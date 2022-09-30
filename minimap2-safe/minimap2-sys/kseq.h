@@ -1,1 +1,1 @@
-#include <minimap2/kseq.h>
+#include "minimap2/kseq.h"

@@ -4,6 +4,7 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
+
     let bindings = bindgen::Builder::default()
         .header("minimap2.h")
         .header("kseq.h")
