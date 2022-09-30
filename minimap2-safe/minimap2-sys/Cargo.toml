@@ -1,0 +1,13 @@
+[package]
+name = "minimap2-sys"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[build-dependencies]
+bindgen = "0.60.1"
+
+[build-dependencies.cc]
+version = "1.0.45"
+features = ["parallel"]
