@@ -1,8 +1,13 @@
 [package]
-name = "minimap2-rs"
+name = "minimap2-sys"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+
+[build-dependencies]
+bindgen = "0.60.1"
+
+[build-dependencies.cc]
+version = "1.0.45"
+features = ["parallel"]
