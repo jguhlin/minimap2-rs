@@ -24,5 +24,4 @@ mod tests {
         println!("{:#?}", unsafe { mm_idxopt.assume_init() });
         println!("{:#?}", unsafe { mm_mapopt.assume_init() }); // Run tests with --nocapture to see the output
     }
-
 }

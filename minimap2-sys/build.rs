@@ -1,6 +1,6 @@
+use pkg_config;
 use std::env;
 use std::path::PathBuf;
-use pkg_config;
 
 // #[cfg(feature = "bindgen")]
 fn gen() {
@@ -48,7 +48,7 @@ fn gen() {
     bindgen::Builder::default()
         .header("minimap2.h")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
-/*        .allowlist_type("mm_idxopt_t")
+        /*        .allowlist_type("mm_idxopt_t")
         .allowlist_type("mm_mapopt_t")
         .allowlist_function("mm_set_opt")
         .allowlist_var("mm_verbose")
