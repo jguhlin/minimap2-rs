@@ -1,3 +1,6 @@
 [submodule "minimap2-safe/minimap2-sys/minimap2"]
 	path = minimap2-safe/minimap2-sys/minimap2
 	url = https://github.com/lh3/minimap2
+[submodule "minimap2-sys/minimap2"]
+	path = minimap2-sys/minimap2
+	url = https://github.com/lh3/minimap2
