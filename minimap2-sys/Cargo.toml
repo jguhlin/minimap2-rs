@@ -3,16 +3,22 @@ name = "minimap2-sys"
 version = "0.1.0"
 edition = "2021"
 links = "libminimap2"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
+license = "MIT OR Apache-2.0"
+description = "Bindings to libminimap2"
+repository = "https://github.com/jguhlin/minimap2-rs"
+categories = ["science", "ffi"]
+keywords = ["bioinformatics", "fasta", "alignment", "ffi", "fastq"]
+exclude = [
+	"**/*.fasta",
+	"libsfasta/test_data/",
+	"*.profdata",
+]
 
 [dependencies]
-libc = "0.2.134"
-# libz-sys = { version = "1.1.0", default-features = false, features = ["libc"] }
 
 [build-dependencies]
 pkg-config = "0.3.25"
-# libz-sys = { version = "1.1.0", default-features = false, features = ["libc"] }
 
 [build-dependencies.bindgen]
 optional = true
