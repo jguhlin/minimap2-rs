@@ -1,19 +1,8 @@
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-
-#[cfg(feature = "bindgen")]
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-
 use std::error::Error;
 use std::mem::MaybeUninit;
 use std::path::Path;
 
-#[cfg(not(feature = "bindgen"))]
-pub mod bindings;
-
-#[cfg(not(feature = "bindgen"))]
-pub use bindings::*;
+use minimap2_sys::*;
 
 pub static MAP_ONT: &str = "map-ont\0";
 pub static AVA_ONT: &str = "ava-ont\0";
@@ -26,42 +15,43 @@ pub static SR: &str = "sr\0";
 pub static SPLICE: &str = "splice\0";
 pub static CDNA: &str = "cdna\0";
 
+#[derive(Debug)]
 pub enum Preset {
-    MAP_ONT,
-    AVA_ONT,
-    MAP10K,
-    AVA_PB,
-    MAP_HIFI,
-    ASM,
-    SHORT,
-    SR,
-    SPLICE,
-    CDNA,
+    MapOnt,
+    AvaOnt,
+    Map10k,
+    AvaPb,
+    MapHifi,
+    Asm,
+    Short,
+    Sr,
+    Splice,
+    Cdna,
 }
 
 impl From<Preset> for *const i8 {
     fn from(preset: Preset) -> Self {
         match preset {
-            Preset::MAP_ONT => MAP_ONT.as_bytes().as_ptr() as *const i8,
-            Preset::AVA_ONT => AVA_ONT.as_bytes().as_ptr() as *const i8,
-            Preset::MAP10K => MAP10K.as_bytes().as_ptr() as *const i8,
-            Preset::AVA_PB => AVA_PB.as_bytes().as_ptr() as *const i8,
-            Preset::MAP_HIFI => MAP_HIFI.as_bytes().as_ptr() as *const i8,
-            Preset::ASM => ASM.as_bytes().as_ptr() as *const i8,
-            Preset::SHORT => SHORT.as_bytes().as_ptr() as *const i8,
-            Preset::SR => SR.as_bytes().as_ptr() as *const i8,
-            Preset::SPLICE => SPLICE.as_bytes().as_ptr() as *const i8,
-            Preset::CDNA => CDNA.as_bytes().as_ptr() as *const i8,
+            Preset::MapOnt => MAP_ONT.as_bytes().as_ptr() as *const i8,
+            Preset::AvaOnt => AVA_ONT.as_bytes().as_ptr() as *const i8,
+            Preset::Map10k => MAP10K.as_bytes().as_ptr() as *const i8,
+            Preset::AvaPb => AVA_PB.as_bytes().as_ptr() as *const i8,
+            Preset::MapHifi => MAP_HIFI.as_bytes().as_ptr() as *const i8,
+            Preset::Asm => ASM.as_bytes().as_ptr() as *const i8,
+            Preset::Short => SHORT.as_bytes().as_ptr() as *const i8,
+            Preset::Sr => SR.as_bytes().as_ptr() as *const i8,
+            Preset::Splice => SPLICE.as_bytes().as_ptr() as *const i8,
+            Preset::Cdna => CDNA.as_bytes().as_ptr() as *const i8,
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Aligner {
-    idxopt: MaybeUninit<mm_idxopt_t>,
-    mapopt: MaybeUninit<mm_mapopt_t>,
-    idx: Option<MaybeUninit<*mut mm_idx_t>>,
-    idx_reader: MaybeUninit<*mut mm_idx_reader_t>,
+    idxopt: mm_idxopt_t,
+    mapopt: mm_mapopt_t,
+    idx: Option<*mut mm_idx_t>,
+    idx_reader: Option<*mut mm_idx_reader_t>,
     threads: usize,
     /* TODO: Goals for better ergonomics...
 
@@ -139,12 +129,13 @@ impl Default for Aligner {
         let mut mm_idxopt = MaybeUninit::uninit();
         let mut mm_mapopt = MaybeUninit::uninit();
 
-        unsafe { mm_set_opt(&0, mm_idxopt.as_mut_ptr(), mm_mapopt.as_mut_ptr()) };
+        unsafe { mm_set_opt(std::ptr::null(), mm_idxopt.as_mut_ptr(), mm_mapopt.as_mut_ptr()) };
         Self {
-            idxopt: mm_idxopt,
-            mapopt: mm_mapopt,
+            idxopt: unsafe { mm_idxopt.assume_init() },
+            mapopt: unsafe { mm_mapopt.assume_init() },
             threads: 1,
-            ..Default::default()
+            idx: None,
+            idx_reader: None,
         }
     }
 }
@@ -154,16 +145,21 @@ impl Aligner {
         let mut mm_idxopt = MaybeUninit::uninit();
         let mut mm_mapopt = MaybeUninit::uninit();
 
+        #[cfg(test)]
+        println!("Preset: {:#?}", preset);
+
         unsafe {
+            mm_set_opt(std::ptr::null(), mm_idxopt.as_mut_ptr(), mm_mapopt.as_mut_ptr());
             mm_set_opt(
                 preset.into(),
                 mm_idxopt.as_mut_ptr(),
                 mm_mapopt.as_mut_ptr(),
             )
         };
+
         Self {
-            idxopt: mm_idxopt,
-            mapopt: mm_mapopt,
+            idxopt: unsafe { mm_idxopt.assume_init() },
+            mapopt: unsafe { mm_mapopt.assume_init() },
             ..Default::default()
         }
     }
@@ -178,7 +174,11 @@ impl Aligner {
         todo!();
     }
 
-    pub fn with_named_index(mut self, path: &Path, output: Option<&str>) -> Result<Self, &'static str> {
+    pub fn with_named_index(
+        mut self,
+        path: &Path,
+        output: Option<&str>,
+    ) -> Result<Self, &'static str> {
         let path = match path.to_str() {
             Some(path) => path,
             None => return Err("Invalid path"),
@@ -198,16 +198,25 @@ impl Aligner {
         };
 
         let idx_reader = MaybeUninit::new(unsafe {
-            mm_idx_reader_open(path.as_ptr(), &self.idxopt.assume_init(), output.as_ptr())
+            mm_idx_reader_open(
+                path.as_ptr(), 
+                &self.idxopt, 
+                output.as_ptr())
         });
 
-        self.idx_reader = idx_reader;
+        unsafe {
+            if idx_reader.assume_init().is_null() {
+                return Err("Failed to create index reader - File not found?");
+            }
+        }
+
+        self.idx_reader = Some(unsafe { idx_reader.assume_init() });
 
         let idx = MaybeUninit::new(unsafe {
-            mm_idx_reader_read(self.idx_reader.assume_init(), self.threads as libc::c_int)
+            mm_idx_reader_read(self.idx_reader.unwrap(), self.threads as libc::c_int)
         });
 
-        self.idx = Some(idx);
+        self.idx = Some(unsafe { idx.assume_init() });
 
         Ok(self)
     }
@@ -221,14 +230,14 @@ impl Aligner {
         todo!();
 
         //let idx = MaybeUninit::new(unsafe {
-            /*mm_idx_str(
-                self.idx_opt.w,
-                self.idx_opt.k,
-                self.idx_opt.flag & 1,
-                self.idx_opt.bucket_bits,
-                str.encode(seq),
-                len(seq),
-            )*/
+        /*mm_idx_str(
+            self.idx_opt.w,
+            self.idx_opt.k,
+            self.idx_opt.flag & 1,
+            self.idx_opt.bucket_bits,
+            str.encode(seq),
+            len(seq),
+        )*/
         //});
 
         //self.idx = Some(idx);
@@ -244,7 +253,7 @@ impl Aligner {
 impl Drop for Aligner {
     fn drop(&mut self) {
         if self.idx.is_some() {
-            unsafe { mm_idx_destroy(self.idx.unwrap().assume_init()) };
+            unsafe { mm_idx_destroy(self.idx.unwrap()) };
         }
     }
 }
@@ -259,13 +268,31 @@ mod tests {
         let mut mm_idxopt = MaybeUninit::uninit();
         let mut mm_mapopt = MaybeUninit::uninit();
 
-        unsafe { mm_set_opt(&0, mm_idxopt.as_mut_ptr(), mm_mapopt.as_mut_ptr()) };
-        println!("{:#?}", unsafe { mm_idxopt.assume_init() });
-        println!("{:#?}", unsafe { mm_mapopt.assume_init() }); // Run tests with --nocapture to see the output
+        unsafe { 
+            mm_set_opt(&0, mm_idxopt.as_mut_ptr(), mm_mapopt.as_mut_ptr()) 
+        };
+    }
+
+    #[test]
+    fn create_index_file_missing() {
+        let result = Aligner::with_preset(Preset::MapOnt)
+            .with_threads(1)
+            .with_named_index(Path::new("test_data/test.fa_FILE_NOT_FOUND"), 
+            Some("test_FILE_NOT_FOUND.mmi"));
+        assert!(result.is_err());
     }
 
     #[test]
     fn create_index() {
-        Aligner::with_preset(Preset::MAP_ONT).with_threads(1).with_named_index(Path::new("test_data/test.fa"), Some("test.mmi")).unwrap();
+        let mut aligner = Aligner::with_preset(Preset::MapOnt)
+            .with_threads(1);
+
+        println!("{}", aligner.idxopt.w);
+
+        assert!(aligner.idxopt.w == 10);
+        
+        aligner = aligner.with_named_index(Path::new("test_data/test_data.fasta"),
+            Some("test.mmi"))
+            .unwrap();
     }
 }
