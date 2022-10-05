@@ -7,7 +7,7 @@ authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "Bindings to libminimap2"
 repository = "https://github.com/jguhlin/minimap2-rs"
-categories = ["science", "ffi"]
+categories = ["science", "external-ffi-bindings"]
 keywords = ["bioinformatics", "fasta", "alignment", "ffi", "fastq"]
 exclude = [
 	"**/*.fasta",
