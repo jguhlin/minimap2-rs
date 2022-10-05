@@ -22,8 +22,6 @@ crate-type = ["cdylib", "rlib"]
 
 [build-dependencies]
 pkg-config = "0.3.25"
-libz-sys = "*"
-system-deps = "6.0.2"
 
 [build-dependencies.bindgen]
 optional = true
