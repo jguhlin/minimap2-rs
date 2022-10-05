@@ -27,7 +27,6 @@ fn gen() {
     cc.cpp_link_stdlib(None);
     cc.flag("-DHAVE_KALLOC");
     cc.flag("-O2");
-    //cc.flag("-Wall");
     cc.flag("-lm");
     cc.flag("-lz");
     cc.flag("-lpthread");
