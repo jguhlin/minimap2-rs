@@ -15,10 +15,15 @@ exclude = [
 	"*.profdata",
 ]
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 
 [build-dependencies]
 pkg-config = "0.3.25"
+libz-sys = "*"
+system-deps = "6.0.2"
 
 [build-dependencies.bindgen]
 optional = true
