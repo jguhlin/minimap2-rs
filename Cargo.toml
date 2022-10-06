@@ -3,6 +3,16 @@ name = "minimap2"
 version = "0.1.0"
 edition = "2021"
 authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
+license = "MIT OR Apache-2.0"
+description = "Bindings to libminimap2"
+repository = "https://github.com/jguhlin/minimap2-rs"
+categories = ["science"]
+keywords = ["bioinformatics", "fasta", "alignment", "fastq"]
+exclude = [
+	"**/*.fasta",
+	"libsfasta/test_data/",
+	"*.profdata",
+]
 
 [dependencies]
 libc = "0.2.134"

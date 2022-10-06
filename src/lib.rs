@@ -1,6 +1,9 @@
+use std::borrow::BorrowMut;
+use std::cell::RefCell;
 use std::error::Error;
 use std::mem::MaybeUninit;
 use std::path::Path;
+use std::thread::Thread;
 
 use minimap2_sys::*;
 
@@ -43,6 +46,33 @@ impl From<Preset> for *const i8 {
             Preset::Splice => SPLICE.as_bytes().as_ptr() as *const i8,
             Preset::Cdna => CDNA.as_bytes().as_ptr() as *const i8,
         }
+    }
+}
+
+thread_local! {
+    static BUF: RefCell<ThreadLocalBuffer> = RefCell::new(ThreadLocalBuffer::new());
+}
+
+pub struct ThreadLocalBuffer {
+    pub buf: *mut mm_tbuf_t,
+}
+
+impl ThreadLocalBuffer {
+    pub fn new() -> Self {
+        let buf = unsafe { mm_tbuf_init() };
+        Self { buf }
+    }
+}
+
+impl Drop for ThreadLocalBuffer {
+    fn drop(&mut self) {
+        unsafe { mm_tbuf_destroy(self.buf) };
+    }
+}
+
+impl Default for ThreadLocalBuffer {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -129,7 +159,13 @@ impl Default for Aligner {
         let mut mm_idxopt = MaybeUninit::uninit();
         let mut mm_mapopt = MaybeUninit::uninit();
 
-        unsafe { mm_set_opt(std::ptr::null(), mm_idxopt.as_mut_ptr(), mm_mapopt.as_mut_ptr()) };
+        unsafe {
+            mm_set_opt(
+                std::ptr::null(),
+                mm_idxopt.as_mut_ptr(),
+                mm_mapopt.as_mut_ptr(),
+            )
+        };
         Self {
             idxopt: unsafe { mm_idxopt.assume_init() },
             mapopt: unsafe { mm_mapopt.assume_init() },
@@ -149,7 +185,11 @@ impl Aligner {
         println!("Preset: {:#?}", preset);
 
         unsafe {
-            mm_set_opt(std::ptr::null(), mm_idxopt.as_mut_ptr(), mm_mapopt.as_mut_ptr());
+            mm_set_opt(
+                std::ptr::null(),
+                mm_idxopt.as_mut_ptr(),
+                mm_mapopt.as_mut_ptr(),
+            );
             mm_set_opt(
                 preset.into(),
                 mm_idxopt.as_mut_ptr(),
@@ -198,10 +238,7 @@ impl Aligner {
         };
 
         let idx_reader = MaybeUninit::new(unsafe {
-            mm_idx_reader_open(
-                path.as_ptr(), 
-                &self.idxopt, 
-                output.as_ptr())
+            mm_idx_reader_open(path.as_ptr(), &self.idxopt, output.as_ptr())
         });
 
         unsafe {
@@ -212,9 +249,21 @@ impl Aligner {
 
         self.idx_reader = Some(unsafe { idx_reader.assume_init() });
 
-        let idx = MaybeUninit::new(unsafe {
-            mm_idx_reader_read(self.idx_reader.unwrap(), self.threads as libc::c_int)
-        });
+        let mut idx: MaybeUninit<*mut mm_idx_t> = MaybeUninit::uninit();
+
+        unsafe {
+            // Test reading? Just following: https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L147
+            idx = MaybeUninit::new(mm_idx_reader_read(
+                self.idx_reader.unwrap(),
+                self.threads as libc::c_int,
+            ));
+            // Close the reader
+            mm_idx_reader_close(self.idx_reader.unwrap());
+            // Set index opts
+            mm_mapopt_update(&mut self.mapopt, *idx.as_ptr());
+            // Idx index name
+            mm_idx_index_name(idx.assume_init());
+        }
 
         self.idx = Some(unsafe { idx.assume_init() });
 
@@ -245,6 +294,113 @@ impl Aligner {
         Ok(self)
     }
 
+    // https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L164
+    // TODO: I doubt extra_flags is working properly...
+    // TODO: Python allows for paired-end mapping with seq2: Option<&[u8]>, but more work to implement
+    pub fn map(
+        &mut self,
+        seq: &[u8],
+        cs: bool,
+        MD: bool,
+        max_frag_len: Option<usize>,
+        extra_flags: Option<i64>,
+    ) -> Result<usize, &'static str> {
+        // cdef cmappy.mm_reg1_t *regs
+        let mut mm_reg: MaybeUninit<*mut mm_reg1_t> = MaybeUninit::uninit();
+
+        // Skipping, probably won't need??
+        // cdef cmappy.mm_hitpy_t h
+
+        // cdef ThreadBuffer b
+        let mut b: ThreadLocalBuffer = Default::default();
+
+        // cdef int n_regs
+        let mut n_regs: i32 = 0;
+
+        // cdef char *cs_str = NULL
+        let mut cs_str: *mut libc::c_char = std::ptr::null_mut();
+
+        // cdef int l_cs_str, m_cs_str = 0
+        let mut l_cs_str: i32 = 0;
+        let mut m_cs_str: i32 = 0;
+
+        // cdef void *km - Nah
+        // let mut km: *mut libc::c_void = std::ptr::null_mut();
+
+        // cdef cmappy.mm_mapopt_t map_opt
+        let mut map_opt = self.mapopt.clone();
+        // Already defined in self...
+
+        if !self.has_index() {
+            return Err("No index");
+        }
+
+        // if max_frag_len is not None: map_opt.max_frag_len = max_frag_len
+        if let Some(max_frag_len) = max_frag_len {
+            map_opt.max_frag_len = max_frag_len as i32;
+        }
+
+        // if extra_flags is not None: map_opt.flag |= extra_flags
+        if let Some(extra_flags) = extra_flags {
+            map_opt.flag |= extra_flags as i64;
+        }
+
+        // if buf is None: b = ThreadBuffer()
+        // else: b = buf
+        BUF.with(|buf| {
+            // No idea what this does...
+            // km = cmappy.mm_tbuf_get_km(b._b)
+            let km = unsafe { mm_tbuf_get_km(buf.borrow_mut().buf) };
+
+            // Seq is already bytes
+            // _seq = seq if isinstance(seq, bytes) else seq.encode()
+            mm_reg = MaybeUninit::new(unsafe {
+                mm_map(
+                    *&self.idx.unwrap(),
+                    seq.len() as i32,
+                    seq.as_ptr() as *const i8,
+                    &mut n_regs,
+                    buf.borrow_mut().buf,
+                    &mut map_opt,
+                    std::ptr::null(),
+                )
+            });
+        });
+
+        println!("n_regs: {}", n_regs);
+
+        /*
+
+            try:
+                i = 0
+                while i < n_regs:
+                    cmappy.mm_reg2hitpy(self._idx, &regs[i], &h)
+                    cigar, _cs, _MD = [], '', ''
+                    for k in range(h.n_cigar32): # convert the 32-bit CIGAR encoding to Python array
+                        c = h.cigar32[k]
+                        cigar.append([c>>4, c&0xf])
+                    if cs or MD: # generate the cs and/or the MD tag, if requested
+                        if cs:
+                            l_cs_str = cmappy.mm_gen_cs(km, &cs_str, &m_cs_str, self._idx, &regs[i], _seq, 1)
+                            _cs = cs_str[:l_cs_str] if isinstance(cs_str, str) else cs_str[:l_cs_str].decode()
+                        if MD:
+                            l_cs_str = cmappy.mm_gen_MD(km, &cs_str, &m_cs_str, self._idx, &regs[i], _seq)
+                            _MD = cs_str[:l_cs_str] if isinstance(cs_str, str) else cs_str[:l_cs_str].decode()
+                    yield Alignment(h.ctg, h.ctg_len, h.ctg_start, h.ctg_end, h.strand, h.qry_start, h.qry_end, h.mapq, cigar, h.is_primary, h.mlen, h.blen, h.NM, h.trans_strand, h.seg_id, _cs, _MD)
+                    cmappy.mm_free_reg1(&regs[i])
+                    i += 1
+            finally:
+                while i < n_regs:
+                    cmappy.mm_free_reg1(&regs[i])
+                    i += 1
+                free(regs)
+                free(cs_str)
+        */
+
+        Ok(n_regs as usize)
+    }
+
+    // This is in the python module, so copied here...
     pub fn has_index(&self) -> bool {
         self.idx.is_some()
     }
@@ -268,31 +424,41 @@ mod tests {
         let mut mm_idxopt = MaybeUninit::uninit();
         let mut mm_mapopt = MaybeUninit::uninit();
 
-        unsafe { 
-            mm_set_opt(&0, mm_idxopt.as_mut_ptr(), mm_mapopt.as_mut_ptr()) 
-        };
+        unsafe { mm_set_opt(&0, mm_idxopt.as_mut_ptr(), mm_mapopt.as_mut_ptr()) };
     }
 
     #[test]
     fn create_index_file_missing() {
         let result = Aligner::with_preset(Preset::MapOnt)
             .with_threads(1)
-            .with_named_index(Path::new("test_data/test.fa_FILE_NOT_FOUND"), 
-            Some("test_FILE_NOT_FOUND.mmi"));
+            .with_named_index(
+                Path::new("test_data/test.fa_FILE_NOT_FOUND"),
+                Some("test_FILE_NOT_FOUND.mmi"),
+            );
         assert!(result.is_err());
     }
 
     #[test]
     fn create_index() {
-        let mut aligner = Aligner::with_preset(Preset::MapOnt)
-            .with_threads(1);
+        let mut aligner = Aligner::with_preset(Preset::MapOnt).with_threads(1);
 
         println!("{}", aligner.idxopt.w);
 
         assert!(aligner.idxopt.w == 10);
-        
-        aligner = aligner.with_named_index(Path::new("test_data/test_data.fasta"),
-            Some("test.mmi"))
+
+        aligner = aligner
+            .with_named_index(Path::new("test_data/test_data.fasta"), Some("test.mmi"))
             .unwrap();
+    }
+
+    #[test]
+    fn test_mapping() {
+        let mut aligner = Aligner::with_preset(Preset::MapOnt).with_threads(1);
+        aligner = aligner
+            .with_named_index(Path::new("test_data/test_data.fasta"), Some("test.mmi"))
+            .unwrap();
+        aligner.map("ATGAGCAAAATATTCTAAAGTGGAAACGGCACTAAGGTGAACTAAGCAACTTAGTGCAAAAc".as_bytes(), false, false, None, None).unwrap();
+        aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagttatgtgtgGGTCTAAAATAATTTGCTGAGCA        ATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAG        TGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatca        atttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGT        GGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaa        aacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATG        ATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTT        GCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), false, false, None, None).unwrap();
+
     }
 }

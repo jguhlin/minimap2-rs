@@ -30,9 +30,9 @@ fn gen() {
     cc.flag("-lm");
     cc.flag("-lz");
     cc.flag("-lpthread");
-    cc.flag("-msse4.1");
-    cc.flag("-DKSW_CPU_DISPATCH");
-    cc.flag("-DKSW_SSE2_ONLY");
+    // cc.flag("-msse4.1");
+    // cc.flag("-DKSW_CPU_DISPATCH");
+    // cc.flag("-DKSW_SSE2_ONLY");
     cc.static_flag(true);
     cc.include("minimap2");
 
