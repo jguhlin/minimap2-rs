@@ -1,9 +1,8 @@
-use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::error::Error;
 use std::mem::MaybeUninit;
 use std::path::Path;
-use std::thread::Thread;
+use std::num::NonZeroI32;
 
 use minimap2_sys::*;
 
@@ -60,32 +59,58 @@ impl From<Preset> for *const i8 {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AlignmentType {
+    Primary,
+    Secondary,
+    Inversion,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Alignment {
-    // cdef int _ctg_len, _r_st, _r_en
-    pub contig_len: usize,
-    pub reference_start: i32,
-    pub reference_end: i32,
-    // cdef int _q_st, _q_en
+    pub is_primary: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Mapping {
+
+    // The query sequence name.
+    pub query_name: Option<String>,
+    pub query_len: Option<NonZeroI32>,
     pub query_start: i32,
     pub query_end: i32,
-    // cdef int _NM, _mlen, _blen
-    pub nm: i32,
+    pub strand: Strand,
+    pub target_name: Option<String>,
+    pub target_len: i32,
+    pub target_start: i32,
+    pub target_end: i32,
     pub match_len: i32,
     pub block_len: i32,
-    // cdef int8_t _strand, _trans_strand
-    pub strand: Strand,
-    pub trans_strand: Strand,
-    // cdef uint8_t _mapq, _is_primary
     pub mapq: u32,
-    pub is_primary: bool,
+    pub alignment: Option<Alignment>,
+
+    // cdef int _ctg_len, _r_st, _r_en
+    // pub contig_len: usize,
+    // pub reference_start: i32,
+    // pub reference_end: i32,
+    // cdef int _q_st, _q_en
+    // cdef int _NM, _mlen, _blen
+    // pub nm: i32,
+    // pub match_len: i32,
+    // pub block_len: i32,
+    // cdef int8_t _strand, _trans_strand
+    // pub strand: Strand,
+    // pub trans_strand: Strand,
+    // cdef uint8_t _mapq, _is_primary
+    
+    // pub is_primary: bool,
     // cdef int _seg_id
-    pub seg_id: u32,
+    // pub seg_id: u32,
     // cdef _ctg, _cigar, _cs, _MD # these are python objects
-    pub contig: String,
-    pub cs: Option<String>,
-    pub md: Option<String>,
-    pub score: i32,
-    pub score0: i32,
+    // pub contig: String,
+    // pub cs: Option<String>,
+    // pub md: Option<String>,
+    // pub score: i32,
+    // pub score0: i32,
 }
 
 pub struct ThreadLocalBuffer {
@@ -346,7 +371,7 @@ impl Aligner {
         MD: bool,
         max_frag_len: Option<usize>,
         extra_flags: Option<i64>,
-    ) -> Result<usize, &'static str> {
+    ) -> Result<Vec<Mapping>, &'static str> {
         // cdef cmappy.mm_reg1_t *regs
         let mut mm_reg: MaybeUninit<*mut mm_reg1_t> = MaybeUninit::uninit();
 
@@ -389,7 +414,7 @@ impl Aligner {
 
         // if buf is None: b = ThreadBuffer()
         // else: b = buf
-        BUF.with(|buf| {
+        let mappings = BUF.with(|buf| {
             // No idea what this does...
             // km = cmappy.mm_tbuf_get_km(b._b)
             let km = unsafe { mm_tbuf_get_km(buf.borrow_mut().buf) };
@@ -408,72 +433,41 @@ impl Aligner {
                 )
             });
 
-            let mut alignments = Vec::with_capacity(n_regs as usize);
+            let mut mappings = Vec::with_capacity(n_regs as usize);
 
             for i in 0..n_regs {
                 unsafe {
                     let reg: mm_reg1_t = *(*mm_reg.as_ptr().offset(i as isize));
-                    println!("New Match");
-                    println!("{:#?}", reg);
+                    // println!("New Match");
+                    // println!("{:#?}", reg);
                     let contig: *mut ::std::os::raw::c_char = (*(*(self.idx.unwrap())).seq.offset(reg.rid as isize)).name;
-                    println!("Contig: {}", std::ffi::CStr::from_ptr(contig).to_str().unwrap());
+                    // println!("Contig: {}", std::ffi::CStr::from_ptr(contig).to_str().unwrap());
 
                     let p_is_null = reg.p.is_null();
 
-                    alignments.push(Alignment {
-                        contig: std::ffi::CStr::from_ptr(contig).to_str().unwrap().to_string(),
-                        contig_len: (*(*(self.idx.unwrap())).seq.offset(reg.rid as isize)).len as usize,
-                        reference_start: reg.rs,
-                        reference_end: reg.re,
+                    mappings.push(Mapping {
+                        target_name: Some(std::ffi::CStr::from_ptr(contig).to_str().unwrap().to_string()),
+                        target_len: (*(*(self.idx.unwrap())).seq.offset(reg.rid as isize)).len as i32,
+                        target_start: reg.rs,
+                        target_end: reg.re,
+                        query_name: None,
+                        query_len: None,
                         query_start: reg.qs,
                         query_end: reg.qe,
                         strand: if reg.rev() == 0 { Strand::Forward } else { Strand::Reverse },
-                        trans_strand: Strand::Forward, // *(reg).p.trans_strand == 0 { Strand::Forward } else { Strand::Reverse },
+                        // trans_strand: Strand::Forward, // *(reg).p.trans_strand == 0 { Strand::Forward } else { Strand::Reverse },
                         //nm: reg.blen - reg.mlen + p.as_ref().expect("Pointer Hell").n_ambi() as i32,
-                        nm: 0,
-                        score: reg.score,
-                        score0: reg.score0,
                         match_len: reg.mlen,
                         block_len: reg.blen,
                         mapq: reg.mapq(),
-                        is_primary: false, // TODO
-                        seg_id: reg.seg_id(),
-                        md: Some(String::new()), // TODO: Implement
-                        cs: Some(String::new()), // TODO: Implement
+                        alignment: None,
                     })
                 }
             }
+
+            mappings
         });
-
-        /*
-
-            try:
-                i = 0
-                while i < n_regs:
-                    cmappy.mm_reg2hitpy(self._idx, &regs[i], &h)
-                    cigar, _cs, _MD = [], '', ''
-                    for k in range(h.n_cigar32): # convert the 32-bit CIGAR encoding to Python array
-                        c = h.cigar32[k]
-                        cigar.append([c>>4, c&0xf])
-                    if cs or MD: # generate the cs and/or the MD tag, if requested
-                        if cs:
-                            l_cs_str = cmappy.mm_gen_cs(km, &cs_str, &m_cs_str, self._idx, &regs[i], _seq, 1)
-                            _cs = cs_str[:l_cs_str] if isinstance(cs_str, str) else cs_str[:l_cs_str].decode()
-                        if MD:
-                            l_cs_str = cmappy.mm_gen_MD(km, &cs_str, &m_cs_str, self._idx, &regs[i], _seq)
-                            _MD = cs_str[:l_cs_str] if isinstance(cs_str, str) else cs_str[:l_cs_str].decode()
-                    yield Alignment(h.ctg, h.ctg_len, h.ctg_start, h.ctg_end, h.strand, h.qry_start, h.qry_end, h.mapq, cigar, h.is_primary, h.mlen, h.blen, h.NM, h.trans_strand, h.seg_id, _cs, _MD)
-                    cmappy.mm_free_reg1(&regs[i])
-                    i += 1
-            finally:
-                while i < n_regs:
-                    cmappy.mm_free_reg1(&regs[i])
-                    i += 1
-                free(regs)
-                free(cs_str)
-        */
-
-        Ok(n_regs as usize)
+        Ok(mappings)
     }
 
     // This is in the python module, so copied here...
@@ -534,6 +528,7 @@ mod tests {
             .with_named_index(Path::new("test_data/test_data.fasta"), Some("test.mmi"))
             .unwrap();
         aligner.map("ATGAGCAAAATATTCTAAAGTGGAAACGGCACTAAGGTGAACTAAGCAACTTAGTGCAAAAc".as_bytes(), false, false, None, None).unwrap();
-        aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagttatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), false, false, None, None).unwrap();
+        let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagttatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), false, false, None, None).unwrap();
+        println!("{:#?}", mappings);
     }
 }

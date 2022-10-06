@@ -2,6 +2,8 @@ use pkg_config;
 use std::env;
 use std::path::PathBuf;
 
+// TODO: Default to using simde
+
 // #[cfg(feature = "bindgen")]
 fn gen() {
     let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
@@ -30,9 +32,9 @@ fn gen() {
     cc.flag("-lm");
     cc.flag("-lz");
     cc.flag("-lpthread");
-    // cc.flag("-msse4.1");
+    //cc.flag("-msse4.1");
     // cc.flag("-DKSW_CPU_DISPATCH");
-    // cc.flag("-DKSW_SSE2_ONLY");
+    //cc.flag("-DKSW_SSE2_ONLY");
     cc.static_flag(true);
     cc.include("minimap2");
 
@@ -46,6 +48,11 @@ fn gen() {
     for file in files {
         // Skip "main.c" and "example.c"
         if file.file_name().unwrap() == "main.c" || file.file_name().unwrap() == "example.c" {
+            continue;
+        }
+
+        // Ignore all "neon"
+        if file.file_name().unwrap().to_str().unwrap().contains("neon") {
             continue;
         }
 
