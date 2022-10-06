@@ -18,6 +18,16 @@ pub static SR: &str = "sr\0";
 pub static SPLICE: &str = "splice\0";
 pub static CDNA: &str = "cdna\0";
 
+thread_local! {
+    static BUF: RefCell<ThreadLocalBuffer> = RefCell::new(ThreadLocalBuffer::new());
+}
+
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum Strand {
+    Forward,
+    Reverse,
+}
+
 #[derive(Debug)]
 pub enum Preset {
     MapOnt,
@@ -49,8 +59,33 @@ impl From<Preset> for *const i8 {
     }
 }
 
-thread_local! {
-    static BUF: RefCell<ThreadLocalBuffer> = RefCell::new(ThreadLocalBuffer::new());
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Alignment {
+    // cdef int _ctg_len, _r_st, _r_en
+    pub contig_len: usize,
+    pub reference_start: i32,
+    pub reference_end: i32,
+    // cdef int _q_st, _q_en
+    pub query_start: i32,
+    pub query_end: i32,
+    // cdef int _NM, _mlen, _blen
+    pub nm: i32,
+    pub match_len: i32,
+    pub block_len: i32,
+    // cdef int8_t _strand, _trans_strand
+    pub strand: Strand,
+    pub trans_strand: Strand,
+    // cdef uint8_t _mapq, _is_primary
+    pub mapq: u32,
+    pub is_primary: bool,
+    // cdef int _seg_id
+    pub seg_id: u32,
+    // cdef _ctg, _cigar, _cs, _MD # these are python objects
+    pub contig: String,
+    pub cs: Option<String>,
+    pub md: Option<String>,
+    pub score: i32,
+    pub score0: i32,
 }
 
 pub struct ThreadLocalBuffer {
@@ -197,11 +232,18 @@ impl Aligner {
             )
         };
 
+        let mut mm_mapopt = unsafe { mm_mapopt.assume_init() };
+
         Self {
             idxopt: unsafe { mm_idxopt.assume_init() },
-            mapopt: unsafe { mm_mapopt.assume_init() },
+            mapopt: mm_mapopt,
             ..Default::default()
         }
+    }
+
+    pub fn with_cigar(mut self) -> Self {
+        self.mapopt.flag |= MM_F_CIGAR as i64;
+        self
     }
 
     pub fn with_threads(mut self, threads: usize) -> Self {
@@ -365,9 +407,43 @@ impl Aligner {
                     std::ptr::null(),
                 )
             });
-        });
 
-        println!("n_regs: {}", n_regs);
+            let mut alignments = Vec::with_capacity(n_regs as usize);
+
+            for i in 0..n_regs {
+                unsafe {
+                    let reg: mm_reg1_t = *(*mm_reg.as_ptr().offset(i as isize));
+                    println!("New Match");
+                    println!("{:#?}", reg);
+                    let contig: *mut ::std::os::raw::c_char = (*(*(self.idx.unwrap())).seq.offset(reg.rid as isize)).name;
+                    println!("Contig: {}", std::ffi::CStr::from_ptr(contig).to_str().unwrap());
+
+                    let p_is_null = reg.p.is_null();
+
+                    alignments.push(Alignment {
+                        contig: std::ffi::CStr::from_ptr(contig).to_str().unwrap().to_string(),
+                        contig_len: (*(*(self.idx.unwrap())).seq.offset(reg.rid as isize)).len as usize,
+                        reference_start: reg.rs,
+                        reference_end: reg.re,
+                        query_start: reg.qs,
+                        query_end: reg.qe,
+                        strand: if reg.rev() == 0 { Strand::Forward } else { Strand::Reverse },
+                        trans_strand: Strand::Forward, // *(reg).p.trans_strand == 0 { Strand::Forward } else { Strand::Reverse },
+                        //nm: reg.blen - reg.mlen + p.as_ref().expect("Pointer Hell").n_ambi() as i32,
+                        nm: 0,
+                        score: reg.score,
+                        score0: reg.score0,
+                        match_len: reg.mlen,
+                        block_len: reg.blen,
+                        mapq: reg.mapq(),
+                        is_primary: false, // TODO
+                        seg_id: reg.seg_id(),
+                        md: Some(String::new()), // TODO: Implement
+                        cs: Some(String::new()), // TODO: Implement
+                    })
+                }
+            }
+        });
 
         /*
 
@@ -458,7 +534,6 @@ mod tests {
             .with_named_index(Path::new("test_data/test_data.fasta"), Some("test.mmi"))
             .unwrap();
         aligner.map("ATGAGCAAAATATTCTAAAGTGGAAACGGCACTAAGGTGAACTAAGCAACTTAGTGCAAAAc".as_bytes(), false, false, None, None).unwrap();
-        aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagttatgtgtgGGTCTAAAATAATTTGCTGAGCA        ATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAG        TGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatca        atttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGT        GGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaa        aacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATG        ATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTT        GCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), false, false, None, None).unwrap();
-
+        aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagttatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), false, false, None, None).unwrap();
     }
 }

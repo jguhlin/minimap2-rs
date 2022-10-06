@@ -8466,7 +8466,7 @@ pub struct __locale_struct {
 fn bindgen_test_layout___locale_struct() {
     assert_eq!(
         ::std::mem::size_of::<__locale_struct>(),
-        232usize,
+        usize,
         concat!("Size of: ", stringify!(__locale_struct))
     );
     assert_eq!(
