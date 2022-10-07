@@ -1,12 +1,13 @@
 use std::cell::RefCell;
+use std::io::Read;
 use std::mem::MaybeUninit;
 use std::num::NonZeroI32;
 use std::path::Path;
-use std::io::Read;
+use std::io::BufRead;
 
+use flate2::read::GzDecoder;
 use minimap2_sys::*;
 use simdutf8::basic::from_utf8;
-use flate2::read::GzDecoder;
 
 /// Alias for mm_mapop_t
 pub type MapOpt = mm_mapopt_t;
@@ -625,8 +626,7 @@ impl Aligner {
                                 self.idx.unwrap(),
                                 const_ptr,
                                 seq.as_ptr() as *const i8,
-                                true.into()
-                                //1 as std::ffi::c_int,
+                                true.into(), //1 as std::ffi::c_int,
                             );
 
                             let cs_string = std::ffi::CStr::from_ptr(cs_string)
@@ -639,15 +639,18 @@ impl Aligner {
                                 cigar: Some(format!("cs:Z::{}", cs_string)),
                             })
                         } else {
-                            Some(Alignment { is_primary: true, cigar: None,})
+                            Some(Alignment {
+                                is_primary: true,
+                                cigar: None,
+                            })
                         }
                     } else {
                         None
                     };
 
-                    if !reg.p.is_null() {
-                        libc::free(reg.p as *mut std::ffi::c_void);
-                    }
+                    // if !reg.p.is_null() {
+                    // libc::free(reg.p as *mut std::ffi::c_void);
+                    // }
 
                     mappings.push(Mapping {
                         target_name: Some(
@@ -675,10 +678,9 @@ impl Aligner {
                         alignment,
                     });
                 }
-
             }
 
-            unsafe { libc::free(mm_reg.assume_init() as *mut std::ffi::c_void); }
+            // unsafe { libc::free(mm_reg.assume_init() as *mut std::ffi::c_void); }
 
             mappings
         });
@@ -687,14 +689,18 @@ impl Aligner {
 
     /// Map entire file
     /// Detects if file is gzip or not and if it's fastq/fasta or not
+    /// Best for smaller files (all results are stored in an accumulated Vec!)
+    /// What you probably want is to loop through the file yourself and use the map() function
+    /// 
     /// TODO: Remove cs and md and make them options on the struct
+    /// 
     pub fn map_file(&self, file: &str, cs: bool, md: bool) -> Result<Vec<Mapping>, &'static str> {
         // Make sure index is set
         if self.idx.is_none() {
             return Err("No index");
         }
 
-        // Check that file exists 
+        // Check that file exists
         if !Path::new(file).exists() {
             return Err("File does not exist");
         }
@@ -743,20 +749,22 @@ impl Aligner {
         // Put into bufreader
         let mut reader = std::io::BufReader::new(reader);
 
-        let reader: Box<dyn Iterator<Item = Result<Sequence, &'static str>>> = if file_type == FileFormat::FASTA {
-            Box::new(Fasta::from_buffer(&mut reader))
-        } else {
-            Box::new(Fastq::from_buffer(&mut reader))
-        };
-
+        let reader: Box<dyn Iterator<Item = Result<Sequence, &'static str>>> =
+            if file_type == FileFormat::FASTA {
+                Box::new(Fasta::from_buffer(&mut reader))
+            } else {
+                Box::new(Fastq::from_buffer(&mut reader))
+            };
 
         // The output vec
         let mut mappings = Vec::new();
-        
+
         // Iterate over the sequences
         for seq in reader {
             let seq = seq.unwrap();
-            let mut seq_mappings = self.map(&seq.sequence.unwrap(), cs, md, None, None).unwrap();
+            let mut seq_mappings = self
+                .map(&seq.sequence.unwrap(), cs, md, None, None)
+                .unwrap();
             for mut mapping in seq_mappings.iter_mut() {
                 mapping.query_name = seq.id.clone();
             }
@@ -820,7 +828,6 @@ pub struct Sequence {
     /// Primarily used downstream, but when used for random access this is the offset from the start of the sequence
     pub offset: usize,
 }
-
 
 /// Return the compression type of a file
 #[allow(dead_code)]
@@ -906,14 +913,14 @@ mod tests {
         let mut aligner = aligner.with_cigar();
 
         aligner
-        .map(
-            "ATGAGCAAAATATTCTAAAGTGGAAACGGCACTAAGGTGAACTAAGCAACTTAGTGCAAAAc".as_bytes(),
-            true,
-            false,
-            None,
-            None,
-        )
-        .unwrap();
+            .map(
+                "ATGAGCAAAATATTCTAAAGTGGAAACGGCACTAAGGTGAACTAAGCAACTTAGTGCAAAAc".as_bytes(),
+                true,
+                false,
+                None,
+                None,
+            )
+            .unwrap();
 
         let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagttatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), true, false, None, None).unwrap();
         println!("{:#?}", mappings);
