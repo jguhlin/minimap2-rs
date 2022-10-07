@@ -24,21 +24,19 @@ Align a sequence:
 ```rust
 let seq: Vec<u8> = b"ACTGACTCACATCGACTACGACTACTAGACACTAGACTATCGACTACTGACATCGA";
 let alignment = aligner
-    .map(seq, false, false, None, None)
+    .map(&seq, false, false, None, None)
     .expect("Unable to align");
 ```
 
 ### Presets
-All minimap2 presets should be available:
+All minimap2 presets should be available (see [functions section](https://docs.rs/minimap2/latest/minimap2/)):
 ```rust
 let aligner = map_ont();
-```
-```rust
 let aligner = asm20();
 ```
 
 ### Customization
-[MapOpts](https://docs.rs/minimap2-sys/0.1.5/minimap2_sys/struct.mm_mapopt_t.html) and [IdxOpts](https://docs.rs/minimap2-sys/0.1.5/minimap2_sys/struct.mm_idxopt_t.html) can be customized with Rust's struct pattern, as well as applying mapping settings.
+[MapOpts](https://docs.rs/minimap2-sys/0.1.5/minimap2_sys/struct.mm_mapopt_t.html) and [IdxOpts](https://docs.rs/minimap2-sys/0.1.5/minimap2_sys/struct.mm_idxopt_t.html) can be customized with Rust's struct pattern, as well as applying mapping settings. Inspired by [bevy](https://bevyengine.org/).
 ```rust
 Aligner {
     mapopt: MapOpt {
