@@ -54,6 +54,8 @@ Aligner {
 ### Working Example
 There is a binary called "fakeminimap2" that I am using to test for memory leaks. You can follow the [source code](https://github.com/jguhlin/minimap2-rs/blob/main/fakeminimap2/src/main.rs) for an example. It also shows some helper functions for identifying compression types and FASTA vs FASTQ files. I used my own parsers as they are well fuzzed, but open to removing them or putting them behind a feature wall.
 
+Alignment functions return a [Mapping](https://docs.rs/minimap2/latest/minimap2/struct.Mapping.html) struct. The [Alignment](https://docs.rs/minimap2/latest/minimap2/struct.Alignment.html) struct is only returned when the [Aligner](https://docs.rs/minimap2/latest/minimap2/struct.Aligner.html) is created using [.with_cigar()](https://docs.rs/minimap2/latest/minimap2/struct.Aligner.html#method.with_cigar).
+
 A very simple example would be:
 ```rust
 let mut file = std::fs::File::open(query_file);
@@ -62,12 +64,20 @@ let mut fasta = Fasta::from_buffer(&mut reader)
 
 for seq in reader {
     let seq = seq.unwrap();
-    let alignment = aligner
+    let alignment: Vec<Mapping> = aligner
         .map(&seq.sequence.unwrap(), false, false, None, None)
         .expect("Unable to align");
     println!("{:?}", alignment);
 }
 ```
+
+There is a map_file function that works on an entire file, but it is not-lazy and thus not suitable for large files.
+
+```rust
+let mappings: Result<Vec<Mapping>> = aligner.map_file("query.fa", false, false);
+```
+
+
 
 ## Multithreading
 Untested, however the thread_local buffer is already set, so theoretically it could work. It's also the weekend, so.... Next week. I may or may not implement it in here, torn between a hold-your-hand library and a lightweight library for those who want to use their own solutions. This may get split into two separate libraries for that very reason (following the [zstd](https://github.com/gyscos/zstd-rs) concept).
@@ -109,6 +119,7 @@ Probably not freeing C memory somewhere.... Not sure yet, if so it's just leakin
 * Multi-thread guide (tokio async threads or use crossbeam queue and traditional threads?)
 * Maybe should be split into 2 more libraries, minimap2-safe (lower but safe level) and minimap2 (high-level api) like zstd? - Then people can implement threading as they like or just fall back to a known-decent implementation?
 * Iterator interface for map_file
+* MORE TESTS
 
 
 # Changelog
