@@ -28,6 +28,15 @@ let alignment = aligner
     .expect("Unable to align");
 ```
 
+### Presets
+All minimap2 presets should be available:
+```rust
+let aligner = map_ont();
+```
+```rust
+let aligner = asm20();
+```
+
 ### Customization
 [MapOpts](https://docs.rs/minimap2-sys/0.1.5/minimap2_sys/struct.mm_mapopt_t.html) and [IdxOpts](https://docs.rs/minimap2-sys/0.1.5/minimap2_sys/struct.mm_idxopt_t.html) can be customized with Rust's struct pattern, as well as applying mapping settings.
 ```rust
@@ -49,6 +58,30 @@ Aligner {
 # Want feedback
 * Many fields are i32 / i8 to mimic the C environment, but would it make more sense to convert to u32 / u8 / usize?
 * Let me know pain points
+
+Presets currently look like this:
+```rust
+Aligner {
+    threads: 2,
+    ..map_ont()
+}
+```
+or:
+```rust
+Aligner {
+    threads: 2,
+    ..preset(Preset::MapOnt)
+}
+```
+or:
+```rust
+Aligner {
+    threads: 2,
+    ..Aligner::preset(Preset::MapOnt)
+}
+```
+
+The second pollutes the namespace less, but the first looks less redundant. Open to opinions.
 
 # Pain Points
 Probably not freeing C memory somewhere.... Not sure yet, if so it's just leaking a little...
