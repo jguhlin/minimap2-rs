@@ -172,18 +172,19 @@ impl Default for ThreadLocalBuffer {
 /// Aligner struct, mimicking minimap2's python interface
 ///
 /// ```
-/// # use super::*;
+/// # use minimap2::*;
 /// Aligner {
-/// mapopt: MapOpt {
-/// seed: 42,
-/// best_n: 1,
-/// ..Default::default()
+///     mapopt: MapOpt {
+///         seed: 42,
+///         best_n: 1,
+///         ..Default::default()
 ///     },
-///    idxopt: IdxOpt {
+///     idxopt: IdxOpt {
 ///         k: 21,
-/// },
-/// ..map_ont()
-/// }
+///         ..Default::default()
+///     },
+///   ..map_ont()
+/// };
 /// ```
 
 #[derive(Debug, Clone)]
