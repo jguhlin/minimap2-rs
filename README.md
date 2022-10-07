@@ -11,8 +11,21 @@ minimap2 = "1.1.5"
 Create an Aligner 
 
 ```rust
+let mut aligner = Aligner {
+    threads: 8,
+    ..map_ont()
+}
+.with_cigar()
+.with_index("ReferenceFile.fasta", None)
+.expect("Unable to build index");
+```
 
-
+Align a sequence:
+```rust
+let seq: Vec<u8> = b"ACTGACTCACATCGACTACGACTACTAGACACTAGACTATCGACTACTGACATCGA";
+let alignment = aligner
+    .map(seq, false, false, None, None)
+    .expect("Unable to align");
 ```
 
 # Want feedback
@@ -20,7 +33,7 @@ Create an Aligner
 * Let me know pain points
 
 # Pain Points
-Probably not freeing C memory somewhere.... expect crashes
+Probably not freeing C memory somewhere.... Not sure yet, if so it's just leaking a little...
 
 # Next things todo
 * Print other tags so we can have an entire PAF format
@@ -31,4 +44,4 @@ Probably not freeing C memory somewhere.... expect crashes
 
 
 # Changelog
-¯\_(ツ)_/¯
+¯\\_(ツ)_/¯
