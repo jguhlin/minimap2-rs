@@ -1,9 +1,9 @@
 use std::cell::RefCell;
+use std::io::BufRead;
 use std::io::Read;
 use std::mem::MaybeUninit;
 use std::num::NonZeroI32;
 use std::path::Path;
-use std::io::BufRead;
 
 use flate2::read::GzDecoder;
 use minimap2_sys::*;
@@ -170,6 +170,22 @@ impl Default for ThreadLocalBuffer {
 }
 
 /// Aligner struct, mimicking minimap2's python interface
+///
+/// ```
+/// # use super::*;
+/// Aligner {
+/// mapopt: MapOpt {
+/// seed: 42,
+/// best_n: 1,
+/// ..Default::default()
+///     },
+///    idxopt: IdxOpt {
+///         k: 21,
+/// },
+/// ..map_ont()
+/// }
+/// ```
+
 #[derive(Debug, Clone)]
 pub struct Aligner {
     /// Index options passed to minimap2 (mm_idxopt_t)
@@ -691,9 +707,9 @@ impl Aligner {
     /// Detects if file is gzip or not and if it's fastq/fasta or not
     /// Best for smaller files (all results are stored in an accumulated Vec!)
     /// What you probably want is to loop through the file yourself and use the map() function
-    /// 
+    ///
     /// TODO: Remove cs and md and make them options on the struct
-    /// 
+    ///
     pub fn map_file(&self, file: &str, cs: bool, md: bool) -> Result<Vec<Mapping>, &'static str> {
         // Make sure index is set
         if self.idx.is_none() {

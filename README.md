@@ -28,6 +28,23 @@ let alignment = aligner
     .expect("Unable to align");
 ```
 
+### Customization
+[MapOpts](https://docs.rs/minimap2-sys/0.1.5/minimap2_sys/struct.mm_mapopt_t.html) and [IdxOpts](https://docs.rs/minimap2-sys/0.1.5/minimap2_sys/struct.mm_idxopt_t.html) can be customized with Rust's struct pattern, as well as applying mapping settings.
+```rust
+Aligner {
+    mapopt: MapOpt {
+        seed: 42,
+        best_n: 1,
+        ..Default::default()
+    },
+    idxopt: IdxOpt {
+        k: 21,
+    },
+    ..map_ont()
+}
+```
+
+
 # Want feedback
 * Many fields are i32 / i8 to mimic the C environment, but would it make more sense to convert to u32 / u8 / usize?
 * Let me know pain points
