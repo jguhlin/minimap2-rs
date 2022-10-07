@@ -53,7 +53,26 @@ Aligner {
     ..map_ont()
 }
 ```
+### Working Example
+There is a binary called "fakeminimap2" that I am using to test for memory leaks. You can follow the [source code](https://github.com/jguhlin/minimap2-rs/blob/main/fakeminimap2/src/main.rs) for an example. It also shows some helper functions for identifying compression types and FASTA vs FASTQ files. I used my own parsers as they are well fuzzed, but open to removing them or putting them behind a feature wall.
 
+A very simple example would be:
+```rust
+let mut file = std::fs::File::open(query_file);
+let mut reader = BufReader::new(reader);
+let mut fasta = Fasta::from_buffer(&mut reader)
+
+for seq in reader {
+    let seq = seq.unwrap();
+    let alignment = aligner
+        .map(&seq.sequence.unwrap(), false, false, None, None)
+        .expect("Unable to align");
+    println!("{:?}", alignment);
+}
+```
+
+## Multithreading
+Untested, however the thread_local buffer is already set, so theoretically it could work. It's also the weekend, so.... Next week. I may or may not implement it in here, torn between a hold-your-hand library and a lightweight library for those who want to use their own solutions. This may get split into two separate libraries for that very reason (following the [zstd](https://github.com/gyscos/zstd-rs) concept).
 
 # Want feedback
 * Many fields are i32 / i8 to mimic the C environment, but would it make more sense to convert to u32 / u8 / usize?
