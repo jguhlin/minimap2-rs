@@ -21,8 +21,8 @@ simdutf8 = "0.1.4"
 flate2 = { version = "1.0.17", features = ["zlib-ng"], default-features = false }
 
 # Dep for development
-minimap2-sys = { path = "./minimap2-sys" }
-# minimap2-sys = "0.1.5"
+# minimap2-sys = { path = "./minimap2-sys" }
+minimap2-sys = "0.1.5"
 
 [profile.release]
 opt-level = 3
