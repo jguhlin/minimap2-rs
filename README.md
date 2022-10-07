@@ -121,6 +121,9 @@ Probably not freeing C memory somewhere.... Not sure yet, if so it's just leakin
 * Iterator interface for map_file
 * MORE TESTS
 
-
 # Changelog
 ¯\\_(ツ)_/¯
+
+
+
+![Genomics Aotearoa](info/genomics-aotearoa.png)
