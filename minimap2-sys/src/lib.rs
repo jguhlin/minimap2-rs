@@ -5,9 +5,27 @@
 // #[cfg(feature = "bindgen")]
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-use std::error::Error;
 use std::mem::MaybeUninit;
-use std::path::Path;
+
+impl Default for mm_mapopt_t {
+    fn default() -> Self {
+        unsafe {
+            let mut opt = MaybeUninit::uninit();
+            mm_mapopt_init(opt.as_mut_ptr());
+            opt.assume_init()
+        }
+    }
+}
+
+impl Default for mm_idxopt_t {
+    fn default() -> Self {
+        unsafe {
+            let mut opt = MaybeUninit::uninit();
+            mm_idxopt_init(opt.as_mut_ptr());
+            opt.assume_init()
+        }
+    }
+}
 
 // TODO: Add more tests!
 #[cfg(test)]
