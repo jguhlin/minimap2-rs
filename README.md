@@ -39,6 +39,7 @@ Aligner {
     },
     idxopt: IdxOpt {
         k: 21,
+        ..Default::default()
     },
     ..map_ont()
 }
