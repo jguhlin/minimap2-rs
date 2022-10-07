@@ -1,0 +1,21 @@
+[package]
+name = "fakeminimap2"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+minimap2 = { path = ".." }
+clap = {version = "4.0.10", features = ["derive"] }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units  = 1
+
+[profile.dev]
+debug = true
+
+[profile.dev.package."*"]
+opt-level = 3

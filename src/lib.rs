@@ -1,32 +1,48 @@
 use std::cell::RefCell;
-use std::error::Error;
 use std::mem::MaybeUninit;
-use std::path::Path;
 use std::num::NonZeroI32;
+use std::path::Path;
+use std::io::Read;
 
 use minimap2_sys::*;
+use simdutf8::basic::from_utf8;
+use flate2::read::GzDecoder;
 
-pub static MAP_ONT: &str = "map-ont\0";
-pub static AVA_ONT: &str = "ava-ont\0";
-pub static MAP10K: &str = "map10k\0";
-pub static AVA_PB: &str = "ava-pb\0";
-pub static MAP_HIFI: &str = "map-hifi\0";
-pub static ASM: &str = "asm\0";
-pub static SHORT: &str = "short\0";
-pub static SR: &str = "sr\0";
-pub static SPLICE: &str = "splice\0";
-pub static CDNA: &str = "cdna\0";
+/// Alias for mm_mapop_t
+pub type MapOpt = mm_mapopt_t;
 
-thread_local! {
-    static BUF: RefCell<ThreadLocalBuffer> = RefCell::new(ThreadLocalBuffer::new());
-}
+/// Alias for mm_idxopt_t
+pub type IdxOpt = mm_idxopt_t;
 
+pub mod fasta;
+pub mod fastq;
+
+pub use fasta::Fasta;
+pub use fastq::Fastq;
+
+// TODO: Probably a better way to handle this...
+static MAP_ONT: &str = "map-ont\0";
+static AVA_ONT: &str = "ava-ont\0";
+static MAP10K: &str = "map10k\0";
+static AVA_PB: &str = "ava-pb\0";
+static MAP_HIFI: &str = "map-hifi\0";
+static ASM: &str = "asm\0";
+static ASM5: &str = "asm5\0";
+static ASM10: &str = "asm10\0";
+static ASM20: &str = "asm20\0";
+static SHORT: &str = "short\0";
+static SR: &str = "sr\0";
+static SPLICE: &str = "splice\0";
+static CDNA: &str = "cdna\0";
+
+/// Strand enum
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Strand {
     Forward,
     Reverse,
 }
 
+/// Preset's for minimap2 config
 #[derive(Debug)]
 pub enum Preset {
     MapOnt,
@@ -35,12 +51,16 @@ pub enum Preset {
     AvaPb,
     MapHifi,
     Asm,
+    Asm5,
+    Asm10,
+    Asm20,
     Short,
     Sr,
     Splice,
     Cdna,
 }
 
+// Convert to c string for input into minimap2
 impl From<Preset> for *const i8 {
     fn from(preset: Preset) -> Self {
         match preset {
@@ -50,6 +70,9 @@ impl From<Preset> for *const i8 {
             Preset::AvaPb => AVA_PB.as_bytes().as_ptr() as *const i8,
             Preset::MapHifi => MAP_HIFI.as_bytes().as_ptr() as *const i8,
             Preset::Asm => ASM.as_bytes().as_ptr() as *const i8,
+            Preset::Asm5 => ASM5.as_bytes().as_ptr() as *const i8,
+            Preset::Asm10 => ASM10.as_bytes().as_ptr() as *const i8,
+            Preset::Asm20 => ASM20.as_bytes().as_ptr() as *const i8,
             Preset::Short => SHORT.as_bytes().as_ptr() as *const i8,
             Preset::Sr => SR.as_bytes().as_ptr() as *const i8,
             Preset::Splice => SPLICE.as_bytes().as_ptr() as *const i8,
@@ -58,6 +81,7 @@ impl From<Preset> for *const i8 {
     }
 }
 
+/// Alignment type
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AlignmentType {
     Primary,
@@ -65,14 +89,16 @@ pub enum AlignmentType {
     Inversion,
 }
 
+/// Alignment struct when alignment flag is set
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Alignment {
     pub is_primary: bool,
+    pub cigar: Option<String>,
 }
 
+/// Mapping result
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Mapping {
-
     // The query sequence name.
     pub query_name: Option<String>,
     pub query_len: Option<NonZeroI32>,
@@ -87,7 +113,6 @@ pub struct Mapping {
     pub block_len: i32,
     pub mapq: u32,
     pub alignment: Option<Alignment>,
-
     // cdef int _ctg_len, _r_st, _r_en
     // pub contig_len: usize,
     // pub reference_start: i32,
@@ -101,7 +126,7 @@ pub struct Mapping {
     // pub strand: Strand,
     // pub trans_strand: Strand,
     // cdef uint8_t _mapq, _is_primary
-    
+
     // pub is_primary: bool,
     // cdef int _seg_id
     // pub seg_id: u32,
@@ -113,8 +138,14 @@ pub struct Mapping {
     // pub score0: i32,
 }
 
-pub struct ThreadLocalBuffer {
-    pub buf: *mut mm_tbuf_t,
+// Thread local buffer (memory management) for minimap2
+thread_local! {
+    static BUF: RefCell<ThreadLocalBuffer> = RefCell::new(ThreadLocalBuffer::new());
+}
+
+/// ThreadLocalBuffer for minimap2 memory management
+struct ThreadLocalBuffer {
+    buf: *mut mm_tbuf_t,
 }
 
 impl ThreadLocalBuffer {
@@ -124,6 +155,7 @@ impl ThreadLocalBuffer {
     }
 }
 
+/// Handle destruction of thread local buffer properly.
 impl Drop for ThreadLocalBuffer {
     fn drop(&mut self) {
         unsafe { mm_tbuf_destroy(self.buf) };
@@ -136,99 +168,31 @@ impl Default for ThreadLocalBuffer {
     }
 }
 
+/// Aligner struct, mimicking minimap2's python interface
 #[derive(Debug, Clone)]
 pub struct Aligner {
-    idxopt: mm_idxopt_t,
-    mapopt: mm_mapopt_t,
-    idx: Option<*mut mm_idx_t>,
-    idx_reader: Option<*mut mm_idx_reader_t>,
-    threads: usize,
-    /* TODO: Goals for better ergonomics...
+    /// Index options passed to minimap2 (mm_idxopt_t)
+    pub idxopt: IdxOpt,
 
-    // mm_idx_opt
-    pub k: u16,
-    pub w: u16,
-    pub idxflag: u16,
-    pub bucket_bits: u16,
-    pub mini_batch_size_idx: i64, // Renamed from mini_batch_size
-    pub batch_size: u64,
+    /// Mapping options passed to minimap2 (mm_mapopt_t)
+    pub mapopt: MapOpt,
 
-    // mapopt
-    pub mapflag: i64,
-    pub seed: i32,
-    pub sdust_threshold: i32, // Renamed from sdust_thres
-    pub max_qlen: i32,
-    pub bw: i32,
-    pub bw_long: i32,
-    pub max_gap: i32,
-    pub max_gap_ref: i32,
-    pub max_frag_len: i32,
-    pub max_chain_skip: i32,
-    pub max_chain_iter: i32,
-    pub min_cnt: i32,
-    pub min_chain_score: i32,
-    pub chain_gap_scale: f32,
-    pub chain_skip_scale: f32,
-    pub rmq_size_cap: i32,
-    pub rmq_inner_dist: i32,
-    pub rmq_rescue_size: i32,
-    pub rmq_rescue_ratio: f32,
-    pub mask_level: f32,
-    pub mask_len: i32,
-    pub pri_ratio: f32,
-    pub best_n: i32,
-    pub alt_drop: f32,
-    pub a: i32,
-    pub b: i32,
-    pub q: i32,
-    pub e: i32,
-    pub q2: i32,
-    pub e2: i32,
-    pub sc_ambi: i32,
-    pub noncan: i32,
-    pub junc_bonus: i32,
-    pub zdrop: i32,
-    pub zdrop_inv: i32,
-    pub end_bonus: i32,
-    pub min_dp_max: i32,
-    pub min_ksw_len: i32,
-    pub anchor_ext_len: i32,
-    pub anchor_ext_shift: i32,
-    pub max_clip_ratio: f32,
-    pub rank_min_len: i32,
-    pub rank_frac: f32,
-    pub pe_ori: i32,
-    pub pe_bonus: i32,
-    pub mid_occ_frac: f32,
-    pub q_occ_frac: f32,
-    pub min_mid_occ: i32,
-    pub max_mid_occ: i32,
-    pub mid_occ: i32,
-    pub max_occ: i32,
-    pub max_max_occ: i32,
-    pub occ_dist: i32,
-    pub mini_batch_size_map: i64, // Renamed from mini_batch_size
-    pub max_sw_mat: i64,
-    pub cap_kalloc: i64,
-    pub split_prefix: Vec<u8>,
-    */
+    /// Number of threads to create the index with
+    pub threads: usize,
+
+    /// Index created by minimap2
+    pub idx: Option<*mut mm_idx_t>,
+
+    /// Index reader created by minimap2
+    pub idx_reader: Option<*mut mm_idx_reader_t>,
 }
 
+/// Create a default aligner
 impl Default for Aligner {
     fn default() -> Self {
-        let mut mm_idxopt = MaybeUninit::uninit();
-        let mut mm_mapopt = MaybeUninit::uninit();
-
-        unsafe {
-            mm_set_opt(
-                std::ptr::null(),
-                mm_idxopt.as_mut_ptr(),
-                mm_mapopt.as_mut_ptr(),
-            )
-        };
         Self {
-            idxopt: unsafe { mm_idxopt.assume_init() },
-            mapopt: unsafe { mm_mapopt.assume_init() },
+            idxopt: Default::default(),
+            mapopt: Default::default(),
             threads: 1,
             idx: None,
             idx_reader: None,
@@ -236,60 +200,265 @@ impl Default for Aligner {
     }
 }
 
-impl Aligner {
-    pub fn with_preset(preset: Preset) -> Self {
-        let mut mm_idxopt = MaybeUninit::uninit();
-        let mut mm_mapopt = MaybeUninit::uninit();
+/// Ergonomic function for Aligner.
+///
+/// TODO: Make it simpler (and less redundant) with functions?
+/// Such that it'd be ..map_ont() or ..map_ava() instead?
+///
+/// ```
+/// # use minimap2::*;
+/// Aligner {
+///   threads: 8,
+///   mapopt: MapOpt {
+///     best_n: 10,
+///     ..Default::default()
+///   },
+///  ..preset(Preset::MapOnt)
+/// };
+/// ```
+pub fn preset(preset: Preset) -> Aligner {
+    Aligner::preset(preset)
+}
 
-        #[cfg(test)]
-        println!("Preset: {:#?}", preset);
+/// Ergonomic function for Aligner. Just to see if people prefer this over the
+/// preset() function.
+/// ```
+/// # use minimap2::*;
+/// Aligner {
+///   threads: 8,
+///  ..map_ont()
+/// };
+/// ```
+pub fn map_ont() -> Aligner {
+    Aligner::preset(Preset::MapOnt)
+}
+
+/// Ergonomic function for Aligner. Just to see if people prefer this over the
+/// preset() function.
+/// ```
+/// # use minimap2::*;
+/// Aligner {
+///   threads: 8,
+///  ..ava_ont()
+/// };
+/// ```
+pub fn ava_ont() -> Aligner {
+    Aligner::preset(Preset::AvaOnt)
+}
+
+/// Ergonomic function for Aligner. Just to see if people prefer this over the
+/// preset() function.
+/// ```
+/// # use minimap2::*;
+/// Aligner {
+///   threads: 8,
+///  ..map10k()
+/// };
+/// ```
+pub fn map10k() -> Aligner {
+    Aligner::preset(Preset::Map10k)
+}
+
+/// Ergonomic function for Aligner. Just to see if people prefer this over the
+/// preset() function.
+/// ```
+/// # use minimap2::*;
+/// Aligner {
+///   threads: 8,
+///  ..ava_pb()
+/// };
+/// ```
+pub fn ava_pb() -> Aligner {
+    Aligner::preset(Preset::AvaPb)
+}
+
+/// Ergonomic function for Aligner. Just to see if people prefer this over the
+/// preset() function.
+/// ```
+/// # use minimap2::*;
+/// Aligner {
+///   threads: 8,
+///  ..map_hifi()
+/// };
+/// ```
+pub fn map_hifi() -> Aligner {
+    Aligner::preset(Preset::MapHifi)
+}
+
+/// Ergonomic function for Aligner. Just to see if people prefer this over the
+/// preset() function.
+/// ```
+/// # use minimap2::*;
+/// Aligner {
+///   threads: 8,
+///  ..asm()
+/// };
+/// ```
+pub fn asm() -> Aligner {
+    Aligner::preset(Preset::Asm)
+}
+
+/// Ergonomic function for Aligner. Just to see if people prefer this over the
+/// preset() function.
+/// ```
+/// # use minimap2::*;
+/// Aligner {
+///   threads: 8,
+///  ..asm5()
+/// };
+/// ```
+pub fn asm5() -> Aligner {
+    Aligner::preset(Preset::Asm5)
+}
+/// Ergonomic function for Aligner. Just to see if people prefer this over the
+/// preset() function.
+/// ```
+/// # use minimap2::*;
+/// Aligner {
+///   threads: 8,
+///  ..asm10()
+/// };
+/// ```
+pub fn asm10() -> Aligner {
+    Aligner::preset(Preset::Asm10)
+}
+/// Ergonomic function for Aligner. Just to see if people prefer this over the
+/// preset() function.
+/// ```
+/// # use minimap2::*;
+/// Aligner {
+///   threads: 8,
+///  ..asm20()
+/// };
+/// ```
+pub fn asm20() -> Aligner {
+    Aligner::preset(Preset::Asm20)
+}
+
+/// Ergonomic function for Aligner. Just to see if people prefer this over the
+/// preset() function.
+/// ```
+/// # use minimap2::*;
+/// Aligner {
+///   threads: 8,
+///  ..short()
+/// };
+/// ```
+pub fn short() -> Aligner {
+    Aligner::preset(Preset::Short)
+}
+
+/// Ergonomic function for Aligner. Just to see if people prefer this over the
+/// preset() function.
+/// ```
+/// # use minimap2::*;
+/// Aligner {
+///   threads: 8,
+///  ..sr()
+/// };
+/// ```
+pub fn sr() -> Aligner {
+    Aligner::preset(Preset::Sr)
+}
+
+/// Ergonomic function for Aligner. Just to see if people prefer this over the
+/// preset() function.
+/// ```
+/// # use minimap2::*;
+/// Aligner {
+///   threads: 8,
+///  ..splice()
+/// };
+/// ```
+pub fn splice() -> Aligner {
+    Aligner::preset(Preset::Splice)
+}
+
+/// Ergonomic function for Aligner. Just to see if people prefer this over the
+/// preset() function.
+/// ```
+/// # use minimap2::*;
+/// Aligner {
+///   threads: 8,
+///  ..cdna()
+/// };
+/// ```
+pub fn cdna() -> Aligner {
+    Aligner::preset(Preset::Cdna)
+}
+
+impl Aligner {
+    /// Create an aligner using a preset.
+    pub fn preset(preset: Preset) -> Self {
+        let mut idxopt = IdxOpt::default();
+        let mut mapopt = MapOpt::default();
 
         unsafe {
-            mm_set_opt(
-                std::ptr::null(),
-                mm_idxopt.as_mut_ptr(),
-                mm_mapopt.as_mut_ptr(),
-            );
-            mm_set_opt(
-                preset.into(),
-                mm_idxopt.as_mut_ptr(),
-                mm_mapopt.as_mut_ptr(),
-            )
+            // Set preset
+            mm_set_opt(preset.into(), &mut idxopt, &mut mapopt)
         };
 
-        let mut mm_mapopt = unsafe { mm_mapopt.assume_init() };
-
         Self {
-            idxopt: unsafe { mm_idxopt.assume_init() },
-            mapopt: mm_mapopt,
+            idxopt: idxopt,
+            mapopt: mapopt,
             ..Default::default()
         }
     }
 
+    /// Set Alignment mode / cigar mode in minimap2
     pub fn with_cigar(mut self) -> Self {
+        // Make sure MM_F_CIGAR flag isn't already set
+        assert!((self.mapopt.flag & MM_F_CIGAR as i64) == 0);
+
         self.mapopt.flag |= MM_F_CIGAR as i64;
         self
     }
 
+    /// Set the number of threads (prefer to use the struct config)
     pub fn with_threads(mut self, threads: usize) -> Self {
         self.threads = threads;
         self
     }
 
-    pub fn with_index() {
-        // Index, but instead pass output as None. Placeholder
-        todo!();
-    }
+    /// Set index parameters for minimap2 using builder pattern
+    /// Creates the index as well with the given number of threads (set at struct creation)
+    ///
+    /// Parameters:
+    /// path: Location of pre-built index or FASTA/FASTQ file (may be gzipped or plaintext)
+    /// Output: Option (None) or a filename
+    ///
+    /// Returns the aligner with the index set
+    ///
+    /// ```
+    /// # use minimap2::*;
+    /// // Do not save the index file
+    /// Aligner {
+    ///   threads: 4, // Use 4 threads
+    ///  ..map_ont()
+    /// }.with_index("test_data/test_data.fasta", None);
+    ///
+    /// // Save the index file as my_index.mmi
+    /// Aligner {
+    ///   threads: 4, // Use 4 threads
+    ///  ..map_ont()
+    /// }.with_index("test_data/test_data.fasta", Some("my_index.mmi"));
+    ///
+    /// // Use the previously built index
+    /// Aligner {
+    ///   threads: 4, // Use 4 threads
+    ///  ..map_ont()
+    /// }.with_index("my_index.mmi", None);
+    /// ```
+    pub fn with_index(mut self, path: &str, output: Option<&str>) -> Result<Self, &'static str> {
+        // Confirm file exists
+        if !Path::new(path).exists() {
+            return Err("File does not exist");
+        }
 
-    pub fn with_named_index(
-        mut self,
-        path: &Path,
-        output: Option<&str>,
-    ) -> Result<Self, &'static str> {
-        let path = match path.to_str() {
-            Some(path) => path,
-            None => return Err("Invalid path"),
-        };
+        // Confirm file is not empty
+        if Path::new(path).metadata().unwrap().len() == 0 {
+            return Err("File is empty");
+        }
 
         let path = match std::ffi::CString::new(path) {
             Ok(path) => path,
@@ -337,6 +506,8 @@ impl Aligner {
         Ok(self)
     }
 
+    /// Map a single sequence to an index
+    /// not implemented yet!
     pub fn with_seq(mut self, seq: &[u8]) -> Result<Self, &'static str> {
         let seq = match std::ffi::CString::new(seq) {
             Ok(seq) => seq,
@@ -364,43 +535,40 @@ impl Aligner {
     // https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L164
     // TODO: I doubt extra_flags is working properly...
     // TODO: Python allows for paired-end mapping with seq2: Option<&[u8]>, but more work to implement
+    /// Aligns a given sequence (as bytes) to the index associated with this aligner
+    ///
+    /// Parameters:
+    /// seq: Sequence to align
+    /// cs: Whether to output CIGAR string
+    /// MD: Whether to output MD tag
+    /// max_frag_len: Maximum fragment length
+    /// extra_flags: Extra flags to pass to minimap2 as Vec<u64>
+    ///
     pub fn map(
-        &mut self,
+        &self,
         seq: &[u8],
         cs: bool,
-        MD: bool,
+        md: bool, // TODO
         max_frag_len: Option<usize>,
-        extra_flags: Option<i64>,
+        extra_flags: Option<Vec<u64>>,
     ) -> Result<Vec<Mapping>, &'static str> {
-        // cdef cmappy.mm_reg1_t *regs
-        let mut mm_reg: MaybeUninit<*mut mm_reg1_t> = MaybeUninit::uninit();
-
-        // Skipping, probably won't need??
-        // cdef cmappy.mm_hitpy_t h
-
-        // cdef ThreadBuffer b
-        let mut b: ThreadLocalBuffer = Default::default();
-
-        // cdef int n_regs
-        let mut n_regs: i32 = 0;
-
-        // cdef char *cs_str = NULL
-        let mut cs_str: *mut libc::c_char = std::ptr::null_mut();
-
-        // cdef int l_cs_str, m_cs_str = 0
-        let mut l_cs_str: i32 = 0;
-        let mut m_cs_str: i32 = 0;
-
-        // cdef void *km - Nah
-        // let mut km: *mut libc::c_void = std::ptr::null_mut();
-
-        // cdef cmappy.mm_mapopt_t map_opt
-        let mut map_opt = self.mapopt.clone();
-        // Already defined in self...
-
+        // Make sure index is set
         if !self.has_index() {
             return Err("No index");
         }
+
+        // Make sure sequence is not empty
+        if seq.len() == 0 {
+            return Err("Sequence is empty");
+        }
+
+        let mut mm_reg: MaybeUninit<*mut mm_reg1_t> = MaybeUninit::uninit();
+
+        let mut b: ThreadLocalBuffer = Default::default();
+
+        // Number of results
+        let mut n_regs: i32 = 0;
+        let mut map_opt = self.mapopt.clone();
 
         // if max_frag_len is not None: map_opt.max_frag_len = max_frag_len
         if let Some(max_frag_len) = max_frag_len {
@@ -409,18 +577,14 @@ impl Aligner {
 
         // if extra_flags is not None: map_opt.flag |= extra_flags
         if let Some(extra_flags) = extra_flags {
-            map_opt.flag |= extra_flags as i64;
+            for flag in extra_flags {
+                map_opt.flag |= flag as i64;
+            }
         }
 
-        // if buf is None: b = ThreadBuffer()
-        // else: b = buf
         let mappings = BUF.with(|buf| {
-            // No idea what this does...
-            // km = cmappy.mm_tbuf_get_km(b._b)
             let km = unsafe { mm_tbuf_get_km(buf.borrow_mut().buf) };
 
-            // Seq is already bytes
-            // _seq = seq if isinstance(seq, bytes) else seq.encode()
             mm_reg = MaybeUninit::new(unsafe {
                 mm_map(
                     *&self.idx.unwrap(),
@@ -437,36 +601,169 @@ impl Aligner {
 
             for i in 0..n_regs {
                 unsafe {
+                    let reg_ptr = (*mm_reg.as_ptr()).offset(i as isize);
+                    let const_ptr = reg_ptr as *const mm_reg1_t;
                     let reg: mm_reg1_t = *(*mm_reg.as_ptr().offset(i as isize));
-                    // println!("New Match");
-                    // println!("{:#?}", reg);
-                    let contig: *mut ::std::os::raw::c_char = (*(*(self.idx.unwrap())).seq.offset(reg.rid as isize)).name;
-                    // println!("Contig: {}", std::ffi::CStr::from_ptr(contig).to_str().unwrap());
 
-                    let p_is_null = reg.p.is_null();
+                    // TODO: Get all contig names and store as Cow<String> somewhere centralized...
+                    let contig: *mut ::std::os::raw::c_char =
+                        (*(*(self.idx.unwrap())).seq.offset(reg.rid as isize)).name;
+
+                    let alignment = if !reg.p.is_null() {
+                        let p = &*reg.p;
+                        let n_cigar = p.n_cigar;
+                        let cigar: Vec<u32> = p.cigar.as_slice(n_cigar as usize).to_vec();
+                        if cs {
+                            // let mut cs_string: *mut std::ffi::c_char = std::ptr::null_mut();
+                            let mut cs_string: *mut std::ffi::c_char = std::ptr::null_mut();
+                            let mut m_cs_string: std::ffi::c_int = 0i32;
+
+                            let cs_len = mm_gen_cs(
+                                km,
+                                &mut cs_string,
+                                &mut m_cs_string,
+                                self.idx.unwrap(),
+                                const_ptr,
+                                seq.as_ptr() as *const i8,
+                                true.into()
+                                //1 as std::ffi::c_int,
+                            );
+
+                            let cs_string = std::ffi::CStr::from_ptr(cs_string)
+                                .to_str()
+                                .unwrap()
+                                .to_string();
+
+                            Some(Alignment {
+                                is_primary: true,
+                                cigar: Some(format!("cs:Z::{}", cs_string)),
+                            })
+                        } else {
+                            Some(Alignment { is_primary: true, cigar: None,})
+                        }
+                    } else {
+                        None
+                    };
+
+                    if !reg.p.is_null() {
+                        libc::free(reg.p as *mut std::ffi::c_void);
+                    }
 
                     mappings.push(Mapping {
-                        target_name: Some(std::ffi::CStr::from_ptr(contig).to_str().unwrap().to_string()),
-                        target_len: (*(*(self.idx.unwrap())).seq.offset(reg.rid as isize)).len as i32,
+                        target_name: Some(
+                            std::ffi::CStr::from_ptr(contig)
+                                .to_str()
+                                .unwrap()
+                                .to_string(),
+                        ),
+                        target_len: (*(*(self.idx.unwrap())).seq.offset(reg.rid as isize)).len
+                            as i32,
                         target_start: reg.rs,
                         target_end: reg.re,
                         query_name: None,
-                        query_len: None,
+                        query_len: NonZeroI32::new(seq.len() as i32),
                         query_start: reg.qs,
                         query_end: reg.qe,
-                        strand: if reg.rev() == 0 { Strand::Forward } else { Strand::Reverse },
-                        // trans_strand: Strand::Forward, // *(reg).p.trans_strand == 0 { Strand::Forward } else { Strand::Reverse },
-                        //nm: reg.blen - reg.mlen + p.as_ref().expect("Pointer Hell").n_ambi() as i32,
+                        strand: if reg.rev() == 0 {
+                            Strand::Forward
+                        } else {
+                            Strand::Reverse
+                        },
                         match_len: reg.mlen,
                         block_len: reg.blen,
                         mapq: reg.mapq(),
-                        alignment: None,
-                    })
+                        alignment,
+                    });
                 }
+
             }
+
+            unsafe { libc::free(mm_reg.assume_init() as *mut std::ffi::c_void); }
 
             mappings
         });
+        Ok(mappings)
+    }
+
+    /// Map entire file
+    /// Detects if file is gzip or not and if it's fastq/fasta or not
+    /// TODO: Remove cs and md and make them options on the struct
+    pub fn map_file(&self, file: &str, cs: bool, md: bool) -> Result<Vec<Mapping>, &'static str> {
+        // Make sure index is set
+        if self.idx.is_none() {
+            return Err("No index");
+        }
+
+        // Check that file exists 
+        if !Path::new(file).exists() {
+            return Err("File does not exist");
+        }
+
+        // Check that file isn't empty...
+        let metadata = std::fs::metadata(file).unwrap();
+        if metadata.len() == 0 {
+            return Err("File is empty");
+        }
+
+        // Read the first 50 bytes of the file
+        let mut f = std::fs::File::open(file).unwrap();
+        let mut buffer = [0; 50];
+        f.read(&mut buffer).unwrap();
+        // Close the file
+        drop(f);
+
+        // Check if the file is gzipped
+        let compression_type = detect_compression_format(&buffer).unwrap();
+        if compression_type != CompressionType::NONE && compression_type != CompressionType::GZIP {
+            return Err("Compression type is not supported");
+        }
+
+        // If gzipped, open it with a reader...
+        let mut reader: Box<dyn Read> = if compression_type == CompressionType::GZIP {
+            Box::new(GzDecoder::new(std::fs::File::open(file).unwrap()))
+        } else {
+            Box::new(std::fs::File::open(file).unwrap())
+        };
+
+        // Check the file type
+        let mut buffer = [0; 4];
+        reader.read(&mut buffer).unwrap();
+        let file_type = detect_file_format(&buffer).unwrap();
+        if file_type != FileFormat::FASTA && file_type != FileFormat::FASTQ {
+            return Err("File type is not supported");
+        }
+
+        // If gzipped, open it with a reader...
+        let mut reader: Box<dyn Read> = if compression_type == CompressionType::GZIP {
+            Box::new(GzDecoder::new(std::fs::File::open(file).unwrap()))
+        } else {
+            Box::new(std::fs::File::open(file).unwrap())
+        };
+
+        // Put into bufreader
+        let mut reader = std::io::BufReader::new(reader);
+
+        let reader: Box<dyn Iterator<Item = Result<Sequence, &'static str>>> = if file_type == FileFormat::FASTA {
+            Box::new(Fasta::from_buffer(&mut reader))
+        } else {
+            Box::new(Fastq::from_buffer(&mut reader))
+        };
+
+
+        // The output vec
+        let mut mappings = Vec::new();
+        
+        // Iterate over the sequences
+        for seq in reader {
+            let seq = seq.unwrap();
+            let mut seq_mappings = self.map(&seq.sequence.unwrap(), cs, md, None, None).unwrap();
+            for mut mapping in seq_mappings.iter_mut() {
+                mapping.query_name = seq.id.clone();
+            }
+
+            mappings.extend(seq_mappings);
+        }
+
         Ok(mappings)
     }
 
@@ -484,6 +781,65 @@ impl Drop for Aligner {
     }
 }
 
+#[derive(PartialEq, Eq)]
+pub enum FileFormat {
+    FASTA,
+    FASTQ,
+}
+
+#[allow(dead_code)]
+pub fn detect_file_format(buffer: &[u8]) -> Result<FileFormat, &'static str> {
+    let buffer = from_utf8(&buffer).expect("Unable to parse file as UTF-8");
+    if buffer.starts_with(">") {
+        Ok(FileFormat::FASTA)
+    } else if buffer.starts_with("@") {
+        Ok(FileFormat::FASTQ)
+    } else {
+        Err("Unknown file format")
+    }
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub enum CompressionType {
+    GZIP,
+    BZIP2,
+    XZ,
+    RAR,
+    ZSTD,
+    LZ4,
+    LZMA,
+    NONE,
+}
+
+#[derive(PartialEq, Eq, Clone, Debug, Default)]
+pub struct Sequence {
+    pub sequence: Option<Vec<u8>>,
+    pub scores: Option<Vec<u8>>,
+    pub header: Option<String>,
+    pub id: Option<String>,
+    /// Primarily used downstream, but when used for random access this is the offset from the start of the sequence
+    pub offset: usize,
+}
+
+
+/// Return the compression type of a file
+#[allow(dead_code)]
+pub fn detect_compression_format(buffer: &[u8]) -> Result<CompressionType, &'static str> {
+    Ok(match buffer {
+        [0x1F, 0x8B, ..] => CompressionType::GZIP,
+        [0x42, 0x5A, ..] => CompressionType::BZIP2,
+        [0xFD, b'7', b'z', b'X', b'Z', 0x00] => CompressionType::XZ,
+        [0x28, 0xB5, 0x2F, 0xFD, ..] => CompressionType::LZMA,
+        [0x5D, 0x00, ..] => CompressionType::LZMA,
+        [0x1F, 0x9D, ..] => CompressionType::LZMA,
+        [0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C] => CompressionType::ZSTD,
+        [0x04, 0x22, 0x4D, 0x18, ..] => CompressionType::LZ4,
+        [0x08, 0x22, 0x4D, 0x18, ..] => CompressionType::LZ4,
+        [0x52, 0x61, 0x72, 0x21, 0x1A, 0x07] => CompressionType::RAR,
+        _ => CompressionType::NONE,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -499,36 +855,88 @@ mod tests {
 
     #[test]
     fn create_index_file_missing() {
-        let result = Aligner::with_preset(Preset::MapOnt)
-            .with_threads(1)
-            .with_named_index(
-                Path::new("test_data/test.fa_FILE_NOT_FOUND"),
-                Some("test_FILE_NOT_FOUND.mmi"),
-            );
+        let result = Aligner::preset(Preset::MapOnt).with_threads(1).with_index(
+            "test_data/test.fa_FILE_NOT_FOUND",
+            Some("test_FILE_NOT_FOUND.mmi"),
+        );
         assert!(result.is_err());
     }
 
     #[test]
     fn create_index() {
-        let mut aligner = Aligner::with_preset(Preset::MapOnt).with_threads(1);
+        let mut aligner = Aligner::preset(Preset::MapOnt).with_threads(1);
 
         println!("{}", aligner.idxopt.w);
 
         assert!(aligner.idxopt.w == 10);
 
         aligner = aligner
-            .with_named_index(Path::new("test_data/test_data.fasta"), Some("test.mmi"))
+            .with_index("test_data/test_data.fasta", Some("test.mmi"))
             .unwrap();
     }
 
     #[test]
     fn test_mapping() {
-        let mut aligner = Aligner::with_preset(Preset::MapOnt).with_threads(1);
+        let mut aligner = Aligner {
+            mapopt: MapOpt {
+                seed: 42,
+                best_n: 1,
+                ..Default::default()
+            },
+            threads: 2,
+            ..preset(Preset::MapOnt)
+        };
+
         aligner = aligner
-            .with_named_index(Path::new("test_data/test_data.fasta"), Some("test.mmi"))
+            .with_index("test_data/test_data.fasta", Some("test.mmi"))
             .unwrap();
-        aligner.map("ATGAGCAAAATATTCTAAAGTGGAAACGGCACTAAGGTGAACTAAGCAACTTAGTGCAAAAc".as_bytes(), false, false, None, None).unwrap();
+
+        aligner
+            .map(
+                "ATGAGCAAAATATTCTAAAGTGGAAACGGCACTAAGGTGAACTAAGCAACTTAGTGCAAAAc".as_bytes(),
+                false,
+                false,
+                None,
+                None,
+            )
+            .unwrap();
         let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagttatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), false, false, None, None).unwrap();
+        println!("{:#?}", mappings);
+
+        let mut aligner = aligner.with_cigar();
+
+        aligner
+        .map(
+            "ATGAGCAAAATATTCTAAAGTGGAAACGGCACTAAGGTGAACTAAGCAACTTAGTGCAAAAc".as_bytes(),
+            true,
+            false,
+            None,
+            None,
+        )
+        .unwrap();
+
+        let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagttatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), true, false, None, None).unwrap();
+        println!("{:#?}", mappings);
+    }
+
+    #[test]
+    fn test_aligner_config_and_mapping() {
+        let mut aligner = Aligner::preset(Preset::MapOnt).with_threads(1);
+        aligner = aligner
+            .with_index("test_data/test_data.fasta", Some("test.mmi"))
+            .unwrap()
+            .with_cigar();
+
+        aligner
+            .map(
+                "ATGAGCAAAATATTCTAAAGTGGAAACGGCACTAAGGTGAACTAAGCAACTTAGTGCAAAAc".as_bytes(),
+                true,
+                false,
+                None,
+                None,
+            )
+            .unwrap();
+        let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagGGACatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), true, true, None, None).unwrap();
         println!("{:#?}", mappings);
     }
 }
