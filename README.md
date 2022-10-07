@@ -71,13 +71,11 @@ for seq in reader {
 }
 ```
 
-There is a map_file function that works on an entire file, but it is not-lazy and thus not suitable for large files.
+There is a map_file function that works on an entire file, but it is not-lazy and thus not suitable for large files. It may be removed in the future or moved to a separate lib.
 
 ```rust
 let mappings: Result<Vec<Mapping>> = aligner.map_file("query.fa", false, false);
 ```
-
-
 
 ## Multithreading
 Untested, however the thread_local buffer is already set, so theoretically it could work. It's also the weekend, so.... Next week. I may or may not implement it in here, torn between a hold-your-hand library and a lightweight library for those who want to use their own solutions. This may get split into two separate libraries for that very reason (following the [zstd](https://github.com/gyscos/zstd-rs) concept).
