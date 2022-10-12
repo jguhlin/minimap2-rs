@@ -10,7 +10,7 @@ Clang is required to build (probably....)
 minimap2 = "1.1.6"
 ```
 
-Tested with rustc 1.64.0 and nightly. So probably a good idea to upgrade:
+Tested with rustc 1.64.0 and nightly. So probably a good idea to upgrade before running. But let me know if you run into pain points with older versions and will try to fix!
 ```bash
 rustup update
 ```
