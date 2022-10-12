@@ -633,7 +633,7 @@ impl Aligner {
                         let cigar: Vec<u32> = p.cigar.as_slice(n_cigar as usize).to_vec();
                         if cs {
                             // let mut cs_string: *mut std::ffi::c_char = std::ptr::null_mut();
-                            let mut cs_string: *mut std::ffi::c_char = std::ptr::null_mut();
+                            let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
                             let mut m_cs_string: std::ffi::c_int = 0i32;
 
                             let cs_len = mm_gen_cs(

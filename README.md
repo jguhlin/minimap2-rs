@@ -1,13 +1,22 @@
 In development!
 
+![https://crates.io/crates/minimap2](https://img.shields.io/crates/v/minimap2.svg)
+![https://docs.rs/minimap2/latest/minimap2/](https://img.shields.io/docsrs/minimap2)
+
 # How to use
 ## Requirements
 Clang is required to build (probably....)
 ```toml
-minimap2 = "1.1.5"
+minimap2 = "1.1.6"
 ```
 
-## Use
+Tested with rustc 1.64.0 and nightly. So probably a good idea to upgrade:
+```bash
+rustup update
+```
+
+
+## Usage
 Create an Aligner 
 
 ```rust
@@ -78,7 +87,9 @@ let mappings: Result<Vec<Mapping>> = aligner.map_file("query.fa", false, false);
 ```
 
 ## Multithreading
-Untested, however the thread_local buffer is already set, so theoretically it could work. It's also the weekend, so.... Next week. I may or may not implement it in here, torn between a hold-your-hand library and a lightweight library for those who want to use their own solutions. This may get split into two separate libraries for that very reason (following the [zstd](https://github.com/gyscos/zstd-rs) concept).
+Untested, however the thread_local buffer is already set, so theoretically it could work. I may or may not implement it in here, torn between a hold-your-hand library and a lightweight library for those who want to use their own solutions. This may get split into two separate libraries for that very reason (following the [zstd](https://github.com/gyscos/zstd-rs) concept).
+
+So far multithreading only works for building the index and not for mapping.
 
 # Want feedback
 * Many fields are i32 / i8 to mimic the C environment, but would it make more sense to convert to u32 / u8 / usize?
@@ -119,9 +130,21 @@ Probably not freeing C memory somewhere.... Not sure yet, if so it's just leakin
 * Iterator interface for map_file
 * MORE TESTS
 
-# Changelog
-¯\\_(ツ)_/¯
+# Citation
+You should cite the minimap2 papers if you use this in your work. If you use this extensively, let me know and I'll add a way to cite this project as well with version.
 
+> Li, H. (2018). Minimap2: pairwise alignment for nucleotide sequences.
+> *Bioinformatics*, **34**:3094-3100. [doi:10.1093/bioinformatics/bty191][doi]
+
+and/or:
+
+> Li, H. (2021). New strategies to improve minimap2 alignment accuracy.
+> *Bioinformatics*, **37**:4572-4574. [doi:10.1093/bioinformatics/btab705][doi2]
+
+
+# Changelog
+## 1.1.6 
+Support slightly older versions of rustc by using libc:: rather than std::ffi for c_char (Thanks dwpeng!)
 
 
 ![Genomics Aotearoa](info/genomics-aotearoa.png)
