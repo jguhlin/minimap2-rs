@@ -1,7 +1,10 @@
-In development!
+A rust FFI library for [minimap2](https://github.com/lh3/minimap2/). In development! Feedback appreciated!
 
 ![https://crates.io/crates/minimap2](https://img.shields.io/crates/v/minimap2.svg)
 ![https://docs.rs/minimap2/latest/minimap2/](https://img.shields.io/docsrs/minimap2)
+
+# Structure
+minimap2-sys is the library of the raw FFI bindings to minimap2. minimap2 is the most rusty version.
 
 # How to use
 ## Requirements
@@ -14,7 +17,6 @@ Tested with rustc 1.64.0 and nightly. So probably a good idea to upgrade before 
 ```bash
 rustup update
 ```
-
 
 ## Usage
 Create an Aligner 
@@ -144,7 +146,8 @@ and/or:
 
 # Changelog
 ## 1.1.6 
-Support slightly older versions of rustc by using libc:: rather than std::ffi for c_char (Thanks dwpeng!)
+* Support slightly older versions of rustc by using libc:: rather than std::ffi for c_char (Thanks dwpeng!)
+* Use fffx module for fasta/q parsing
 
 
 ![Genomics Aotearoa](info/genomics-aotearoa.png)

@@ -15,11 +15,7 @@ pub type MapOpt = mm_mapopt_t;
 /// Alias for mm_idxopt_t
 pub type IdxOpt = mm_idxopt_t;
 
-pub mod fasta;
-pub mod fastq;
-
-pub use fasta::Fasta;
-pub use fastq::Fastq;
+pub use fffx::{Fasta, Fastq, Sequence};
 
 // TODO: Probably a better way to handle this...
 static MAP_ONT: &str = "map-ont\0";
@@ -334,7 +330,7 @@ pub fn asm5() -> Aligner {
 /// # use minimap2::*;
 /// Aligner {
 ///   threads: 8,
-///  ..asm10()
+///  ..asm10()fffx
 /// };
 /// ```
 pub fn asm10() -> Aligner {
@@ -834,16 +830,6 @@ pub enum CompressionType {
     LZ4,
     LZMA,
     NONE,
-}
-
-#[derive(PartialEq, Eq, Clone, Debug, Default)]
-pub struct Sequence {
-    pub sequence: Option<Vec<u8>>,
-    pub scores: Option<Vec<u8>>,
-    pub header: Option<String>,
-    pub id: Option<String>,
-    /// Primarily used downstream, but when used for random access this is the offset from the start of the sequence
-    pub offset: usize,
 }
 
 /// Return the compression type of a file
