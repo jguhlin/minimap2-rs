@@ -133,7 +133,7 @@ Probably not freeing C memory somewhere.... Not sure yet, if so it's just leakin
 * MORE TESTS
 
 # Citation
-You should cite the minimap2 papers if you use this in your work. If you use this extensively, let me know and I'll add a way to cite this project as well with version.
+You should cite the minimap2 papers if you use this in your work. If you use this extensively, let me know and I'll add a way to cite this project as well with version (Zenodo, probably).
 
 > Li, H. (2018). Minimap2: pairwise alignment for nucleotide sequences.
 > *Bioinformatics*, **34**:3094-3100. [doi:10.1093/bioinformatics/bty191][doi]
