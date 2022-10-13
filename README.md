@@ -10,7 +10,7 @@ minimap2-sys is the library of the raw FFI bindings to minimap2. minimap2 is the
 ## Requirements
 Clang is required to build (probably....)
 ```toml
-minimap2 = "1.1.6"
+minimap2 = "0.1.7"
 ```
 
 Tested with rustc 1.64.0 and nightly. So probably a good idea to upgrade before running. But let me know if you run into pain points with older versions and will try to fix!
