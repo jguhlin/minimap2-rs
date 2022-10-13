@@ -330,7 +330,7 @@ pub fn asm5() -> Aligner {
 /// # use minimap2::*;
 /// Aligner {
 ///   threads: 8,
-///  ..asm10()fffx
+///  ..asm10()
 /// };
 /// ```
 pub fn asm10() -> Aligner {
@@ -630,7 +630,7 @@ impl Aligner {
                         if cs {
                             // let mut cs_string: *mut std::ffi::c_char = std::ptr::null_mut();
                             let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
-                            let mut m_cs_string: std::ffi::c_int = 0i32;
+                            let mut m_cs_string: libc::c_int = 0i32;
 
                             let cs_len = mm_gen_cs(
                                 km,
@@ -639,7 +639,7 @@ impl Aligner {
                                 self.idx.unwrap(),
                                 const_ptr,
                                 seq.as_ptr() as *const i8,
-                                true.into(), //1 as std::ffi::c_int,
+                                true.into(),
                             );
 
                             let cs_string = std::ffi::CStr::from_ptr(cs_string)

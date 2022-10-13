@@ -145,7 +145,9 @@ and/or:
 
 
 # Changelog
-## 1.1.6 
+## 0.1.7
+* use libc instead of std:ffi::c_int as well
+## 0.1.6 
 * Support slightly older versions of rustc by using libc:: rather than std::ffi for c_char (Thanks dwpeng!)
 * Use fffx module for fasta/q parsing
 
