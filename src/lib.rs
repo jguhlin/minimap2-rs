@@ -183,7 +183,7 @@ impl Default for ThreadLocalBuffer {
 /// };
 /// ```
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Aligner {
     /// Index options passed to minimap2 (mm_idxopt_t)
     pub idxopt: IdxOpt,
@@ -195,10 +195,10 @@ pub struct Aligner {
     pub threads: usize,
 
     /// Index created by minimap2
-    pub idx: Option<*mut mm_idx_t>,
+    pub idx: Option<mm_idx_t>,
 
     /// Index reader created by minimap2
-    pub idx_reader: Option<*mut mm_idx_reader_t>,
+    pub idx_reader: Option<mm_idx_reader_t>,
 }
 
 /// Create a default aligner
@@ -491,31 +491,26 @@ impl Aligner {
             mm_idx_reader_open(path.as_ptr(), &self.idxopt, output.as_ptr())
         });
 
-        unsafe {
-            if idx_reader.assume_init().is_null() {
-                return Err("Failed to create index reader - File not found?");
-            }
-        }
-
-        self.idx_reader = Some(unsafe { idx_reader.assume_init() });
-
         let mut idx: MaybeUninit<*mut mm_idx_t> = MaybeUninit::uninit();
 
+        let mut idx_reader = unsafe { idx_reader.assume_init() };
+
         unsafe {
-            // Test reading? Just following: https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L147
+            // Just a test read? Just following: https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L147
             idx = MaybeUninit::new(mm_idx_reader_read(
-                self.idx_reader.unwrap(),
+                // self.idx_reader.as_mut().unwrap() as *mut mm_idx_reader_t,
+                &mut *idx_reader as *mut mm_idx_reader_t,
                 self.threads as libc::c_int,
             ));
             // Close the reader
-            mm_idx_reader_close(self.idx_reader.unwrap());
+            mm_idx_reader_close(idx_reader);
             // Set index opts
             mm_mapopt_update(&mut self.mapopt, *idx.as_ptr());
             // Idx index name
             mm_idx_index_name(idx.assume_init());
         }
 
-        self.idx = Some(unsafe { idx.assume_init() });
+        self.idx = Some(unsafe { *idx.assume_init() });
 
         Ok(self)
     }
@@ -601,7 +596,7 @@ impl Aligner {
 
             mm_reg = MaybeUninit::new(unsafe {
                 mm_map(
-                    *&self.idx.unwrap(),
+                    &self.idx.unwrap() as *const mm_idx_t,
                     seq.len() as i32,
                     seq.as_ptr() as *const i8,
                     &mut n_regs,
@@ -621,7 +616,7 @@ impl Aligner {
 
                     // TODO: Get all contig names and store as Cow<String> somewhere centralized...
                     let contig: *mut ::std::os::raw::c_char =
-                        (*(*(self.idx.unwrap())).seq.offset(reg.rid as isize)).name;
+                        (*(self.idx.unwrap()).seq.offset(reg.rid as isize)).name;
 
                     let alignment = if !reg.p.is_null() {
                         let p = &*reg.p;
@@ -636,7 +631,7 @@ impl Aligner {
                                 km,
                                 &mut cs_string,
                                 &mut m_cs_string,
-                                self.idx.unwrap(),
+                                &self.idx.unwrap() as *const mm_idx_t,
                                 const_ptr,
                                 seq.as_ptr() as *const i8,
                                 true.into(),
@@ -672,7 +667,7 @@ impl Aligner {
                                 .unwrap()
                                 .to_string(),
                         ),
-                        target_len: (*(*(self.idx.unwrap())).seq.offset(reg.rid as isize)).len
+                        target_len: (*(self.idx.unwrap()).seq.offset(reg.rid as isize)).len
                             as i32,
                         target_start: reg.rs,
                         target_end: reg.re,
@@ -794,13 +789,23 @@ impl Aligner {
     }
 }
 
+/* TODO: This stopped working when we switched to not storing raw pointers but the structs themselves
+// Since Rust is now handling the structs, I think memory gets freed that way, maybe this is no longer
+// necessary?
+// TODO: Test for memory leaks
+
 impl Drop for Aligner {
     fn drop(&mut self) {
-        if self.idx.is_some() {
-            unsafe { mm_idx_destroy(self.idx.unwrap()) };
+        if self.idx.is_some() { 
+            println!("Doing the drop");
+            let mut idx: mm_idx_t = self.idx.take().unwrap();
+            let ptr: *mut mm_idx_t = &mut idx;
+            unsafe { mm_idx_destroy(ptr) };
+            std::mem::forget(idx);
+            println!("Done the drop");
         }
     }
-}
+}*/
 
 #[derive(PartialEq, Eq)]
 pub enum FileFormat {
