@@ -13,8 +13,8 @@ struct Cli {
     query: String,
 }
 
-enum WorkQueue {
-    Work(Sequence),
+enum WorkQueue<T> {
+    Work(T),
     Done,
 }
 
