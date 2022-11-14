@@ -59,8 +59,8 @@ fn main() {
         panic!("File type is not supported");
     }
 
-    let work_queue = Arc::new(ArrayQueue::new(128));
-    let results_queue = Arc::new(ArrayQueue::new(128));
+    let work_queue = Arc::new(ArrayQueue::<WorkQueue<Sequence>>::new(128));
+    let results_queue = Arc::new(ArrayQueue::<WorkQueue<Vec<Mapping>>>::new(128));
     // TODO: Make threads clap argument
 
     // 8 threads
