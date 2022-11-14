@@ -596,7 +596,7 @@ impl Aligner {
 
             mm_reg = MaybeUninit::new(unsafe {
                 mm_map(
-                    &self.idx.unwrap() as *const mm_idx_t,
+                    &self.idx.as_ref().unwrap() as *const mm_idx_t,
                     seq.len() as i32,
                     seq.as_ptr() as *const i8,
                     &mut n_regs,
