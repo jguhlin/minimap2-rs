@@ -72,19 +72,22 @@ fn main() {
         let mut aligner = aligner.clone();
 
         std::thread::spawn(move || loop {
+            let backoff = crossbeam::utils::Backoff::new();
             let work = work_queue.pop();
             match work {
                 Some(WorkQueue::Work(sequence)) => {
+                    println!("Got work");
                     let alignment = aligner
                         .map(&sequence.sequence.unwrap(), false, false, None, None)
                         .expect("Unable to align");
+                    println!("Alignment len: {}", alignment.len());
                     results_queue.push(alignment);
                 }
                 Some(WorkQueue::Done) => {
                     break;
                 }
                 None => {
-                    break;
+                    backoff.snooze();
                 }
             }
         });
