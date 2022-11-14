@@ -81,9 +81,11 @@ fn main() {
                         .map(&sequence.sequence.unwrap(), false, false, None, None)
                         .expect("Unable to align");
                     println!("Alignment len: {}", alignment.len());
-                    results_queue.push(alignment);
+                    results_queue.push(WorkQueue::Work(alignment));
                 }
                 Some(WorkQueue::Done) => {
+                    println!("Got done");
+                    results_queue.push(WorkQueue::Done);
                     break;
                 }
                 None => {
@@ -124,12 +126,18 @@ fn main() {
     loop {
         let result = results_queue.pop();
         match result {
-            Some(alignment) => {
+            Some(WorkQueue::Work(alignment)) => {
                 println!("{:#?}", alignment);
-            }
-            None => {
+            },
+            Some(WorkQueue::Done) => {
                 break;
+            },
+            None => {
+                std::thread::sleep(std::time::Duration::from_millis(100));
             }
+
+
+            
         }
     }
 }
