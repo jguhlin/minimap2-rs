@@ -9,6 +9,7 @@ edition = "2021"
 minimap2 = { path = ".." }
 clap = {version = "4.0.10", features = ["derive"] }
 flate2 = { version = "1.0.17", features = ["zlib-ng"], default-features = false }
+crossbeam = "0.8.2"
 
 [profile.release]
 opt-level = 3

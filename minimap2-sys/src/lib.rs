@@ -5,6 +5,10 @@
 // #[cfg(feature = "bindgen")]
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
+unsafe impl Send for mm_idx_t {}
+unsafe impl Send for mm_idx_reader_t {}
+unsafe impl Send for mm_mapopt_t {}
+
 use std::mem::MaybeUninit;
 
 impl Default for mm_mapopt_t {
