@@ -614,7 +614,7 @@ impl Aligner {
 
             let mut mappings = Vec::with_capacity(n_regs as usize);
 
-            println!("5..");
+            println!("5.. {}", n_regs);
             for i in 0..n_regs {
                 unsafe {
                     let reg_ptr = (*mm_reg.as_ptr()).offset(i as isize);
