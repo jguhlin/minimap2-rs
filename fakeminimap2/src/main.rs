@@ -64,7 +64,7 @@ fn main() {
     // TODO: Make threads clap argument
 
     // 8 threads
-    for i in 0..8 {
+    for i in 0..1 {
         let work_queue = Arc::clone(&work_queue);
         let results_queue = Arc::clone(&results_queue);
 
