@@ -145,6 +145,8 @@ and/or:
 
 
 # Changelog
+## 0.1.8
+* Multithreading support (use less raw pointers, and treat more like rust Struct's)
 ## 0.1.7
 * use libc instead of std:ffi::c_int as well
 ## 0.1.6 
