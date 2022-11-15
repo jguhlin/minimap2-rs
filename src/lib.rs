@@ -624,7 +624,8 @@ impl Aligner {
 
                     // TODO: Get all contig names and store as Cow<String> somewhere centralized...
                     let idx = self.idx.as_ref().unwrap();
-                    println!("{:#?}", idx.seq);
+                    println!("{:#?}", reg.rid as isize);
+                    println!("{:#?}", idx.seq.name);
                     let contig: *mut ::std::os::raw::c_char =
                         (*(self.idx.unwrap()).seq.offset(reg.rid as isize)).name;
                     
