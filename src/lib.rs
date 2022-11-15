@@ -634,6 +634,7 @@ impl Aligner {
                         let n_cigar = p.n_cigar;
                         let cigar: Vec<u32> = p.cigar.as_slice(n_cigar as usize).to_vec();
                         if cs {
+                            println!("8.1..");
                             // let mut cs_string: *mut std::ffi::c_char = std::ptr::null_mut();
                             let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
                             let mut m_cs_string: libc::c_int = 0i32;
@@ -658,7 +659,7 @@ impl Aligner {
                                 cigar: Some(format!("cs:Z::{}", cs_string)),
                             })
                         } else {
-                            println!("8.1..");
+                            println!("8.2..");
                             Some(Alignment {
                                 is_primary: true,
                                 cigar: None,
