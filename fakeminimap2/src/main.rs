@@ -64,8 +64,7 @@ fn main() {
     // TODO: Make threads clap argument
 
     // 8 threads
-    for i in 0..1 {
-        println!("Starting thread: {}", i);
+    for i in 0..8 {
         let work_queue = Arc::clone(&work_queue);
         let results_queue = Arc::clone(&results_queue);
 
@@ -77,15 +76,12 @@ fn main() {
             let work = work_queue.pop();
             match work {
                 Some(WorkQueue::Work(sequence)) => {
-                    println!("Got work");
                     let alignment = aligner
                         .map(&sequence.sequence.unwrap(), false, false, None, None)
                         .expect("Unable to align");
-                    println!("Alignment len: {}", alignment.len());
                     results_queue.push(WorkQueue::Work(alignment));
                 }
                 Some(WorkQueue::Done) => {
-                    println!("Got done");
                     results_queue.push(WorkQueue::Done);
                     break;
                 }

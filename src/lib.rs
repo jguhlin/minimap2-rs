@@ -573,13 +573,9 @@ impl Aligner {
 
         let mut mm_reg: MaybeUninit<*mut mm_reg1_t> = MaybeUninit::uninit();
 
-        println!("1..");
-
         // Number of results
         let mut n_regs: i32 = 0;
         let mut map_opt = self.mapopt.clone();
-
-        println!("2..");
 
         // if max_frag_len is not None: map_opt.max_frag_len = max_frag_len
         if let Some(max_frag_len) = max_frag_len {
@@ -592,8 +588,6 @@ impl Aligner {
                 map_opt.flag |= flag as i64;
             }
         }
-
-        println!("3..");
 
         let mappings = BUF.with(|buf| {
             let km = unsafe { mm_tbuf_get_km(buf.borrow_mut().buf) };
@@ -610,33 +604,24 @@ impl Aligner {
                 )
             });
 
-            println!("4..");
-
             let mut mappings = Vec::with_capacity(n_regs as usize);
 
-            println!("5.. {}", n_regs);
             for i in 0..n_regs {
                 unsafe {
                     let reg_ptr = (*mm_reg.as_ptr()).offset(i as isize);
+                    // println!("{:#?}", *reg_ptr);
                     let const_ptr = reg_ptr as *const mm_reg1_t;
-                    let reg: mm_reg1_t = *(*mm_reg.as_ptr().offset(i as isize));
-                    println!("6..");
+                    let reg: mm_reg1_t = *reg_ptr;
 
                     // TODO: Get all contig names and store as Cow<String> somewhere centralized...
-                    println!("{:#?}", reg.rid as u32);
-                    println!("{:#?}", self.idx.as_ref().unwrap().seq);
                     let contig: *mut ::std::os::raw::c_char =
                         (*(self.idx.unwrap()).seq.offset(reg.rid as isize)).name;
                     
-                    println!("7..");
-
                     let alignment = if !reg.p.is_null() {
-                        println!("8.0..");
                         let p = &*reg.p;
                         let n_cigar = p.n_cigar;
                         let cigar: Vec<u32> = p.cigar.as_slice(n_cigar as usize).to_vec();
                         if cs {
-                            println!("8.1..");
                             // let mut cs_string: *mut std::ffi::c_char = std::ptr::null_mut();
                             let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
                             let mut m_cs_string: libc::c_int = 0i32;
@@ -661,7 +646,6 @@ impl Aligner {
                                 cigar: Some(format!("cs:Z::{}", cs_string)),
                             })
                         } else {
-                            println!("8.2..");
                             Some(Alignment {
                                 is_primary: true,
                                 cigar: None,
@@ -670,12 +654,6 @@ impl Aligner {
                     } else {
                         None
                     };
-
-                    // if !reg.p.is_null() {
-                    // libc::free(reg.p as *mut std::ffi::c_void);
-                    // }
-
-                    println!("9..");
 
                     mappings.push(Mapping {
                         target_name: Some(
@@ -704,10 +682,6 @@ impl Aligner {
                     });
                 }
             }
-
-            println!("9..");
-
-            // unsafe { libc::free(mm_reg.assume_init() as *mut std::ffi::c_void); }
 
             mappings
         });
