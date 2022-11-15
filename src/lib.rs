@@ -573,11 +573,13 @@ impl Aligner {
 
         let mut mm_reg: MaybeUninit<*mut mm_reg1_t> = MaybeUninit::uninit();
 
-        let mut b: ThreadLocalBuffer = Default::default();
+        println!("1..");
 
         // Number of results
         let mut n_regs: i32 = 0;
         let mut map_opt = self.mapopt.clone();
+
+        println!("2..");
 
         // if max_frag_len is not None: map_opt.max_frag_len = max_frag_len
         if let Some(max_frag_len) = max_frag_len {
@@ -590,6 +592,8 @@ impl Aligner {
                 map_opt.flag |= flag as i64;
             }
         }
+
+        println!("3..");
 
         let mappings = BUF.with(|buf| {
             let km = unsafe { mm_tbuf_get_km(buf.borrow_mut().buf) };
@@ -606,13 +610,17 @@ impl Aligner {
                 )
             });
 
+            println!("4..");
+
             let mut mappings = Vec::with_capacity(n_regs as usize);
 
+            println!("5..");
             for i in 0..n_regs {
                 unsafe {
                     let reg_ptr = (*mm_reg.as_ptr()).offset(i as isize);
                     let const_ptr = reg_ptr as *const mm_reg1_t;
                     let reg: mm_reg1_t = *(*mm_reg.as_ptr().offset(i as isize));
+                    println!("6..");
 
                     // TODO: Get all contig names and store as Cow<String> somewhere centralized...
                     let contig: *mut ::std::os::raw::c_char =
@@ -636,6 +644,7 @@ impl Aligner {
                                 seq.as_ptr() as *const i8,
                                 true.into(),
                             );
+                            println!("7..");
 
                             let cs_string = std::ffi::CStr::from_ptr(cs_string)
                                 .to_str()
@@ -659,6 +668,8 @@ impl Aligner {
                     // if !reg.p.is_null() {
                     // libc::free(reg.p as *mut std::ffi::c_void);
                     // }
+
+                    println!("8..");
 
                     mappings.push(Mapping {
                         target_name: Some(
@@ -687,6 +698,8 @@ impl Aligner {
                     });
                 }
             }
+
+            println!("9..");
 
             // unsafe { libc::free(mm_reg.assume_init() as *mut std::ffi::c_void); }
 
