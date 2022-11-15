@@ -625,8 +625,11 @@ impl Aligner {
                     // TODO: Get all contig names and store as Cow<String> somewhere centralized...
                     let contig: *mut ::std::os::raw::c_char =
                         (*(self.idx.unwrap()).seq.offset(reg.rid as isize)).name;
+                    
+                    println!("7..");
 
                     let alignment = if !reg.p.is_null() {
+                        println!("8.0..");
                         let p = &*reg.p;
                         let n_cigar = p.n_cigar;
                         let cigar: Vec<u32> = p.cigar.as_slice(n_cigar as usize).to_vec();
@@ -644,7 +647,6 @@ impl Aligner {
                                 seq.as_ptr() as *const i8,
                                 true.into(),
                             );
-                            println!("7..");
 
                             let cs_string = std::ffi::CStr::from_ptr(cs_string)
                                 .to_str()
@@ -656,6 +658,7 @@ impl Aligner {
                                 cigar: Some(format!("cs:Z::{}", cs_string)),
                             })
                         } else {
+                            println!("8.1..");
                             Some(Alignment {
                                 is_primary: true,
                                 cigar: None,
@@ -669,7 +672,7 @@ impl Aligner {
                     // libc::free(reg.p as *mut std::ffi::c_void);
                     // }
 
-                    println!("8..");
+                    println!("9..");
 
                     mappings.push(Mapping {
                         target_name: Some(
