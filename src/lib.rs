@@ -89,7 +89,7 @@ pub enum AlignmentType {
 /// Alignment struct when alignment flag is set
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Alignment {
-    pub is_primary: bool,
+    /// The edit distance as calculated in cmappy.h: `h->NM = r->blen - r->mlen + r->p->n_ambi;`
     pub nm: i32,
     pub cigar: Option<Vec<(u32, u8)>>,
     pub cigar_str: Option<String>,
@@ -113,6 +113,7 @@ pub struct Mapping {
     pub match_len: i32,
     pub block_len: i32,
     pub mapq: u32,
+    pub is_primary: bool,
     pub alignment: Option<Alignment>,
     // cdef int _ctg_len, _r_st, _r_en
     // pub contig_len: usize,
@@ -620,10 +621,11 @@ impl Aligner {
                     // TODO: Get all contig names and store as Cow<String> somewhere centralized...
                     let contig: *mut ::std::os::raw::c_char =
                         (*(self.idx.unwrap()).seq.offset(reg.rid as isize)).name;
+
+                    let is_primary = reg.parent == reg.id;
                     let alignment = if !reg.p.is_null() {
                         let p = &*reg.p;
 
-                        let is_primary = reg.parent == reg.id;
                         // calculate the edit distance
                         let nm = reg.blen - reg.mlen + p.n_ambi() as i32;
                         let n_cigar = p.n_cigar;
@@ -706,7 +708,6 @@ impl Aligner {
                         };
 
                         Some(Alignment {
-                            is_primary,
                             nm,
                             cigar,
                             cigar_str,
@@ -739,6 +740,7 @@ impl Aligner {
                         match_len: reg.mlen,
                         block_len: reg.blen,
                         mapq: reg.mapq(),
+                        is_primary,
                         alignment,
                     });
                 }
@@ -1033,6 +1035,7 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
         assert_eq!(observed.match_len, 168);
         assert_eq!(observed.block_len, 195);
         assert_eq!(observed.strand, Strand::Forward);
+        assert_eq!(observed.is_primary, true);
 
         let align = observed.alignment.as_ref().unwrap();
         assert_eq!(align.nm, 27);
