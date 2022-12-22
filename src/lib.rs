@@ -90,7 +90,11 @@ pub enum AlignmentType {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Alignment {
     pub is_primary: bool,
-    pub cigar: Option<String>,
+    pub nm: i32,
+    pub cigar: Option<Vec<(u32, u8)>>,
+    pub cigar_str: Option<String>,
+    pub md: Option<String>,
+    pub cs: Option<String>,
 }
 
 /// Mapping result
@@ -616,41 +620,99 @@ impl Aligner {
                     // TODO: Get all contig names and store as Cow<String> somewhere centralized...
                     let contig: *mut ::std::os::raw::c_char =
                         (*(self.idx.unwrap()).seq.offset(reg.rid as isize)).name;
-                    
                     let alignment = if !reg.p.is_null() {
                         let p = &*reg.p;
+
+                        let is_primary = reg.parent == reg.id;
+                        // calculate the edit distance
+                        let nm = reg.blen - reg.mlen + p.n_ambi() as i32;
                         let n_cigar = p.n_cigar;
-                        let cigar: Vec<u32> = p.cigar.as_slice(n_cigar as usize).to_vec();
-                        if cs {
-                            // let mut cs_string: *mut std::ffi::c_char = std::ptr::null_mut();
+                        // Create a vector of the cigar blocks
+                        let (cigar, cigar_str) = if n_cigar > 0 {
+                            let cigar = p
+                                .cigar
+                                .as_slice(n_cigar as usize)
+                                .to_vec()
+                                .iter()
+                                .map(|c| ((c >> 4) as u32, (c & 0xf) as u8)) // unpack the length and op code
+                                .collect::<Vec<(u32, u8)>>();
+                            let cigar_str = cigar
+                                .iter()
+                                .map(|(len, code)| {
+                                    let cigar_char = match code {
+                                        0 => "M",
+                                        1 => "I",
+                                        2 => "D",
+                                        3 => "N",
+                                        4 => "S",
+                                        5 => "H",
+                                        6 => "P",
+                                        7 => "=",
+                                        8 => "X",
+                                        _ => panic!("Invalid CIGAR code {code}"),
+                                    };
+                                    format!("{len}{cigar_char}")
+                                })
+                                .collect::<Vec<String>>()
+                                .join("");
+                            (Some(cigar), Some(cigar_str))
+                        } else {
+                            (None, None)
+                        };
+
+                        let (cs_str, md_str) = if cs || md {
                             let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
                             let mut m_cs_string: libc::c_int = 0i32;
 
-                            let cs_len = mm_gen_cs(
-                                km,
-                                &mut cs_string,
-                                &mut m_cs_string,
-                                &self.idx.unwrap() as *const mm_idx_t,
-                                const_ptr,
-                                seq.as_ptr() as *const i8,
-                                true.into(),
-                            );
+                            let cs_str = if cs {
+                                let cs_len = mm_gen_cs(
+                                    km,
+                                    &mut cs_string,
+                                    &mut m_cs_string,
+                                    &self.idx.unwrap() as *const mm_idx_t,
+                                    const_ptr,
+                                    seq.as_ptr() as *const i8,
+                                    true.into(),
+                                );
+                                let _cs_string = std::ffi::CStr::from_ptr(cs_string)
+                                    .to_str()
+                                    .unwrap()
+                                    .to_string();
+                                Some(_cs_string)
+                            } else {
+                                None
+                            };
 
-                            let cs_string = std::ffi::CStr::from_ptr(cs_string)
-                                .to_str()
-                                .unwrap()
-                                .to_string();
-
-                            Some(Alignment {
-                                is_primary: true,
-                                cigar: Some(format!("cs:Z::{}", cs_string)),
-                            })
+                            let md_str = if md {
+                                let md_len = mm_gen_MD(
+                                    km,
+                                    &mut cs_string,
+                                    &mut m_cs_string,
+                                    &self.idx.unwrap() as *const mm_idx_t,
+                                    const_ptr,
+                                    seq.as_ptr() as *const i8,
+                                );
+                                let _md_string = std::ffi::CStr::from_ptr(cs_string)
+                                    .to_str()
+                                    .unwrap()
+                                    .to_string();
+                                Some(_md_string)
+                            } else {
+                                None
+                            };
+                            (cs_str, md_str)
                         } else {
-                            Some(Alignment {
-                                is_primary: true,
-                                cigar: None,
-                            })
-                        }
+                            (None, None)
+                        };
+
+                        Some(Alignment {
+                            is_primary,
+                            nm,
+                            cigar,
+                            cigar_str,
+                            md: md_str,
+                            cs: cs_str,
+                        })
                     } else {
                         None
                     };
@@ -662,8 +724,7 @@ impl Aligner {
                                 .unwrap()
                                 .to_string(),
                         ),
-                        target_len: (*(self.idx.unwrap()).seq.offset(reg.rid as isize)).len
-                            as i32,
+                        target_len: (*(self.idx.unwrap()).seq.offset(reg.rid as isize)).len as i32,
                         target_start: reg.rs,
                         target_end: reg.re,
                         query_name: None,
@@ -789,7 +850,7 @@ impl Aligner {
 
 impl Drop for Aligner {
     fn drop(&mut self) {
-        if self.idx.is_some() { 
+        if self.idx.is_some() {
             println!("Doing the drop");
             let mut idx: mm_idx_t = self.idx.take().unwrap();
             let ptr: *mut mm_idx_t = &mut idx;
@@ -946,5 +1007,81 @@ mod tests {
             .unwrap();
         let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagGGACatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), true, true, None, None).unwrap();
         println!("{:#?}", mappings);
+    }
+
+    #[test]
+    fn test_mappy_output() {
+        let aligner = Aligner::preset(Preset::MapOnt)
+            .with_threads(1)
+            .with_index("test_data/MT-human.fa", None)
+            .unwrap()
+            .with_cigar();
+
+        let mut mappings = aligner.map(
+b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGTTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG",
+        true, true, None, None).unwrap();
+        assert_eq!(mappings.len(), 1);
+
+        let observed = mappings.pop().unwrap();
+
+        assert_eq!(observed.target_name, Some(String::from("MT_human")));
+        assert_eq!(observed.target_start, 576);
+        assert_eq!(observed.target_end, 768);
+        assert_eq!(observed.query_start, 0);
+        assert_eq!(observed.query_end, 191);
+        assert_eq!(observed.mapq, 29);
+        assert_eq!(observed.match_len, 168);
+        assert_eq!(observed.block_len, 195);
+        assert_eq!(observed.strand, Strand::Forward);
+
+        let align = observed.alignment.as_ref().unwrap();
+        assert_eq!(align.nm, 27);
+        assert_eq!(
+            align.cigar,
+            Some(vec![
+                (14, 0),
+                (2, 2),
+                (4, 0),
+                (3, 1),
+                (37, 0),
+                (1, 2),
+                (85, 0),
+                (1, 2),
+                (48, 0)
+            ])
+        );
+        assert_eq!(
+            align.cigar_str,
+            Some(String::from("14M2D4M3I37M1D85M1D48M"))
+        );
+        assert_eq!(
+            align.md,
+            Some(String::from(
+                "14^CC1C11A12T1A7T4^T1A48A2A21T0T8^T2A5T2A4C0A0C2T0C2A4A17"
+            ))
+        );
+        assert_eq!(align.cs, Some(String::from(":14-cc:1*ct:2+atc:9*ag:12*tc:1*ac:7*tc:4-t:1*ag:48*ag:2*ag:21*tc*tc:8-t:2*ag:5*tc:2*ag:4*ct*ac*ct:2*tc*ct:2*ag:4*ag:17")));
+    }
+
+    #[test]
+    fn test_mappy_output_no_md() {
+        let aligner = Aligner::preset(Preset::MapOnt)
+            .with_threads(1)
+            .with_index("test_data/MT-human.fa", None)
+            .unwrap()
+            .with_cigar();
+        let query =  b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGTTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG";
+
+        for (md, cs) in vec![(true, true), (false, false), (true, false), (false, true)].iter() {
+            let mapping = aligner
+                .map(query, *cs, *md, None, None)
+                .unwrap()
+                .pop()
+                .unwrap();
+            let align = mapping.alignment.as_ref().unwrap();
+            assert_eq!(align.cigar_str.is_some(), true);
+            assert_eq!(align.md.is_some(), *md);
+            assert_eq!(align.cs.is_some(), *cs);
+        }
     }
 }
