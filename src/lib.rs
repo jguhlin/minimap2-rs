@@ -174,18 +174,7 @@ impl Default for ThreadLocalBuffer {
 ///
 /// ```
 /// # use minimap2::*;
-/// Aligner {
-///     mapopt: MapOpt {
-///         seed: 42,
-///         best_n: 1,
-///         ..Default::default()
-///     },
-///     idxopt: IdxOpt {
-///         k: 21,
-///         ..Default::default()
-///     },
-///   ..map_ont()
-/// };
+/// Aligner::builder();
 /// ```
 
 #[derive(Clone)]
@@ -219,196 +208,166 @@ impl Default for Aligner {
     }
 }
 
-/// Ergonomic function for Aligner.
-///
-/// TODO: Make it simpler (and less redundant) with functions?
-/// Such that it'd be ..map_ont() or ..map_ava() instead?
-///
-/// ```
-/// # use minimap2::*;
-/// Aligner {
-///   threads: 8,
-///   mapopt: MapOpt {
-///     best_n: 10,
-///     ..Default::default()
-///   },
-///  ..preset(Preset::MapOnt)
-/// };
-/// ```
-pub fn preset(preset: Preset) -> Aligner {
-    Aligner::preset(preset)
-}
-
-/// Ergonomic function for Aligner. Just to see if people prefer this over the
-/// preset() function.
-/// ```
-/// # use minimap2::*;
-/// Aligner {
-///   threads: 8,
-///  ..map_ont()
-/// };
-/// ```
-pub fn map_ont() -> Aligner {
-    Aligner::preset(Preset::MapOnt)
-}
-
-/// Ergonomic function for Aligner. Just to see if people prefer this over the
-/// preset() function.
-/// ```
-/// # use minimap2::*;
-/// Aligner {
-///   threads: 8,
-///  ..ava_ont()
-/// };
-/// ```
-pub fn ava_ont() -> Aligner {
-    Aligner::preset(Preset::AvaOnt)
-}
-
-/// Ergonomic function for Aligner. Just to see if people prefer this over the
-/// preset() function.
-/// ```
-/// # use minimap2::*;
-/// Aligner {
-///   threads: 8,
-///  ..map10k()
-/// };
-/// ```
-pub fn map10k() -> Aligner {
-    Aligner::preset(Preset::Map10k)
-}
-
-/// Ergonomic function for Aligner. Just to see if people prefer this over the
-/// preset() function.
-/// ```
-/// # use minimap2::*;
-/// Aligner {
-///   threads: 8,
-///  ..ava_pb()
-/// };
-/// ```
-pub fn ava_pb() -> Aligner {
-    Aligner::preset(Preset::AvaPb)
-}
-
-/// Ergonomic function for Aligner. Just to see if people prefer this over the
-/// preset() function.
-/// ```
-/// # use minimap2::*;
-/// Aligner {
-///   threads: 8,
-///  ..map_hifi()
-/// };
-/// ```
-pub fn map_hifi() -> Aligner {
-    Aligner::preset(Preset::MapHifi)
-}
-
-/// Ergonomic function for Aligner. Just to see if people prefer this over the
-/// preset() function.
-/// ```
-/// # use minimap2::*;
-/// Aligner {
-///   threads: 8,
-///  ..asm()
-/// };
-/// ```
-pub fn asm() -> Aligner {
-    Aligner::preset(Preset::Asm)
-}
-
-/// Ergonomic function for Aligner. Just to see if people prefer this over the
-/// preset() function.
-/// ```
-/// # use minimap2::*;
-/// Aligner {
-///   threads: 8,
-///  ..asm5()
-/// };
-/// ```
-pub fn asm5() -> Aligner {
-    Aligner::preset(Preset::Asm5)
-}
-/// Ergonomic function for Aligner. Just to see if people prefer this over the
-/// preset() function.
-/// ```
-/// # use minimap2::*;
-/// Aligner {
-///   threads: 8,
-///  ..asm10()
-/// };
-/// ```
-pub fn asm10() -> Aligner {
-    Aligner::preset(Preset::Asm10)
-}
-/// Ergonomic function for Aligner. Just to see if people prefer this over the
-/// preset() function.
-/// ```
-/// # use minimap2::*;
-/// Aligner {
-///   threads: 8,
-///  ..asm20()
-/// };
-/// ```
-pub fn asm20() -> Aligner {
-    Aligner::preset(Preset::Asm20)
-}
-
-/// Ergonomic function for Aligner. Just to see if people prefer this over the
-/// preset() function.
-/// ```
-/// # use minimap2::*;
-/// Aligner {
-///   threads: 8,
-///  ..short()
-/// };
-/// ```
-pub fn short() -> Aligner {
-    Aligner::preset(Preset::Short)
-}
-
-/// Ergonomic function for Aligner. Just to see if people prefer this over the
-/// preset() function.
-/// ```
-/// # use minimap2::*;
-/// Aligner {
-///   threads: 8,
-///  ..sr()
-/// };
-/// ```
-pub fn sr() -> Aligner {
-    Aligner::preset(Preset::Sr)
-}
-
-/// Ergonomic function for Aligner. Just to see if people prefer this over the
-/// preset() function.
-/// ```
-/// # use minimap2::*;
-/// Aligner {
-///   threads: 8,
-///  ..splice()
-/// };
-/// ```
-pub fn splice() -> Aligner {
-    Aligner::preset(Preset::Splice)
-}
-
-/// Ergonomic function for Aligner. Just to see if people prefer this over the
-/// preset() function.
-/// ```
-/// # use minimap2::*;
-/// Aligner {
-///   threads: 8,
-///  ..cdna()
-/// };
-/// ```
-pub fn cdna() -> Aligner {
-    Aligner::preset(Preset::Cdna)
-}
 
 impl Aligner {
+    /// Create a new server builder that can configure a [`Server`].
+    pub fn builder() -> Self {
+        Aligner {
+            mapopt: MapOpt {
+                seed: 42,
+                best_n: 1,
+                ..Default::default()
+            },
+            ..Default::default()
+        }
+    }
+}
+
+
+impl Aligner {
+
+    /// Ergonomic function for Aligner.
+    ///
+    /// TODO: Make it simpler (and less redundant) with functions?
+    /// Such that it'd be ..map_ont() or ..map_ava() instead?
+    ///
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().preset(Preset::MapOnt).with_threads(1).with_cigar();
+    /// ```
+    // pub fn preset(preset: Preset) -> Aligner {
+    //     Aligner::preset(preset)
+    // }
+
+    /// Ergonomic function for Aligner. Just to see if people prefer this over the
+    /// preset() function.
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().preset(Preset::MapOnt);
+    /// ```
+    pub fn map_ont(self) -> Self {
+        self.preset(Preset::MapOnt)
+    }
+
+    /// Ergonomic function for Aligner. Just to see if people prefer this over the
+    /// preset() function.
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().preset(Preset::AvaOnt);
+    /// ```
+    pub fn ava_ont(self) -> Self {
+        self.preset(Preset::AvaOnt)
+    }
+
+    /// Ergonomic function for Aligner. Just to see if people prefer this over the
+    /// preset() function.
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().preset(Preset::Map10k);
+    /// ```
+    pub fn map10k(self) -> Self {
+        self.preset(Preset::Map10k)
+    }
+
+    /// Ergonomic function for Aligner. Just to see if people prefer this over the
+    /// preset() function.
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().preset(Preset::AvaPb);
+    /// ```
+    pub fn ava_pb(self) -> Self {
+        self.preset(Preset::AvaPb)
+    }
+
+    /// Ergonomic function for Aligner. Just to see if people prefer this over the
+    /// preset() function.
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().preset(Preset::MapHifi);
+    /// ```
+    pub fn map_hifi(self) -> Self {
+        self.preset(Preset::MapHifi)
+    }
+
+    /// Ergonomic function for Aligner. Just to see if people prefer this over the
+    /// preset() function.
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().preset(Preset::Asm);
+    /// ```
+    pub fn asm(self) -> Self {
+        self.preset(Preset::Asm)
+    }
+
+    /// Ergonomic function for Aligner. Just to see if people prefer this over the
+    /// preset() function.
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().preset(Preset::Asm5);
+    /// ```
+    pub fn asm5(self) -> Self {
+        self.preset(Preset::Asm5)
+    }
+    /// Ergonomic function for Aligner. Just to see if people prefer this over the
+    /// preset() function.
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().preset(Preset::Asm10);
+    /// ```
+    pub fn asm10(self) -> Self {
+        self.preset(Preset::Asm10)
+    }
+    /// Ergonomic function for Aligner. Just to see if people prefer this over the
+    /// preset() function.
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().preset(Preset::Asm20);
+    /// ```
+    pub fn asm20(self) -> Self {
+        self.preset(Preset::Asm20)
+    }
+
+    /// Ergonomic function for Aligner. Just to see if people prefer this over the
+    /// preset() function.
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().preset(Preset::Short);
+    /// ```
+    pub fn short(self) -> Self {
+        self.preset(Preset::Short)
+    }
+
+    /// Ergonomic function for Aligner. Just to see if people prefer this over the
+    /// preset() function.
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().preset(Preset::Sr);
+    /// ```
+    pub fn sr(self) -> Self {
+        self.preset(Preset::Sr)
+    }
+
+    /// Ergonomic function for Aligner. Just to see if people prefer this over the
+    /// preset() function.
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().preset(Preset::Splice);
+    /// ```
+    pub fn splice(self) -> Self {
+        self.preset(Preset::Splice)
+    }
+
+    /// Ergonomic function for Aligner. Just to see if people prefer this over the
+    /// preset() function.
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().preset(Preset::Cdna);
+    /// ```
+    pub fn cdna(self) -> Self {
+        self.preset(Preset::Cdna)
+    }
     /// Create an aligner using a preset.
-    pub fn preset(preset: Preset) -> Self {
+    pub fn preset(self, preset: Preset) -> Self {
         let mut idxopt = IdxOpt::default();
         let mut mapopt = MapOpt::default();
 
@@ -425,6 +384,11 @@ impl Aligner {
     }
 
     /// Set Alignment mode / cigar mode in minimap2
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().preset(Preset::MapOnt).with_cigar();
+    /// ```
+    /// 
     pub fn with_cigar(mut self) -> Self {
         // Make sure MM_F_CIGAR flag isn't already set
         assert!((self.mapopt.flag & MM_F_CIGAR as i64) == 0);
@@ -433,6 +397,12 @@ impl Aligner {
         self
     }
 
+    /// Set Alignment mode / cigar mode in minimap2
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().with_threads(10);
+    /// ```
+    /// 
     /// Set the number of threads (prefer to use the struct config)
     pub fn with_threads(mut self, threads: usize) -> Self {
         self.threads = threads;
@@ -451,22 +421,13 @@ impl Aligner {
     /// ```
     /// # use minimap2::*;
     /// // Do not save the index file
-    /// Aligner {
-    ///   threads: 4, // Use 4 threads
-    ///  ..map_ont()
-    /// }.with_index("test_data/test_data.fasta", None);
+    /// Aligner::builder().map_ont().with_index("test_data/test_data.fasta", None);
     ///
     /// // Save the index file as my_index.mmi
-    /// Aligner {
-    ///   threads: 4, // Use 4 threads
-    ///  ..map_ont()
-    /// }.with_index("test_data/test_data.fasta", Some("my_index.mmi"));
+    /// Aligner::builder().map_ont().with_index("test_data/test_data.fasta", Some("my_index.mmi"));
     ///
     /// // Use the previously built index
-    /// Aligner {
-    ///   threads: 4, // Use 4 threads
-    ///  ..map_ont()
-    /// }.with_index("my_index.mmi", None);
+     /// Aligner::builder().map_ont().with_index("my_index.mmi", None);
     /// ```
     pub fn with_index(mut self, path: &str, output: Option<&str>) -> Result<Self, &'static str> {
         // Confirm file exists
@@ -926,7 +887,7 @@ mod tests {
 
     #[test]
     fn create_index_file_missing() {
-        let result = Aligner::preset(Preset::MapOnt).with_threads(1).with_index(
+        let result = Aligner::builder().preset(Preset::MapOnt).with_threads(1).with_index(
             "test_data/test.fa_FILE_NOT_FOUND",
             Some("test_FILE_NOT_FOUND.mmi"),
         );
@@ -935,7 +896,7 @@ mod tests {
 
     #[test]
     fn create_index() {
-        let mut aligner = Aligner::preset(Preset::MapOnt).with_threads(1);
+        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_threads(1);
 
         println!("{}", aligner.idxopt.w);
 
@@ -947,31 +908,29 @@ mod tests {
     }
 
     #[test]
+    fn test_builder() {
+        let mut aligner = Aligner::builder().preset(Preset::MapOnt);
+    }
+
+
+    #[test]
     fn test_mapping() {
-        let mut aligner = Aligner {
-            mapopt: MapOpt {
-                seed: 42,
-                best_n: 1,
-                ..Default::default()
-            },
-            threads: 2,
-            ..preset(Preset::MapOnt)
-        };
+        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_threads(2);
 
         aligner = aligner
-            .with_index("test_data/test_data.fasta", Some("test.mmi"))
+            .with_index("yeast_ref.mmi", None)
             .unwrap();
 
         aligner
             .map(
-                "ATGAGCAAAATATTCTAAAGTGGAAACGGCACTAAGGTGAACTAAGCAACTTAGTGCAAAAc".as_bytes(),
+                "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(),
                 false,
                 false,
                 None,
                 None,
             )
             .unwrap();
-        let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagttatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), false, false, None, None).unwrap();
+        let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
         println!("{:#?}", mappings);
 
         let mut aligner = aligner.with_cigar();
@@ -992,7 +951,7 @@ mod tests {
 
     #[test]
     fn test_aligner_config_and_mapping() {
-        let mut aligner = Aligner::preset(Preset::MapOnt).with_threads(1);
+        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_threads(2);
         aligner = aligner
             .with_index("test_data/test_data.fasta", Some("test.mmi"))
             .unwrap()
