@@ -8,9 +8,8 @@ minimap2-sys is the library of the raw FFI bindings to minimap2. minimap2 is the
 
 # How to use
 ## Requirements
-Clang is required to build (probably....)
 ```toml
-minimap2 = "0.1.7"
+minimap2 = "0.1.9"
 ```
 
 Tested with rustc 1.64.0 and nightly. So probably a good idea to upgrade before running. But let me know if you run into pain points with older versions and will try to fix!
@@ -136,8 +135,8 @@ and/or:
 
 # Changelog
 ## 0.1.9
-Thanks for @Adoni5 for switching to builder pattern, and @eharr for adding additional fields to alignment.
-Do not require libclang for normal compilation.
+* Thanks for @Adoni5 for switching to builder pattern, and @eharr for adding additional fields to alignment.
+* Do not require libclang for normal compilation.
 ## 0.1.8
 * Multithreading support (use less raw pointers, and treat more like rust Struct's)
 ## 0.1.7
