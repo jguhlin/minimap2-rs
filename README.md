@@ -22,13 +22,12 @@ rustup update
 Create an Aligner 
 
 ```rust
-let mut aligner = Aligner {
-    threads: 8,
-    ..map_ont()
-}
-.with_cigar()
-.with_index("ReferenceFile.fasta", None)
-.expect("Unable to build index");
+let mut aligner = Aligner::builder()
+    .map_ont()
+    .n_threads(8)
+    .with_cigar()
+    .with_index("ReferenceFile.fasta", None)
+    .expect("Unable to build index");
 ```
 
 Align a sequence:
@@ -93,36 +92,15 @@ Untested, however the thread_local buffer is already set, so theoretically it co
 
 So far multithreading only works for building the index and not for mapping.
 
+## Building for MUSL
+TODO
+
 # Want feedback
 * Many fields are i32 / i8 to mimic the C environment, but would it make more sense to convert to u32 / u8 / usize?
 * Let me know pain points
 
-Presets currently look like this:
-```rust
-Aligner {
-    threads: 2,
-    ..map_ont()
-}
-```
-or:
-```rust
-Aligner {
-    threads: 2,
-    ..preset(Preset::MapOnt)
-}
-```
-or:
-```rust
-Aligner {
-    threads: 2,
-    ..Aligner::preset(Preset::MapOnt)
-}
-```
-
-The second pollutes the namespace less, but the first looks less redundant. Open to opinions.
-
 # Pain Points
-Probably not freeing C memory somewhere.... Not sure yet, if so it's just leaking a little...
+Probably not freeing C memory somewhere.... Not sure yet, if so it's just leaking a little... Need to do a large run to test it.
 
 # Next things todo
 * Print other tags so we can have an entire PAF format
