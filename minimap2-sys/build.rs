@@ -4,10 +4,8 @@ use std::path::PathBuf;
 
 // TODO: Default to using simde
 
-// #[cfg(feature = "bindgen")]
-fn gen() {
+fn compile() {
     let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-    println!("{:#?}", out_path);
 
     let _host = env::var("HOST").unwrap();
     let _target = env::var("TARGET").unwrap();
@@ -32,10 +30,9 @@ fn gen() {
     cc.flag("-DHAVE_KALLOC");
     cc.flag("-O2");
     cc.flag("-lm");
-    // cc.flag("-lz");
     cc.flag("-lpthread");
     //cc.flag("-msse4.1");
-    // cc.flag("-DKSW_CPU_DISPATCH");
+    //cc.flag("-DKSW_CPU_DISPATCH");
     //cc.flag("-DKSW_SSE2_ONLY");
     cc.static_flag(true);
 
@@ -76,40 +73,15 @@ fn gen() {
         }
     }
 
-    println!("Compiling...");
-
     cc.compile("libminimap");
+}
 
-    println!("Compiled!");
+#[cfg(feature = "bindgen")]
+fn gen_bindings() {
 
     bindgen::Builder::default()
         .header("minimap2.h")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
-        /*        .allowlist_type("mm_idxopt_t")
-        .allowlist_type("mm_mapopt_t")
-        .allowlist_function("mm_set_opt")
-        .allowlist_var("mm_verbose")
-        .allowlist_type("mm_idx_seq_t")
-        .allowlist_type("mm_idx_bucket_t")
-        .allowlist_type("mm_idx_t")
-        .allowlist_type("mm_idx_reader_t")
-        .allowlist_function("mm_idx_reader_open")
-        .allowlist_function("mm_idx_reader_close")
-        .allowlist_function("mm_idx_destroy")
-        .allowlist_function("mm_idx_index_name")
-        .allowlist_function("mm_idx_reader_read")
-        .allowlist_type("mm_reg1_t")
-        .allowlist_type("mm_tbuf_t")
-        .allowlist_function("mm_tbuf_destroy")
-        .allowlist_function("kseq_init")
-        .allowlist_function("mm_mapopt_update")
-        .allowlist_function("mm_tbuf_init")
-        .allowlist_function("kseq_rewind")
-        .allowlist_type("mm_reg1_t")
-        .allowlist_function("kseq_read")
-        .allowlist_function("kseq_destroy")
-        .allowlist_function("mm_map")
-        .allowlist_function("mm_idx_str") */
         .rustfmt_bindings(true)
         .generate()
         .expect("Couldn't write bindings!")
@@ -117,9 +89,10 @@ fn gen() {
         .expect("Unable to create bindings");
 }
 
-// #[cfg(not(feature = "bindgen"))]
-// fn gen() {}
+#[cfg(not(feature = "bindgen"))]
+fn gen_bindings() {}
 
 fn main() {
-    gen();
+    compile();
+    gen_bindings();
 }

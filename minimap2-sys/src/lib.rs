@@ -2,8 +2,13 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-// #[cfg(feature = "bindgen")]
+#[cfg(feature = "bindgen")]
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+
+#[cfg(all(
+    not(feature = "bindgen")
+))]
+include!("bindings.rs");
 
 unsafe impl Send for mm_idx_t {}
 unsafe impl Send for mm_idx_reader_t {}

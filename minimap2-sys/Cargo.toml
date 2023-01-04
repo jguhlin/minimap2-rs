@@ -1,6 +1,6 @@
 [package]
 name = "minimap2-sys"
-version = "0.1.7" # Update for zlib
+version = "0.1.7"
 edition = "2021"
 links = "libminimap2"
 authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
@@ -35,6 +35,6 @@ features = ["runtime", "which-rustfmt"]
 version = "1.0.45"
 
 [features]
-default = ["bindgen"]
+default = []
 vendored = ["bindgen"]
 
