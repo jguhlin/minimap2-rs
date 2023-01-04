@@ -12,7 +12,11 @@ exclude = [
 	"**/*.fasta",
 	"libsfasta/test_data/",
 	"*.profdata",
+	"*.mmi",
+	"**/*.mmi",
+	"minimap2-sys/"
 ]
+
 
 [dependencies]
 libc = "0.2.134"
