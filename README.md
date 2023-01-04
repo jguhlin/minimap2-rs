@@ -135,7 +135,7 @@ and/or:
 
 
 # Changelog
-## 0.1.9 (IN DEV)
+## 0.1.9
 Thanks for @Adoni5 for switching to builder pattern, and @eharr for adding additional fields to alignment.
 Do not require libclang for normal compilation.
 ## 0.1.8
