@@ -145,6 +145,8 @@ and/or:
 
 
 # Changelog
+## 0.1.9 (IN DEV)
+Thanks for @Adoni5 for switching to builder pattern, and @eharr for adding additional fields to alignment.
 ## 0.1.8
 * Multithreading support (use less raw pointers, and treat more like rust Struct's)
 ## 0.1.7

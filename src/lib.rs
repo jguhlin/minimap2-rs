@@ -208,7 +208,6 @@ impl Default for Aligner {
     }
 }
 
-
 impl Aligner {
     /// Create a new server builder that can configure a [`Server`].
     pub fn builder() -> Self {
@@ -223,9 +222,7 @@ impl Aligner {
     }
 }
 
-
 impl Aligner {
-
     /// Ergonomic function for Aligner.
     ///
     /// TODO: Make it simpler (and less redundant) with functions?
@@ -236,7 +233,7 @@ impl Aligner {
     /// Aligner::builder().preset(Preset::MapOnt).with_threads(1).with_cigar();
     /// ```
     // pub fn preset(preset: Preset) -> Aligner {
-    //     Aligner::preset(preset)
+    //     Aligner::builder().preset(preset)
     // }
 
     /// Ergonomic function for Aligner. Just to see if people prefer this over the
@@ -388,7 +385,7 @@ impl Aligner {
     /// # use minimap2::*;
     /// Aligner::builder().preset(Preset::MapOnt).with_cigar();
     /// ```
-    /// 
+    ///
     pub fn with_cigar(mut self) -> Self {
         // Make sure MM_F_CIGAR flag isn't already set
         assert!((self.mapopt.flag & MM_F_CIGAR as i64) == 0);
@@ -402,7 +399,7 @@ impl Aligner {
     /// # use minimap2::*;
     /// Aligner::builder().with_threads(10);
     /// ```
-    /// 
+    ///
     /// Set the number of threads (prefer to use the struct config)
     pub fn with_threads(mut self, threads: usize) -> Self {
         self.threads = threads;
@@ -427,7 +424,7 @@ impl Aligner {
     /// Aligner::builder().map_ont().with_index("test_data/test_data.fasta", Some("my_index.mmi"));
     ///
     /// // Use the previously built index
-     /// Aligner::builder().map_ont().with_index("my_index.mmi", None);
+    /// Aligner::builder().map_ont().with_index("my_index.mmi", None);
     /// ```
     pub fn with_index(mut self, path: &str, output: Option<&str>) -> Result<Self, &'static str> {
         // Confirm file exists
@@ -887,10 +884,13 @@ mod tests {
 
     #[test]
     fn create_index_file_missing() {
-        let result = Aligner::builder().preset(Preset::MapOnt).with_threads(1).with_index(
-            "test_data/test.fa_FILE_NOT_FOUND",
-            Some("test_FILE_NOT_FOUND.mmi"),
-        );
+        let result = Aligner::builder()
+            .preset(Preset::MapOnt)
+            .with_threads(1)
+            .with_index(
+                "test_data/test.fa_FILE_NOT_FOUND",
+                Some("test_FILE_NOT_FOUND.mmi"),
+            );
         assert!(result.is_err());
     }
 
@@ -912,14 +912,11 @@ mod tests {
         let mut aligner = Aligner::builder().preset(Preset::MapOnt);
     }
 
-
     #[test]
     fn test_mapping() {
         let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_threads(2);
 
-        aligner = aligner
-            .with_index("yeast_ref.mmi", None)
-            .unwrap();
+        aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
 
         aligner
             .map(
@@ -972,7 +969,8 @@ mod tests {
 
     #[test]
     fn test_mappy_output() {
-        let aligner = Aligner::preset(Preset::MapOnt)
+        let aligner = Aligner::builder()
+            .preset(Preset::MapOnt)
             .with_threads(1)
             .with_index("test_data/MT-human.fa", None)
             .unwrap()
@@ -1027,7 +1025,8 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
 
     #[test]
     fn test_mappy_output_no_md() {
-        let aligner = Aligner::preset(Preset::MapOnt)
+        let aligner = Aligner::builder()
+            .preset(Preset::MapOnt)
             .with_threads(1)
             .with_index("test_data/MT-human.fa", None)
             .unwrap()
