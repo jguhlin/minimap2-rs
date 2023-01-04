@@ -93,11 +93,23 @@ Untested, however the thread_local buffer is already set, so theoretically it co
 So far multithreading only works for building the index and not for mapping.
 
 ## Building for MUSL
-TODO
+Follow these [instructions](https://github.com/rust-cross/rust-musl-cross#prebuilt-images).
+
+In brief, using bash shell:
+```bash
+docker pull messense/rust-musl-cross:x86_64-musl
+alias rust-musl-builder='docker run --rm -it -v "$(pwd)":/home/rust/src messense/rust-musl-cross:x86_64-musl'
+rust-musl-builder cargo build --release
+```
+
+Please note minimap2 is only tested for x86_64. Other platforms may work, please open an issue if minimap2 compiles but minimap2-rs does not.
 
 # Want feedback
 * Many fields are i32 / i8 to mimic the C environment, but would it make more sense to convert to u32 / u8 / usize?
 * Let me know pain points
+
+# Tools using this binding
+[Chopper](https://github.com/wdecoster/chopper)
 
 # Pain Points
 Probably not freeing C memory somewhere.... Not sure yet, if so it's just leaking a little... Need to do a large run to test it.
@@ -125,6 +137,7 @@ and/or:
 # Changelog
 ## 0.1.9 (IN DEV)
 Thanks for @Adoni5 for switching to builder pattern, and @eharr for adding additional fields to alignment.
+Do not require libclang for normal compilation.
 ## 0.1.8
 * Multithreading support (use less raw pointers, and treat more like rust Struct's)
 ## 0.1.7
