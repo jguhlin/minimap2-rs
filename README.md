@@ -23,7 +23,7 @@ Create an Aligner
 ```rust
 let mut aligner = Aligner::builder()
     .map_ont()
-    .n_threads(8)
+    .with_threads(8)
     .with_cigar()
     .with_index("ReferenceFile.fasta", None)
     .expect("Unable to build index");
