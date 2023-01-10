@@ -22,6 +22,7 @@ pub type MapOpt = mm_mapopt_t;
 /// Alias for mm_idxopt_t
 pub type IdxOpt = mm_idxopt_t;
 
+#[cfg(feature="map-file")]
 pub use fffx::{Fasta, Fastq, Sequence};
 
 // TODO: Probably a better way to handle this...
