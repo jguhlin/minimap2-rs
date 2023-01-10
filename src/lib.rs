@@ -5,9 +5,16 @@ use std::mem::MaybeUninit;
 use std::num::NonZeroI32;
 use std::path::Path;
 
-use flate2::read::GzDecoder;
 use minimap2_sys::*;
+
+
+#[cfg(feature="map-file")]
+use flate2::read::GzDecoder;
+#[cfg(feature="map-file")]
 use simdutf8::basic::from_utf8;
+
+#[cfg(feature="htslib")]
+pub mod htslib;
 
 /// Alias for mm_mapop_t
 pub type MapOpt = mm_mapopt_t;
@@ -716,6 +723,7 @@ impl Aligner {
     ///
     /// TODO: Remove cs and md and make them options on the struct
     ///
+    #[cfg(feature="map-file")]
     pub fn map_file(&self, file: &str, cs: bool, md: bool) -> Result<Vec<Mapping>, &'static str> {
         // Make sure index is set
         if self.idx.is_none() {
@@ -827,7 +835,9 @@ pub enum FileFormat {
     FASTQ,
 }
 
+
 #[allow(dead_code)]
+#[cfg(feature="map-file")]
 pub fn detect_file_format(buffer: &[u8]) -> Result<FileFormat, &'static str> {
     let buffer = from_utf8(&buffer).expect("Unable to parse file as UTF-8");
     if buffer.starts_with(">") {
