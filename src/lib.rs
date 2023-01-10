@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::io::BufRead;
+
 use std::io::Read;
 use std::mem::MaybeUninit;
 use std::num::NonZeroI32;
@@ -456,7 +456,7 @@ impl Aligner {
 
         let mut idx: MaybeUninit<*mut mm_idx_t> = MaybeUninit::uninit();
 
-        let mut idx_reader = unsafe { idx_reader.assume_init() };
+        let idx_reader = unsafe { idx_reader.assume_init() };
 
         unsafe {
             // Just a test read? Just following: https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L147
@@ -480,8 +480,8 @@ impl Aligner {
 
     /// Map a single sequence to an index
     /// not implemented yet!
-    pub fn with_seq(mut self, seq: &[u8]) -> Result<Self, &'static str> {
-        let seq = match std::ffi::CString::new(seq) {
+    pub fn with_seq(self, seq: &[u8]) -> Result<Self, &'static str> {
+        let _seq = match std::ffi::CString::new(seq) {
             Ok(seq) => seq,
             Err(_) => return Err("Invalid sequence"),
         };
@@ -625,7 +625,7 @@ impl Aligner {
                             let mut m_cs_string: libc::c_int = 0i32;
 
                             let cs_str = if cs {
-                                let cs_len = mm_gen_cs(
+                                let _cs_len = mm_gen_cs(
                                     km,
                                     &mut cs_string,
                                     &mut m_cs_string,
@@ -644,7 +644,7 @@ impl Aligner {
                             };
 
                             let md_str = if md {
-                                let md_len = mm_gen_MD(
+                                let _md_len = mm_gen_MD(
                                     km,
                                     &mut cs_string,
                                     &mut m_cs_string,
@@ -762,7 +762,7 @@ impl Aligner {
         }
 
         // If gzipped, open it with a reader...
-        let mut reader: Box<dyn Read> = if compression_type == CompressionType::GZIP {
+        let reader: Box<dyn Read> = if compression_type == CompressionType::GZIP {
             Box::new(GzDecoder::new(std::fs::File::open(file).unwrap()))
         } else {
             Box::new(std::fs::File::open(file).unwrap())
@@ -909,7 +909,7 @@ mod tests {
 
     #[test]
     fn test_builder() {
-        let mut aligner = Aligner::builder().preset(Preset::MapOnt);
+        let _aligner = Aligner::builder().preset(Preset::MapOnt);
     }
 
     #[test]
@@ -930,7 +930,7 @@ mod tests {
         let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
         println!("{:#?}", mappings);
 
-        let mut aligner = aligner.with_cigar();
+        let aligner = aligner.with_cigar();
 
         aligner
             .map(
