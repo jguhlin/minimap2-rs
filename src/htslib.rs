@@ -74,5 +74,3 @@ pub fn mapping_to_record(
     // TODO: set AUX flags for cs/md if available
     rec
 }
-
-

@@ -1,8 +1,8 @@
 #[cfg(test)]
-#[cfg(feature="htslib")]
+#[cfg(feature = "htslib")]
 mod tests {
+    use minimap2::htslib::mapping_to_record;
     use minimap2::{Aligner, Preset};
-    use minimap2::htslib::{mapping_to_record};
 
     use rust_htslib::bam::header::{Header, HeaderRecord};
     use rust_htslib::bam::{Format, Read, Reader, Writer};
@@ -55,4 +55,3 @@ mod tests {
         writer.write(&o).unwrap();
     }
 }
-
