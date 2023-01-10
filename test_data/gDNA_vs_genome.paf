@@ -1,0 +1,7 @@
+perfect_read.fwd	100	0	100	+	chr1	1720	180	280	100	100	60	NM:i:0	ms:i:200	AS:i:200	nn:i:0	tp:A:P	cm:i:17	s1:i:84	s2:i:0	de:f:0	rl:i:0	MD:Z:100
+perfect_read.rev	100	0	100	-	chr1	1720	180	280	100	100	60	NM:i:0	ms:i:200	AS:i:200	nn:i:0	tp:A:P	cm:i:17	s1:i:84	s2:i:0	de:f:0	rl:i:0	MD:Z:100
+imperfect_read.fwd	100	0	100	+	chr1	1720	180	280	95	100	13	NM:i:5	ms:i:170	AS:i:170	nn:i:0	tp:A:P	cm:i:5	s1:i:48	s2:i:0	de:f:0.0500	rl:i:0	MD:Z:34G10C6A6G33T6
+perfect_inv_duplicate	100	0	100	+	chr1	1720	540	640	100	100	36	NM:i:0	ms:i:200	AS:i:200	nn:i:0	tp:A:P	cm:i:15	s1:i:85	s2:i:71	de:f:0	rl:i:0	MD:Z:100
+perfect_inv_duplicate	100	0	100	-	chr1	1720	720	820	98	100	0	NM:i:2	ms:i:188	AS:i:188	nn:i:0	tp:A:S	cm:i:11	s1:i:71	de:f:0.0200	rl:i:0	MD:Z:8T65C25
+split_read	180	0	100	+	chr1	1720	0	100	100	100	60	NM:i:0	ms:i:200	AS:i:200	nn:i:0	tp:A:P	cm:i:13	s1:i:90	s2:i:0	de:f:0	rl:i:0	MD:Z:100
+split_read	180	100	180	-	chr1	1720	820	900	80	80	52	NM:i:0	ms:i:160	AS:i:160	nn:i:0	tp:A:P	cm:i:11	s1:i:70	s2:i:0	de:f:0	rl:i:0	MD:Z:80

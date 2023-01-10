@@ -1,13 +1,19 @@
 use std::cell::RefCell;
-use std::io::BufRead;
+
 use std::io::Read;
 use std::mem::MaybeUninit;
 use std::num::NonZeroI32;
 use std::path::Path;
 
-use flate2::read::GzDecoder;
 use minimap2_sys::*;
+
+#[cfg(feature = "map-file")]
+use flate2::read::GzDecoder;
+#[cfg(feature = "map-file")]
 use simdutf8::basic::from_utf8;
+
+#[cfg(feature = "htslib")]
+pub mod htslib;
 
 /// Alias for mm_mapop_t
 pub type MapOpt = mm_mapopt_t;
@@ -15,6 +21,7 @@ pub type MapOpt = mm_mapopt_t;
 /// Alias for mm_idxopt_t
 pub type IdxOpt = mm_idxopt_t;
 
+#[cfg(feature="map-file")]
 pub use fffx::{Fasta, Fastq, Sequence};
 
 // TODO: Probably a better way to handle this...
@@ -456,7 +463,7 @@ impl Aligner {
 
         let mut idx: MaybeUninit<*mut mm_idx_t> = MaybeUninit::uninit();
 
-        let mut idx_reader = unsafe { idx_reader.assume_init() };
+        let idx_reader = unsafe { idx_reader.assume_init() };
 
         unsafe {
             // Just a test read? Just following: https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L147
@@ -480,8 +487,8 @@ impl Aligner {
 
     /// Map a single sequence to an index
     /// not implemented yet!
-    pub fn with_seq(mut self, seq: &[u8]) -> Result<Self, &'static str> {
-        let seq = match std::ffi::CString::new(seq) {
+    pub fn with_seq(self, seq: &[u8]) -> Result<Self, &'static str> {
+        let _seq = match std::ffi::CString::new(seq) {
             Ok(seq) => seq,
             Err(_) => return Err("Invalid sequence"),
         };
@@ -625,7 +632,7 @@ impl Aligner {
                             let mut m_cs_string: libc::c_int = 0i32;
 
                             let cs_str = if cs {
-                                let cs_len = mm_gen_cs(
+                                let _cs_len = mm_gen_cs(
                                     km,
                                     &mut cs_string,
                                     &mut m_cs_string,
@@ -644,7 +651,7 @@ impl Aligner {
                             };
 
                             let md_str = if md {
-                                let md_len = mm_gen_MD(
+                                let _md_len = mm_gen_MD(
                                     km,
                                     &mut cs_string,
                                     &mut m_cs_string,
@@ -675,7 +682,6 @@ impl Aligner {
                     } else {
                         None
                     };
-
                     mappings.push(Mapping {
                         target_name: Some(
                             std::ffi::CStr::from_ptr(contig)
@@ -716,6 +722,7 @@ impl Aligner {
     ///
     /// TODO: Remove cs and md and make them options on the struct
     ///
+    #[cfg(feature = "map-file")]
     pub fn map_file(&self, file: &str, cs: bool, md: bool) -> Result<Vec<Mapping>, &'static str> {
         // Make sure index is set
         if self.idx.is_none() {
@@ -762,7 +769,7 @@ impl Aligner {
         }
 
         // If gzipped, open it with a reader...
-        let mut reader: Box<dyn Read> = if compression_type == CompressionType::GZIP {
+        let reader: Box<dyn Read> = if compression_type == CompressionType::GZIP {
             Box::new(GzDecoder::new(std::fs::File::open(file).unwrap()))
         } else {
             Box::new(std::fs::File::open(file).unwrap())
@@ -828,6 +835,7 @@ pub enum FileFormat {
 }
 
 #[allow(dead_code)]
+#[cfg(feature = "map-file")]
 pub fn detect_file_format(buffer: &[u8]) -> Result<FileFormat, &'static str> {
     let buffer = from_utf8(&buffer).expect("Unable to parse file as UTF-8");
     if buffer.starts_with(">") {
@@ -909,7 +917,7 @@ mod tests {
 
     #[test]
     fn test_builder() {
-        let mut aligner = Aligner::builder().preset(Preset::MapOnt);
+        let _aligner = Aligner::builder().preset(Preset::MapOnt);
     }
 
     #[test]
@@ -933,8 +941,8 @@ mod tests {
         // This should be reverse strand
         let mappings = aligner.map("TTTTGCATCGCTGAAAACCCCAAAGTATATTTTAGAACTCGTCTATAGGTTCTACGATTTAACATCCACAGCCTTCTGGTGTCGCTGGTGTTTCAAACACCTCGATATATCACTCCTTCTGAATAACATCCATGAAAGAAGAGCCCAATCCATACTACTAAAGCTATCGTCATATGCACCATGGTCTTTTGAGAAAATTTTGCCCTCTTTAATTGACTCTAAGCTAAAAAAGAAAATTTTAATCAGTCCTCAAATTACTTACGTAGTCTTCAAATCAATAAACTATATGATAACCACGAATGACGATAAAATACACAAGTCCGCTATTCCTTCTTCTTCCTCTCTACCGT".as_bytes(), false, false, None, None).unwrap();
         println!("Reverse Strand\n{:#?}", mappings);
-        assert!(mappings[0].strand == Strand::Reverse);      
-        
+        assert!(mappings[0].strand == Strand::Reverse);
+
 
         let mut aligner = aligner.with_cigar();
 
@@ -1051,4 +1059,5 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
             assert_eq!(align.cs.is_some(), *cs);
         }
     }
+
 }
