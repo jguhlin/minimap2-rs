@@ -32,7 +32,7 @@ mod tests {
         let observed = mappings.pop().unwrap();
         let o = mapping_to_record(Some(&observed), seq, header.clone(), None, Some(b"q1"));
 
-        let mut sam_reader = Reader::from_path("../test_data/query_vs_test_data.sam").unwrap();
+        let mut sam_reader = Reader::from_path("test_data/query_vs_test_data.sam").unwrap();
         let e = sam_reader.records().next().unwrap().unwrap();
 
         assert_eq!(o.cigar(), e.cigar());
