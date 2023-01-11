@@ -36,7 +36,7 @@ fffx = {version = "0.1.2", optional = true }
 rust-htslib = { version = "0.40.2", optional = true }
 
 [features]
-default = []
+default = ['map-file']
 htslib = ['rust-htslib']
 map-file = ['flate2', 'simdutf8', 'fffx']
 
