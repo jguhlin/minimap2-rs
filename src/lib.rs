@@ -682,7 +682,6 @@ impl Aligner {
                     } else {
                         None
                     };
-
                     mappings.push(Mapping {
                         target_name: Some(
                             std::ffi::CStr::from_ptr(contig)

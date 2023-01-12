@@ -1,6 +1,6 @@
 use rust_htslib::bam::record::{Cigar, CigarString};
 use rust_htslib::bam::{Header, Record};
-use crate::{Alignment, Mapping};
+use crate::{Alignment, Mapping, Strand};
 
 pub fn mapping_to_record(
     mapping: Option<&Mapping>,
@@ -16,7 +16,7 @@ pub fn mapping_to_record(
     let qual = match qual {
         Some(q) => Vec::from(q),
         None => {
-            let q = vec![255; seq.len()]; // Vec::with_capacity(seq.len());
+            let q = vec![255; seq.len()];
             q
         }
     };
@@ -26,9 +26,14 @@ pub fn mapping_to_record(
         .and_then(|a| a.cigar)
         .map(|c| cigar_to_cigarstr(&c));
 
+    rec.set(qname, cigar.as_ref(), seq, &qual[..]);
     match mapping {
         Some(m) => {
-            // TODO: set strand
+            println!("Strand {m:?}");
+            if m.strand == Strand::Reverse {
+                println!("here");
+                rec.set_reverse();
+            }
             // TODO: set secondary/supplementary flags
             rec.set_pos(m.target_start as i64);
             rec.set_mapq(m.mapq as u8);
@@ -47,7 +52,6 @@ pub fn mapping_to_record(
             rec.set_insert_size(-1);
         }
     };
-    rec.set(qname, cigar.as_ref(), seq, &qual[..]);
     // TODO: set AUX flags for cs/md if available
     rec
 }
