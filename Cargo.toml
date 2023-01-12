@@ -50,3 +50,6 @@ debug = true
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[dev-dependencies]
+cargo-nextest = "0.9.48"

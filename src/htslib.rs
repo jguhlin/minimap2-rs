@@ -1,29 +1,6 @@
 use rust_htslib::bam::record::{Cigar, CigarString};
 use rust_htslib::bam::{Header, Record};
-//    bam, bam::header::HeaderRecord, bam::record::Aux, bam::CompressionLevel, bam::Format,
-//    bam::Header, bam::HeaderView, bam::Read, errors, tpool::ThreadPool,
-//};
 use crate::{Alignment, Mapping};
-
-fn cigar_to_cigarstr(cigar: &Vec<(u32, u8)>) -> CigarString {
-    let op_vec: Vec<Cigar> = cigar
-        .to_owned()
-        .iter()
-        .map(|(len, op)| match op {
-            0 => Cigar::Match(*len),
-            1 => Cigar::Ins(*len),
-            2 => Cigar::Del(*len),
-            3 => Cigar::RefSkip(*len),
-            4 => Cigar::SoftClip(*len),
-            5 => Cigar::HardClip(*len),
-            6 => Cigar::Pad(*len),
-            7 => Cigar::Equal(*len),
-            8 => Cigar::Diff(*len),
-            _ => panic!("Unexpected cigar operation"),
-        })
-        .collect();
-    CigarString(op_vec)
-}
 
 pub fn mapping_to_record(
     mapping: Option<&Mapping>,
@@ -74,3 +51,26 @@ pub fn mapping_to_record(
     // TODO: set AUX flags for cs/md if available
     rec
 }
+
+
+fn cigar_to_cigarstr(cigar: &Vec<(u32, u8)>) -> CigarString {
+    let op_vec: Vec<Cigar> = cigar
+        .to_owned()
+        .iter()
+        .map(|(len, op)| match op {
+            0 => Cigar::Match(*len),
+            1 => Cigar::Ins(*len),
+            2 => Cigar::Del(*len),
+            3 => Cigar::RefSkip(*len),
+            4 => Cigar::SoftClip(*len),
+            5 => Cigar::HardClip(*len),
+            6 => Cigar::Pad(*len),
+            7 => Cigar::Equal(*len),
+            8 => Cigar::Diff(*len),
+            _ => panic!("Unexpected cigar operation"),
+        })
+        .collect();
+    CigarString(op_vec)
+}
+
+

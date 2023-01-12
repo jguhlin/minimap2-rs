@@ -1,11 +1,31 @@
 #[cfg(test)]
-#[cfg(feature = "htslib")]
+// #[cfg(feature = "htslib")]
 mod tests {
     use minimap2::htslib::mapping_to_record;
     use minimap2::{Aligner, Preset};
+    use std::collections::HashMap;
+    use std::rc::Rc;
+    use std::borrow::Cow;
+
 
     use rust_htslib::bam::header::{Header, HeaderRecord};
-    use rust_htslib::bam::{Format, Read, Reader, Writer};
+    use rust_htslib::bam::{Format, Read, Reader, Writer, Record};
+
+    fn gdna_records() -> Vec<Record> {
+        let mut reader = Reader::from_path("test_data/gDNA_vs_genome.sam").unwrap();
+        let records = reader.records().into_iter().filter_map(|r| Some(r.unwrap())).collect();
+        // for rec in reader.records() {
+        //     let rec = rec.unwrap();
+        //     if rec.qname() == q
+        // }
+        records
+    }
+
+    #[test]
+    fn test_unspliced_alignments() {
+        let truth = gdna_records();
+        println!("{truth:?}");
+    }
 
     #[test]
     fn test_mappy_output() {
