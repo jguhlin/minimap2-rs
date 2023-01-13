@@ -1,6 +1,8 @@
+use crate::{Aligner, Mapping, Strand};
+use core::ffi;
+use minimap2_sys::mm_idx_t;
 use rust_htslib::bam::record::{Cigar, CigarString};
 use rust_htslib::bam::{Header, Record};
-use crate::{Alignment, Mapping, Strand};
 
 pub fn mapping_to_record(
     mapping: Option<&Mapping>,
@@ -56,7 +58,6 @@ pub fn mapping_to_record(
     rec
 }
 
-
 fn cigar_to_cigarstr(cigar: &Vec<(u32, u8)>) -> CigarString {
     let op_vec: Vec<Cigar> = cigar
         .to_owned()
@@ -77,4 +78,76 @@ fn cigar_to_cigarstr(cigar: &Vec<(u32, u8)>) -> CigarString {
     CigarString(op_vec)
 }
 
+#[derive(Debug,PartialEq,Eq)]
+pub struct SeqMetaData {
+    pub name: String,
+    pub length: u32,
+    pub is_alt: bool,
+}
 
+#[derive(Debug)]
+pub struct MMIndex {
+    pub inner: mm_idx_t,
+}
+
+impl MMIndex {
+    pub fn n_seq(&self) -> u32 {
+        self.inner.n_seq
+    }
+
+    pub fn seqs(&self) -> Vec<SeqMetaData> {
+        let mut seqs: Vec<SeqMetaData> = Vec::with_capacity(self.n_seq() as usize);
+        for i in 0..self.n_seq() {
+            let _seq = unsafe { *(self.inner.seq).offset(i as isize) };
+            let c_str = unsafe { ffi::CStr::from_ptr(_seq.name) };
+            let rust_str = c_str.to_str().unwrap().to_string();
+            seqs.push(SeqMetaData {
+                name: rust_str,
+                length: _seq.len,
+                is_alt: _seq.is_alt != 0,
+            });
+        }
+        seqs
+    }
+}
+
+impl From<Aligner> for MMIndex {
+    fn from(aligner: Aligner) -> Self {
+        MMIndex {
+            inner: aligner.idx.unwrap(),
+        }
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "htslib")]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_index() {
+        let aligner = Aligner::builder()
+            .with_threads(1)
+            .with_index("test_data/MT-human.fa", Some("test_data/MT-human.mmi"))
+            .unwrap();
+
+        let idx = MMIndex::from(aligner);
+
+        let seqs = idx.seqs();
+
+        assert_eq!(
+            seqs,
+            vec![SeqMetaData {
+                name: "MT_human".to_string(),
+                length: 16569u32,
+                is_alt: false
+            }]
+        );
+
+        //for i in 0..idx.n_seq {
+        //    unsafe {
+        //        println!("{:?}", *(idx.seq).offset(i as isize));
+        //    }
+        //}
+    }
+}

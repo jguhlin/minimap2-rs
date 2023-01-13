@@ -4,3 +4,4 @@ test.mmi
 */target
 /*.mmi
 test_data/*.bam
+test_data/*.mmi

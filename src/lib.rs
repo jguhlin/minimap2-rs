@@ -1053,4 +1053,5 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
             assert_eq!(align.cs.is_some(), *cs);
         }
     }
+
 }
