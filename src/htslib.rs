@@ -1,6 +1,7 @@
 use crate::{Aligner, Mapping, Strand};
 use core::ffi;
 use minimap2_sys::mm_idx_t;
+use rust_htslib::bam::header::HeaderRecord;
 use rust_htslib::bam::record::{Cigar, CigarString};
 use rust_htslib::bam::{Header, Record};
 
@@ -78,7 +79,7 @@ fn cigar_to_cigarstr(cigar: &Vec<(u32, u8)>) -> CigarString {
     CigarString(op_vec)
 }
 
-#[derive(Debug,PartialEq,Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct SeqMetaData {
     pub name: String,
     pub length: u32,
@@ -109,10 +110,22 @@ impl MMIndex {
         }
         seqs
     }
+
+    pub fn get_header(&self) -> Header {
+        let mut header = Header::new();
+        for seq in self.seqs() {
+            header.push_record(
+                HeaderRecord::new(b"SQ")
+                    .push_tag(b"SN", &seq.name)
+                    .push_tag(b"LN", &seq.length),
+            );
+        }
+        header
+    }
 }
 
-impl From<Aligner> for MMIndex {
-    fn from(aligner: Aligner) -> Self {
+impl From<&Aligner> for MMIndex {
+    fn from(aligner: &Aligner) -> Self {
         MMIndex {
             inner: aligner.idx.unwrap(),
         }
@@ -124,17 +137,19 @@ impl From<Aligner> for MMIndex {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_index() {
+    fn get_aligner() -> Aligner {
         let aligner = Aligner::builder()
             .with_threads(1)
             .with_index("test_data/MT-human.fa", Some("test_data/MT-human.mmi"))
             .unwrap();
+        aligner
+    }
 
-        let idx = MMIndex::from(aligner);
-
+    #[test]
+    fn test_index() {
+        let aligner = get_aligner();
+        let idx = MMIndex::from(&aligner);
         let seqs = idx.seqs();
-
         assert_eq!(
             seqs,
             vec![SeqMetaData {
@@ -144,10 +159,11 @@ mod tests {
             }]
         );
 
-        //for i in 0..idx.n_seq {
-        //    unsafe {
-        //        println!("{:?}", *(idx.seq).offset(i as isize));
-        //    }
-        //}
+        let header = idx.get_header();
+
+        let records = header.to_hashmap();
+        let observed = records.get("SQ").unwrap().first().unwrap();
+        assert_eq!(observed.get("SN").unwrap(), "MT_human");
+        assert_eq!(observed.get("LN").unwrap(), "16569");
     }
 }

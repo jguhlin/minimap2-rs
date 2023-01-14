@@ -1,51 +1,8 @@
 #[cfg(test)]
 #[cfg(feature = "htslib")]
 mod tests {
-    use minimap2::htslib::mapping_to_record;
+    use minimap2::htslib::{mapping_to_record, MMIndex};
     use minimap2::{Aligner, Preset};
-    use std::borrow::Cow;
-    use std::collections::HashMap;
-    use std::rc::Rc;
-
-    // #[derive(Debug, Clone, PartialEq, Eq)]
-    // pub enum AlignType {
-    //     Primary,
-    //     Secondary,
-    //     Supplementary,
-    // }
-
-    // impl From<&u16> for AlignType {
-    //     fn from(flags: &u16) -> Self {
-    //         if (*flags & 256 as u16) {
-    //             Self::Secondary
-    //         } else if (*flags & 2048 as u16) {
-    //             Self::Supplementary
-    //         } else {
-    //             Self::Primary
-    //         }
-    //     }
-    // }
-
-    //    use bitflags::bitflags;
-    //    bitflags! {
-    //        struct SamFlags: u16 {
-    //            const PAIRED        = 0x1;
-    //            const PROPER_PAIR   = 0x2;
-    //            const UNMAP         = 0x4;
-    //            const MUNMAP        = 0x8;
-    //            const REVERSE       = 0x16;
-    //            const MREVERSE      = 0x32;
-    //            const READ1         = 0x64;
-    //            const READ2         = 0x128;
-    //            const SECONDARY     = 0x256;
-    //            const QCFAIL        = 0x512;
-
-    //            const DUP           = 0x1024;
-    //            const SUPPLEMENTARY = 0x2048;
-    //            const PRIMARY  = !(Self::SECONDARY | Self::SUPPLEMENTARY);
-    //        }
-    //    }
-
     use rust_htslib::bam::header::{Header, HeaderRecord};
     use rust_htslib::bam::{Format, Read, Reader, Record, Writer};
 
@@ -80,14 +37,8 @@ mod tests {
             .with_index("test_data/genome.fa", None)
             .unwrap()
             .with_cigar();
-        let mut header = Header::new();
-        // TODO: would be nice to get this from the aligner index
-        header.push_record(
-            HeaderRecord::new(b"SQ")
-                .push_tag(b"SN", &String::from("chr1"))
-                .push_tag(b"LN", &1720),
-        );
-
+        let idx = MMIndex::from(&aligner);
+        let header = idx.get_header();
         // truth set from cli minimap
         let expected_recs = gdna_records(query_name);
 
