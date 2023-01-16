@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 // TODO: Default to using simde
 
+#[cfg(not(feature = "mm2-fast"))]
 fn compile() {
     let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
