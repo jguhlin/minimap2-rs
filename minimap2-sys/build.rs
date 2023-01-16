@@ -4,14 +4,80 @@ use std::path::PathBuf;
 
 // TODO: Default to using simde
 
-#[cfg(not(feature = "mm2-fast"))]
+#[cfg(feature = "mm2-fast")]
+fn configure_for_mm2_fast(cc: &mut cc::Build) {
+    println!("cargo:rerun-if-changed=mm2-fast/*.c");
+
+    cc.include("mm2-fast");
+
+    let files: Vec<_> = std::fs::read_dir("mm2-fast")
+        .unwrap()
+        .map(|f| f.unwrap().path())
+        .collect();
+
+    assert!(files.len() != 0, "No files found in mm2-fast directory -- Did you forget to clone the submodule? git submodule init --recursive");
+
+    for file in files {
+        // Skip "main.c" and "example.c"
+        if file.file_name().unwrap() == "main.c" || file.file_name().unwrap() == "example.c" {
+            continue;
+        }
+
+        // Ignore all "neon"
+        if file.file_name().unwrap().to_str().unwrap().contains("neon") {
+            continue;
+        }
+
+        if let Some(x) = file.extension() {
+            if x == "c" {
+                cc.file(file);
+            }
+        }
+    }
+}
+
+#[cfg(feature = "minimap2")]
+fn configure_for_minimap2(cc: &mut cc::Build) {
+    println!("cargo:rerun-if-changed=minimap2/*.c");
+    cc.flag("-march=native");
+    cc.flag("-DPARALLEL_CHAINING");
+    cc.flag("-DALIGN_AVX");
+    cc.flag("-DAPPLY_AVX2");
+
+    cc.include("minimap2");
+
+    let files: Vec<_> = std::fs::read_dir("minimap2")
+        .unwrap()
+        .map(|f| f.unwrap().path())
+        .collect();
+
+    assert!(files.len() != 0, "No files found in minimap2 directory -- Did you forget to clone the submodule? git submodule init --recursive");
+
+    for file in files {
+        // Skip "main.c" and "example.c"
+        if file.file_name().unwrap() == "main.c" || file.file_name().unwrap() == "example.c" {
+            continue;
+        }
+
+        // Ignore all "neon"
+        if file.file_name().unwrap().to_str().unwrap().contains("neon") {
+            continue;
+        }
+
+        if let Some(x) = file.extension() {
+            if x == "c" {
+                cc.file(file);
+            }
+        }
+    }
+}
+
 fn compile() {
     let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
     let _host = env::var("HOST").unwrap();
     let _target = env::var("TARGET").unwrap();
 
-    println!("cargo:rerun-if-changed=minimap2/*.c");
     println!("cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR");
 
     /*
@@ -24,10 +90,17 @@ fn compile() {
     println!("cargo:rustc-link-lib=m");
     println!("cargo:rustc-link-lib=pthread");
 
-    let mut cc = cc::Build::new();
+    let mut cc = cc::Build::new();   
     cc.warnings(false);
     cc.out_dir(&out_path);
     cc.cpp_link_stdlib(None);
+
+    #[cfg(not(feature = "mm2-fast"))]
+    configure_for_minimap2(&mut cc);
+
+    #[cfg(feature = "mm2-fast")]
+    configure_for_mm2_fast(&mut cc);
+
     cc.flag("-DHAVE_KALLOC");
     cc.flag("-O2");
     cc.flag("-lm");
@@ -75,32 +148,7 @@ fn compile() {
         }
     }
 
-    cc.include("minimap2");
-
-    let files: Vec<_> = std::fs::read_dir("minimap2")
-        .unwrap()
-        .map(|f| f.unwrap().path())
-        .collect();
-
-    assert!(files.len() != 0, "No files found in minimap2 directory -- Did you forget to clone the submodule? git submodule init --recursive");
-
-    for file in files {
-        // Skip "main.c" and "example.c"
-        if file.file_name().unwrap() == "main.c" || file.file_name().unwrap() == "example.c" {
-            continue;
-        }
-
-        // Ignore all "neon"
-        if file.file_name().unwrap().to_str().unwrap().contains("neon") {
-            continue;
-        }
-
-        if let Some(x) = file.extension() {
-            if x == "c" {
-                cc.file(file);
-            }
-        }
-    }
+    
 
     cc.compile("libminimap");
 }
