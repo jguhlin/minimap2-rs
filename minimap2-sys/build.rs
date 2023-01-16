@@ -4,11 +4,17 @@ use std::path::PathBuf;
 
 // TODO: Default to using simde
 
+// Configure for mm2-fast
 #[cfg(feature = "mm2-fast")]
-fn configure_for_mm2_fast(cc: &mut cc::Build) {
+fn configure(cc: &mut cc::Build) {
     println!("cargo:rerun-if-changed=mm2-fast/*.c");
 
     cc.include("mm2-fast");
+    cc.target("native");
+    cc.flag("-march=native");
+    cc.flag("-DPARALLEL_CHAINING");
+    cc.flag("-DALIGN_AVX");
+    cc.flag("-DAPPLY_AVX2");
 
     let files: Vec<_> = std::fs::read_dir("mm2-fast")
         .unwrap()
@@ -16,6 +22,8 @@ fn configure_for_mm2_fast(cc: &mut cc::Build) {
         .collect();
 
     assert!(files.len() != 0, "No files found in mm2-fast directory -- Did you forget to clone the submodule? git submodule init --recursive");
+
+    cc.file("mm2-fast/map.c");
 
     for file in files {
         // Skip "main.c" and "example.c"
@@ -36,13 +44,10 @@ fn configure_for_mm2_fast(cc: &mut cc::Build) {
     }
 }
 
+// Configure for minimap2
 #[cfg(feature = "minimap2")]
-fn configure_for_minimap2(cc: &mut cc::Build) {
+fn configure(cc: &mut cc::Build) {
     println!("cargo:rerun-if-changed=minimap2/*.c");
-    cc.flag("-march=native");
-    cc.flag("-DPARALLEL_CHAINING");
-    cc.flag("-DALIGN_AVX");
-    cc.flag("-DAPPLY_AVX2");
 
     cc.include("minimap2");
 
@@ -95,14 +100,10 @@ fn compile() {
     cc.out_dir(&out_path);
     cc.cpp_link_stdlib(None);
 
-    #[cfg(not(feature = "mm2-fast"))]
-    configure_for_minimap2(&mut cc);
-
-    #[cfg(feature = "mm2-fast")]
-    configure_for_mm2_fast(&mut cc);
+    configure(&mut cc);
 
     cc.flag("-DHAVE_KALLOC");
-    cc.flag("-O2");
+    cc.opt_level(2);
     cc.flag("-lm");
     cc.flag("-lpthread");
 
@@ -147,8 +148,6 @@ fn compile() {
             cc.include(path);
         }
     }
-
-    
 
     cc.compile("libminimap");
 }
