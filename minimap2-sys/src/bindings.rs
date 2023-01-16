@@ -478,6 +478,7 @@ pub const MM_F_NO_HASH_NAME: u64 = 17179869184;
 pub const MM_I_HPC: u32 = 1;
 pub const MM_I_NO_SEQ: u32 = 2;
 pub const MM_I_NO_NAME: u32 = 4;
+pub const MM_I_SYNCMER: u32 = 8;
 pub const MM_IDX_MAGIC: &[u8; 5usize] = b"MMI\x02\0";
 pub const MM_MAX_SEG: u32 = 255;
 pub const MM_CIGAR_MATCH: u32 = 0;
@@ -8723,6 +8724,31 @@ extern "C" {
         k: ::std::os::raw::c_int,
         rid: u32,
         is_hpc: ::std::os::raw::c_int,
+        p: *mut mm128_v,
+    );
+}
+extern "C" {
+    pub fn mm_sketch_syncmer(
+        km: *mut ::std::os::raw::c_void,
+        str_: *const ::std::os::raw::c_char,
+        len: ::std::os::raw::c_int,
+        smer: ::std::os::raw::c_int,
+        k: ::std::os::raw::c_int,
+        rid: u32,
+        is_hpc: ::std::os::raw::c_int,
+        p: *mut mm128_v,
+    );
+}
+extern "C" {
+    pub fn mm_sketch2(
+        km: *mut ::std::os::raw::c_void,
+        str_: *const ::std::os::raw::c_char,
+        len: ::std::os::raw::c_int,
+        w: ::std::os::raw::c_int,
+        k: ::std::os::raw::c_int,
+        rid: u32,
+        is_hpc: ::std::os::raw::c_int,
+        is_syncmer: ::std::os::raw::c_int,
         p: *mut mm128_v,
     );
 }

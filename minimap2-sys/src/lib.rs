@@ -5,9 +5,7 @@
 #[cfg(feature = "bindgen")]
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-#[cfg(all(
-    not(feature = "bindgen")
-))]
+#[cfg(all(not(feature = "bindgen")))]
 include!("bindings.rs");
 
 unsafe impl Send for mm_idx_t {}

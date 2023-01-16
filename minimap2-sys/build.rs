@@ -31,9 +31,37 @@ fn compile() {
     cc.flag("-O2");
     cc.flag("-lm");
     cc.flag("-lpthread");
-    //cc.flag("-msse4.1");
-    //cc.flag("-DKSW_CPU_DISPATCH");
-    //cc.flag("-DKSW_SSE2_ONLY");
+
+    //cc.flag("lib/simde");
+    //cc.flag("-DUSE_SIMDE");
+    //cc.flag("-DSIMDE_ENABLE_NATIVE_ALIASES");
+
+    #[cfg(target_feature = "sse4.1")]
+    cc.flag("-msse4.1");
+
+    cc.flag("-DKSW_CPU_DISPATCH");
+
+    #[cfg(all(
+        target_arch = "x86",
+        target_feature = "sse2",
+        not(target_feature = "sse4.1")
+    ))]
+    cc.flag("-DKSW_SSE2_ONLY");
+
+    #[cfg(all(
+        target_arch = "x86",
+        target_feature = "sse2",
+        not(target_feature = "sse4.1")
+    ))]
+    cc.flag("-mno-sse4.1");
+
+    #[cfg(all(
+        target_arch = "x86",
+        target_feature = "sse2",
+        not(target_feature = "sse4.1")
+    ))]
+    cc.flag("-DKSW_SSE2_ONLY");
+
     cc.static_flag(true);
 
     if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
@@ -78,6 +106,7 @@ fn compile() {
 
 #[cfg(feature = "bindgen")]
 fn gen_bindings() {
+    let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
     bindgen::Builder::default()
         .header("minimap2.h")
