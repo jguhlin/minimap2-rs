@@ -6,15 +6,6 @@ Use this if you need lower-level bindings for minimap2.
 * Can we decouple from pthread?
 
 ## Changelog
-
-### 0.1.9 IN DEVELOPMENT
-* HTS lib support by @eharr
-* HTS Lib: Output sam/bam files
-* More tests by @eharr
-* SSE2/4 support can be enabled by using the "sse" feature
-* Update minimap2-sys to latest version
-
-
 ### 0.1.8
 * Changed how zlib is compiled
 * Dep versions update

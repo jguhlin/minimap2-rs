@@ -134,6 +134,13 @@ and/or:
 
 
 # Changelog
+### 0.1.10 IN DEVELOPMENT
+* HTS lib support by @eharr
+* HTS Lib: Output sam/bam files
+* More tests by @eharr
+* SSE2/4 support can be enabled by using the "sse" feature
+* Update minimap2-sys to latest version
+
 ## 0.1.9
 * Thanks for @Adoni5 for switching to builder pattern, and @eharr for adding additional fields to alignment.
 * Do not require libclang for normal compilation.
