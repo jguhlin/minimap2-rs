@@ -45,7 +45,7 @@ fn configure(cc: &mut cc::Build) {
 }
 
 // Configure for minimap2
-#[cfg(feature = "minimap2")]
+#[cfg(not(feature = "mm2-fasta"))]
 fn configure(cc: &mut cc::Build) {
     println!("cargo:rerun-if-changed=minimap2/*.c");
 
@@ -103,7 +103,6 @@ fn compile() {
     configure(&mut cc);
 
     cc.flag("-DHAVE_KALLOC");
-    cc.opt_level(2);
     cc.flag("-lm");
     cc.flag("-lpthread");
 
