@@ -19,23 +19,25 @@ exclude = [
 
 
 [dependencies]
-libc = "0.2.134"
+libc = "0.2.139"
 bytelines = "2.4.0"
 simdutf8 = "0.1.4"
-flate2 = { version = "1.0.17", features = ["zlib-ng"], default-features = false }
+flate2 = { version = "1.0.25", features = ["zlib-ng"], default-features = false }
+fffx = "0.1.1"
 
 # Dep for development
 #minimap2-sys = { path = "./minimap2-sys" }
-minimap2-sys = "0.1.7"
-fffx = "0.1.1"
+minimap2-sys = "0.1.8"
 
 # [profile.release]
 # opt-level = 3
 # lto = "fat"
 # codegen-units  = 1
 
-[profile.dev]
-debug = true
-
 [profile.dev.package."*"]
 opt-level = 3
+
+[features]
+default = []
+mm2-fast = [] # Not working yet!
+sse = ["minimap2-sys/sse"]
