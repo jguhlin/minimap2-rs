@@ -19,11 +19,11 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+libz-sys = { version = "1.1.8", default-features = false, features = ["libc"] }
 
 [build-dependencies]
 pkg-config = "0.3.26"
 libc = "0.2"
-libz-sys = { version = "1.1.8", default-features = false, features = ["libc"] }
 
 [build-dependencies.bindgen]
 optional = true
@@ -38,3 +38,4 @@ version = "1.0.78"
 default = []
 vendored = ["bindgen"]
 mm2-fast = []
+sse = []

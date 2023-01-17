@@ -110,6 +110,25 @@ fn compile() {
     //cc.flag("-DUSE_SIMDE");
     //cc.flag("-DSIMDE_ENABLE_NATIVE_ALIASES");
 
+    #[cfg(feature = "sse")]
+    sse(&mut cc);
+
+    cc.static_flag(true);
+
+    if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
+        cc.include(include);
+    }
+
+    if let Ok(lib) = pkg_config::find_library("zlib") {
+        for path in &lib.include_paths {
+            cc.include(path);
+        }
+    }
+
+    cc.compile("libminimap");
+}
+
+fn sse(cc: &mut cc::Build) {
     #[cfg(target_feature = "sse4.1")]
     cc.flag("-msse4.1");
 
@@ -135,20 +154,6 @@ fn compile() {
         not(target_feature = "sse4.1")
     ))]
     cc.flag("-DKSW_SSE2_ONLY");
-
-    cc.static_flag(true);
-
-    if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
-        cc.include(include);
-    }
-
-    if let Ok(lib) = pkg_config::find_library("zlib") {
-        for path in &lib.include_paths {
-            cc.include(path);
-        }
-    }
-
-    cc.compile("libminimap");
 }
 
 #[cfg(feature = "bindgen")]
