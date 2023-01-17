@@ -45,7 +45,7 @@ fn configure(cc: &mut cc::Build) {
 }
 
 // Configure for minimap2
-#[cfg(not(feature = "mm2-fasta"))]
+#[cfg(not(feature = "mm2-fast"))]
 fn configure(cc: &mut cc::Build) {
     println!("cargo:rerun-if-changed=minimap2/*.c");
 
