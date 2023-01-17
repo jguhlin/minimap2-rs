@@ -128,6 +128,7 @@ fn compile() {
     cc.compile("libminimap");
 }
 
+#[cfg(feature = "sse")]
 fn sse(cc: &mut cc::Build) {
     #[cfg(target_feature = "sse4.1")]
     cc.flag("-msse4.1");
