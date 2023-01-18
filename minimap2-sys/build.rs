@@ -17,7 +17,8 @@ fn configure(cc: &mut cc::Build) {
     cc.flag("-march=native");
     cc.flag("-DPARALLEL_CHAINING");
     cc.flag("-DALIGN_AVX");
-    cc.flag("-DAPPLY_AVX2");    
+    cc.flag("-DAPPLY_AVX2");
+    cc.opt_level(3);
 
     let files: Vec<_> = std::fs::read_dir("mm2-fast")
         .unwrap()
@@ -52,10 +53,14 @@ fn configure(cc: &mut cc::Build) {
 
 // Configure for minimap2
 #[cfg(not(feature = "mm2-fast"))]
-fn configure(cc: &mut cc::Build) {
+fn configure(mut cc: &mut cc::Build) {
     println!("cargo:rerun-if-changed=minimap2/*.c");
 
     cc.include("minimap2");
+    cc.opt_level(2);
+
+    #[cfg(feature = "sse")]
+    sse(&mut cc);
 
     let files: Vec<_> = std::fs::read_dir("minimap2")
         .unwrap()
@@ -104,6 +109,7 @@ fn compile() {
     let mut cc = cc::Build::new();
 
     cc.warnings(false);
+    cc.flag("-Wc++-compat");
     cc.out_dir(&out_path);
     // cc.cpp_link_stdlib(None);
 
@@ -116,9 +122,6 @@ fn compile() {
     //cc.flag("lib/simde");
     //cc.flag("-DUSE_SIMDE");
     //cc.flag("-DSIMDE_ENABLE_NATIVE_ALIASES");
-
-    #[cfg(feature = "sse")]
-    sse(&mut cc);
 
     cc.static_flag(true);
 
@@ -137,31 +140,43 @@ fn compile() {
 
 #[cfg(feature = "sse")]
 fn sse(cc: &mut cc::Build) {
+    cc.flag("-DKSW_CPU_DISPATCH");
+
+    #[cfg(target_feature = "sse4.1")]
+    println!("DEBUG: SSE4.1 enabled");
+
+    #[cfg(target_feature = "sse4")]
+    println!("DEBUG: SSE4 detected");
+
+    #[cfg(target_feature = "sse2")]
+    println!("DEBUG: SSE2 enabled");
+
     #[cfg(target_feature = "sse4.1")]
     cc.flag("-msse4.1");
 
-    cc.flag("-DKSW_CPU_DISPATCH");
-
     #[cfg(all(
-        target_arch = "x86",
         target_feature = "sse2",
         not(target_feature = "sse4.1")
     ))]
     cc.flag("-DKSW_SSE2_ONLY");
 
     #[cfg(all(
-        target_arch = "x86",
         target_feature = "sse2",
         not(target_feature = "sse4.1")
     ))]
     cc.flag("-mno-sse4.1");
 
     #[cfg(all(
-        target_arch = "x86",
         target_feature = "sse2",
         not(target_feature = "sse4.1")
     ))]
-    cc.flag("-DKSW_SSE2_ONLY");
+    cc.flag("-msse2");
+
+    #[cfg(all(
+        target_feature = "sse2",
+        not(target_feature = "sse4.1")
+    ))]
+    println!("DEBUG: -msse2 flag enabled");
 }
 
 #[cfg(feature = "bindgen")]

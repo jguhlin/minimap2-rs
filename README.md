@@ -132,13 +132,11 @@ and/or:
 > Li, H. (2021). New strategies to improve minimap2 alignment accuracy.
 > *Bioinformatics*, **37**:4572-4574. [doi:10.1093/bioinformatics/btab705][doi2]
 
-
 # Changelog
 ### 0.1.10 IN DEVELOPMENT
 * HTS lib support by @eharr
 * HTS Lib: Output sam/bam files
 * More tests by @eharr
-* SSE2/4 support can be enabled by using the "sse" feature
 * Update minimap2-sys to latest version
 
 ## 0.1.9
@@ -152,5 +150,8 @@ and/or:
 * Support slightly older versions of rustc by using libc:: rather than std::ffi for c_char (Thanks dwpeng!)
 * Use fffx module for fasta/q parsing
 
+# TODO
+* Get SSE working with "sse" feature (compiles and tests work in -sys crate, but not main crate)
+* Possible to decouple from pthread?
 
 ![Genomics Aotearoa](info/genomics-aotearoa.png)
