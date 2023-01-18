@@ -9,12 +9,15 @@ use std::path::PathBuf;
 fn configure(cc: &mut cc::Build) {
     println!("cargo:rerun-if-changed=mm2-fast/*.c");
 
+    // mm2-fast is compiled with c++
+    cc.cpp(true);
     cc.include("mm2-fast");
+    cc.include("mm2-fast/ext/TAL/src/dynamic-programming/");
     cc.target("native");
     cc.flag("-march=native");
     cc.flag("-DPARALLEL_CHAINING");
     cc.flag("-DALIGN_AVX");
-    cc.flag("-DAPPLY_AVX2");
+    cc.flag("-DAPPLY_AVX2");    
 
     let files: Vec<_> = std::fs::read_dir("mm2-fast")
         .unwrap()
@@ -25,9 +28,12 @@ fn configure(cc: &mut cc::Build) {
 
     cc.file("mm2-fast/map.c");
 
+    cc.file("mm2_fast_glue.c");
+
     for file in files {
         // Skip "main.c" and "example.c"
-        if file.file_name().unwrap() == "main.c" || file.file_name().unwrap() == "example.c" {
+        // For mm2fast also skip map.c...
+        if file.file_name().unwrap() == "example.c" || file.file_name().unwrap() == "main.c" || file.file_name().unwrap() == "map.c" {
             continue;
         }
 
@@ -95,10 +101,11 @@ fn compile() {
     println!("cargo:rustc-link-lib=m");
     println!("cargo:rustc-link-lib=pthread");
 
-    let mut cc = cc::Build::new();   
+    let mut cc = cc::Build::new();
+
     cc.warnings(false);
     cc.out_dir(&out_path);
-    cc.cpp_link_stdlib(None);
+    // cc.cpp_link_stdlib(None);
 
     configure(&mut cc);
 
@@ -161,10 +168,17 @@ fn sse(cc: &mut cc::Build) {
 fn gen_bindings() {
     let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
-    bindgen::Builder::default()
-        .header("minimap2.h")
+    let mut bindgen = bindgen::Builder::default()
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
-        .rustfmt_bindings(true)
+        .rustfmt_bindings(true);
+
+    #[cfg(not(feature = "mm2-fast"))]
+    let mut bindgen = bindgen.header("mm2-fast.h");
+
+    #[cfg(feature = "mm2-fast")]
+    let mut bindgen = bindgen.header("minimap2.h");
+
+    bindgen
         .generate()
         .expect("Couldn't write bindings!")
         .write_to_file(out_path.join("bindings.rs"))
