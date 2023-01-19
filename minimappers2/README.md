@@ -55,7 +55,14 @@ result = aligner.map1(Sequence("MySeq", seq))
 Where seq_name and seq are both strings. The output is a Polars DataFrame.
 
 ## Aligning Multiple Sequences
-TBD
+```python
+seqs = [Sequence("name of seq 1", seq1), 
+        Sequence("name of seq 2", seq1)]
+result = aligner.map(seqs)
+```
+
+# Example Notebook
+Please see the [example notebook](https://github.com/jguhlin/minimap2-rs/blob/main/minimappers2/example/Exampe.ipynb) for more examples.
 
 ## Mapping a file
 Please [open an issue](https://github.com/jguhlin/minimap2-rs/issues/new) if you need to map files from this API.
@@ -70,7 +77,7 @@ For more information, please see the [Polars User Guide](https://pola-rs.github.
 
 ## Example of Results
 Here is an image of the resulting dataframe
-![Resulting Dataframe Image](images/minimappers2_df.png)
+![Resulting Dataframe Image](https://raw.githubusercontent.com/jguhlin/minimap2-rs/main/minimappers2/images/minimappers2_df.png)
 
 **NOTE** Mapq, Cigar, and others will not show up unless .cigar() is enabled on the aligner itself.
 
@@ -97,4 +104,4 @@ and/or:
 * Return results as Polars dfs
 
 # Funding
-![Genomics Aotearoa](../info/genomics-aotearoa.png)
+![Genomics Aotearoa](https://github.com/jguhlin/minimap2-rs/blob/main/info/genomics-aotearoa.png)

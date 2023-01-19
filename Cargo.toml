@@ -25,12 +25,12 @@ exclude = [
 libc = "0.2.139"
 bytelines = "2.4.0"
 simdutf8 = "0.1.4"
-flate2 = { version = "1.0.25", features = ["zlib-ng"], default-features = false }
+flate2 = { version = "1.0.25", default-features = false }
 fffx = { version = "0.1.1", optional = true }
 
 # Dep for development
 #minimap2-sys = { path = "./minimap2-sys" }
-minimap2-sys = "0.1.9"
+minimap2-sys = "0.1.10"
 rust-htslib = { version = "0.40.2", optional = true }
 
 # [profile.release]
@@ -48,3 +48,6 @@ sse = ["minimap2-sys/sse"]
 htslib = ['rust-htslib']
 simde = ["minimap2-sys/simde"]
 map-file = ["fffx"]
+
+[package.metadata.docs.rs]
+features = ["map-file", "htslib"]

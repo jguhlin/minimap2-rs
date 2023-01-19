@@ -147,9 +147,13 @@ and/or:
 > *Bioinformatics*, **37**:4572-4574. [doi:10.1093/bioinformatics/btab705][doi2]
 
 # Changelog
+
+### 0.1.11 
+* HTS lib: add support for optional quality scores by @eharr
+
 ### 0.1.10
 * HTS lib support by @eharr
-* HTS Lib: Output sam/bam files by @eharr
+* HTS lib: Output sam/bam files by @eharr
 * More tests by @eharr
 * Display impl for Strand thanks to @ahcm
 * Update minimap2-sys to latest version by @jguhlin
