@@ -156,15 +156,6 @@ fn sse(cc: &mut cc::Build) {
     cc.flag("-DKSW_CPU_DISPATCH");
 
     #[cfg(target_feature = "sse4.1")]
-    println!("DEBUG: SSE4.1 enabled");
-
-    #[cfg(target_feature = "sse4")]
-    println!("DEBUG: SSE4 detected");
-
-    #[cfg(target_feature = "sse2")]
-    println!("DEBUG: SSE2 enabled");
-
-    #[cfg(target_feature = "sse4.1")]
     cc.flag("-msse4.1");
 
     #[cfg(all(
@@ -184,12 +175,6 @@ fn sse(cc: &mut cc::Build) {
         not(target_feature = "sse4.1")
     ))]
     cc.flag("-msse2");
-
-    #[cfg(all(
-        target_feature = "sse2",
-        not(target_feature = "sse4.1")
-    ))]
-    println!("DEBUG: -msse2 flag enabled");
 }
 
 #[cfg(feature = "bindgen")]

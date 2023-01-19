@@ -127,14 +127,13 @@ Probably not freeing C memory somewhere.... Not sure yet, if so it's just leakin
 
 # Next things todo
 * Print other tags so we can have an entire PAF format
-* Compile with SSE2 / SSE4.1 / SIMDe (auto-detect, but also make with features)
+* -sys Compile with SSE2 / SSE4.1 (auto-detect, but also make with features)
 * Multi-thread guide (tokio async threads or use crossbeam queue and traditional threads?)
-* Maybe should be split into 2 more libraries, minimap2-safe (lower but safe level) and minimap2 (high-level api) like zstd? - Then people can implement threading as they like or just fall back to a known-decent implementation?
 * Iterator interface for map_file
 * MORE TESTS
-* Get SSE working with "sse" feature (compiles and tests work in -sys crate, but not main crate)
-* Possible to decouple from pthread?
-* Enable Lisa-hash for mm2-fast? But must handle build arguments from the command-line.
+* -sys Get SSE working with "sse" feature (compiles and tests work in -sys crate, but not main crate)
+* -sys Possible to decouple from pthread?
+* -sys Enable Lisa-hash for mm2-fast? But must handle build arguments from the command-line.
 
 # Citation
 You should cite the minimap2 papers if you use this in your work.
