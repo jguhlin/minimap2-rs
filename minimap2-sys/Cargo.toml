@@ -13,6 +13,7 @@ exclude = [
 	"**/*.fasta",
 	"libsfasta/test_data/",
 	"*.profdata",
+	"target",
 ]
 
 [lib]
