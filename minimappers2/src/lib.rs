@@ -1,6 +1,18 @@
+use std::num::NonZeroI32;
+
+use mimalloc::MiMalloc;
 use pyo3::prelude::*;
 use minimap2::*;
 use minimap2_sys::{mm_set_opt, MM_F_CIGAR};
+use pyo3_polars::{
+    PyDataFrame
+};
+use pyo3_polars::error::PyPolarsErr;
+use polars::prelude::*;
+use polars::df;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 // Reference: https://github.com/pola-rs/pyo3-polars
 
@@ -15,6 +27,18 @@ unsafe impl Send for Aligner {}
 #[pymethods]
 impl Aligner {
 
+    // Mapping functions
+    /// Map a single sequence
+    fn map1(&self, id: &str, seq: &str) -> PyResult<PyDataFrame> {
+        let mut mappings = Mappings::default();
+
+        let results = self.aligner.map(seq.as_bytes(), true, true, None, None).unwrap();
+        results.into_iter().for_each(|r| mappings.push(r));
+
+        Ok(PyDataFrame(mappings.to_df().unwrap()))
+    }
+
+    // Builder functions
     /// Returns an unconfigured Aligner
     #[new]
     fn new() -> Self {
@@ -43,6 +67,7 @@ impl Aligner {
         self.aligner.mapopt.flag |= MM_F_CIGAR as i64;
     }
 
+    // Convenience Functions, at the bottom, because it pollutes the namespace
     /// Configure Aligner for ONT reads
     fn map_ont(&mut self) {
         self.preset(Preset::MapOnt);
@@ -106,14 +131,6 @@ impl Aligner {
     /// Configure Aligner for Cdna
     fn cdna(&mut self) {
         self.preset(Preset::Cdna);
-    }
-
-    fn map(&self, seq: &str) -> PyResult<Vec<minimap2::Alignment>> {
-        let mut alignments = Vec::new();
-        self.aligner.map(seq, |alignment| {
-            alignments.push(alignment);
-        });
-        Ok(alignments)
     }
 }
 
@@ -255,6 +272,147 @@ fn minimappers(py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(splice, m)?)?;
     m.add_function(wrap_pyfunction!(cdna, m)?)?;
     Ok(())
+}
+
+/// Mapping results
+#[derive(Default)]
+struct Mappings {
+    pub query_name: Vec<Option<String>>,
+    pub query_len: Vec<Option<NonZeroI32>>,
+    pub query_start: Vec<i32>,
+    pub query_end: Vec<i32>,
+    pub strand: Vec<Strand>,
+    pub target_name: Vec<Option<String>>,
+    pub target_len: Vec<i32>,
+    pub target_start: Vec<i32>,
+    pub target_end: Vec<i32>,
+    pub match_len: Vec<i32>,
+    pub block_len: Vec<i32>,
+    pub mapq: Vec<u32>,
+    pub is_primary: Vec<bool>,
+    pub alignment: Vec<Option<Alignment>>,
+}
+
+impl Mappings {
+    pub fn push(&mut self, other: minimap2::Mapping) {
+        self.query_name.push(other.query_name);
+        self.query_len.push(other.query_len);
+        self.query_start.push(other.query_start);
+        self.query_end.push(other.query_end);
+        self.strand.push(other.strand);
+        self.target_name.push(other.target_name);
+        self.target_len.push(other.target_len);
+        self.target_start.push(other.target_start);
+        self.target_end.push(other.target_end);
+        self.match_len.push(other.match_len);
+        self.block_len.push(other.block_len);
+        self.mapq.push(other.mapq);
+        self.is_primary.push(other.is_primary);
+        self.alignment.push(other.alignment);
+    }
+
+    pub fn to_df(self) -> Result<DataFrame, PolarsError> {
+
+        // Convert strand to string + or -
+        let strand: Vec<String> = self.strand.iter().map(|x| x.to_string()).collect();
+
+        // Convert query len to Option<u32>
+        // let query_len: Vec<Option<u32>> = self.query_len.iter().map(|x| x.map(|y| y as u32.into())).collect();
+        let query_len: Vec<Option<u32>> = self.query_len.iter().map(|x|
+            match x {
+                Some(y) => Some(y.get() as u32),
+                None => None,
+            }
+        ).collect();
+
+        let nm: Vec<Option<i32>> = self.alignment.iter().map(|x|
+            match x {
+                // These are ugly but it's early in the morning...
+                Some(y) => Some(y.nm),
+                None => None,
+            }
+        ).collect();
+
+        let cigar: Vec<Option<Vec<(u32, u8)>>> = self.alignment.iter().map(|x|
+            match x {
+                Some(y) => match &y.cigar {
+                    Some(z) => Some(z.clone()),
+                    None => None,
+                },
+                None => None,
+            }
+        ).collect();
+
+        let cigar_str: Vec<Option<String>> = self.alignment.iter().map(|x|
+            match x {
+                Some(y) => match &y.cigar_str {
+                    Some(z) => Some(z.clone()),
+                    None => None,
+                },
+                None => None,
+            }
+        ).collect();
+
+        let md: Vec<Option<String>> = self.alignment.iter().map(|x|
+            match x {
+                Some(y) => match &y.md {
+                    Some(z) => Some(z.clone()),
+                    None => None,
+                },
+                None => None,
+            }
+        ).collect();
+
+        let cs: Vec<Option<String>> = self.alignment.iter().map(|x|
+            match x {
+                Some(y) => match &y.cs {
+                    Some(z) => Some(z.clone()),
+                    None => None,
+                },
+                None => None,
+            }
+        ).collect();
+
+        let query_name = Series::new("query_name", self.query_name);
+        let query_len = Series::new("query_len", query_len);
+        let query_start = Series::new("query_start", self.query_start);
+        let query_end = Series::new("query_end", self.query_end);
+        let strand = Series::new("strand", strand);
+        let target_name = Series::new("target_name", self.target_name);
+        let target_len = Series::new("target_len", self.target_len);
+        let target_start = Series::new("target_start", self.target_start);
+        let target_end = Series::new("target_end", self.target_end);
+        let match_len = Series::new("match_len", self.match_len);
+        let block_len = Series::new("block_len", self.block_len);
+        let mapq = Series::new("mapq", self.mapq);
+        let is_primary = Series::new("is_primary", self.is_primary);
+        let nm = Series::new("nm", nm);
+        // let cigar = Series::new("cigar", cigar);
+        let cigar_str = Series::new("cigar_str", cigar_str);
+        let md = Series::new("md", md);
+        let cs = Series::new("cs", cs);
+
+        DataFrame::new(vec![
+            query_name,
+            query_len,
+            query_start,
+            query_end,
+            strand,
+            target_name,
+            target_len,
+            target_start,
+            target_end,
+            match_len,
+            block_len,
+            mapq,
+            is_primary,
+            nm,
+            // cigar,
+            cigar_str,
+            md,
+            cs,
+        ])
+    }
 }
 
 #[cfg(test)]
