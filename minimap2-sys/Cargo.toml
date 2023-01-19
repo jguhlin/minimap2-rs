@@ -35,9 +35,8 @@ features = ["runtime", "which-rustfmt"]
 version = "1.0.78"
 
 [features]
-default = ["map-file"]
+default = []
 vendored = ["bindgen"]
 mm2-fast = []
 sse = []
 simde = []
-map-file = []

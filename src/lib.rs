@@ -21,7 +21,7 @@ pub type MapOpt = mm_mapopt_t;
 /// Alias for mm_idxopt_t
 pub type IdxOpt = mm_idxopt_t;
 
-#[cfg(feature="map-file")]
+#[cfg(feature = "map-file")]
 pub use fffx::{Fasta, Fastq, Sequence};
 
 // TODO: Probably a better way to handle this...
@@ -46,11 +46,9 @@ pub enum Strand {
     Reverse,
 }
 
-impl std::fmt::Display for Strand
-{
+impl std::fmt::Display for Strand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self
-        {
+        match self {
             Forward => write!(f, "+"),
             Reverse => write!(f, "-"),
         }
@@ -962,7 +960,6 @@ mod tests {
         println!("Reverse Strand\n{:#?}", mappings);
         assert!(mappings[0].strand == Strand::Reverse);
 
-
         let mut aligner = aligner.with_cigar();
 
         aligner
@@ -1078,5 +1075,4 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
             assert_eq!(align.cs.is_some(), *cs);
         }
     }
-
 }

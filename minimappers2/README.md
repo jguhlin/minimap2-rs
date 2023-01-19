@@ -3,9 +3,6 @@ Python bindings for the [Rust FFI](https://github.com/jguhlin/minimap2-rs/) [min
 # Why?
 [PyO3](https://github.com/PyO3/pyo3) makes it very easy to create Python libraries via Rust. Further, we can use [Polars](https://github.com/pola-rs/polars) to export results as a dataframe (which can be used as-is, or converted to Pandas). Python allows for faster experimentation with novel algorithms, integration into machine learning pipelines, and provides an opportunity for those not familiar with Rust nor C/C++ to use minimap2.
 
-## Why mininmappers2?
-Because I'm terrible with names. MinimappeRS2, add RS for rust into the name. ¯\_(ツ)_/¯
-
 # Current State
 Very early alpha. Please use, and open an issue for any features you need that are missing, and for any bugs you find.
 
@@ -25,6 +22,11 @@ aligner = map_hifi()
 aligner.cigar()
 ```
 
+Please note, at this time the following syntax is **NOT** supported:
+```python
+aligner = map_ont().threads(4).cigar()
+```
+
 ## Creating an index
 ```python
 aligner.index("ref.fa")
@@ -42,7 +44,12 @@ aligner.load_index("ref.mmi")
 
 ## Aligning a Single Sequence
 ```python
-aligner.align(seq_name, seq)
+query = Sequence(seq_name, seq)
+aligner.map1(query)
+
+# Example
+seq = "CCAGAACGTACAAGGAAATATCCTCAAATTATCCCAAGAATTGTCCGCAGGAAATGGGGATAATTTCAGAAATGAGAG"
+result = aligner.map1(Sequence("MySeq", seq))
 ```
 
 Where seq_name and seq are both strings. The output is a Polars DataFrame.
@@ -50,14 +57,14 @@ Where seq_name and seq are both strings. The output is a Polars DataFrame.
 ## Aligning Multiple Sequences
 TBD
 
-# Resuls
-All results are returned as [Polars](https://github.com/pola-rs/polars) dataframes.
+## Mapping a file
+Please [open an issue](https://github.com/jguhlin/minimap2-rs/issues/new) if you need to map files from this API.
 
-* Polars is the fasted dataframe library in the Python Ecosystem. 
+# Results
+All results are returned as [Polars](https://github.com/pola-rs/polars) dataframes. You can convert Polars dataframes to Pandas dataframes with [.to_pandas()](https://pola-rs.github.io/polars/py-polars/html/reference/dataframe/api/polars.DataFrame.to_pandas.html#polars.DataFrame.to_pandas)
+
+* Polars is the fastest dataframe library in the Python Ecosystem. 
 * Polars provides a nice data bridge between Rust and Python.
-* You can convert Polars dataframes to Pandas dataframes with [.to_pandas()](https://pola-rs.github.io/polars/py-polars/html/reference/dataframe/api/polars.DataFrame.to_pandas.html#polars.DataFrame.to_pandas)
-
-Reading large files via Polars then converting to Pandas is faster than reading directly in Pandas.
 
 For more information, please see the [Polars User Guide](https://pola-rs.github.io/polars-book/user-guide/index.html) or the [Polars Guide for Pandas users](https://pola-rs.github.io/polars-book/user-guide/coming_from_pandas.html).
 
@@ -66,6 +73,12 @@ Here is an image of the resulting dataframe
 ![Resulting Dataframe Image](images/minimappers2_df.png)
 
 **NOTE** Mapq, Cigar, and others will not show up unless .cigar() is enabled on the aligner itself.
+
+# Errors
+As this is a very-early stage library, error checking is not yet implemented. When things crash you will likely need to restart your python interpreter (jupyter kernel). Let me know what happened and [open an issue](https://github.com/jguhlin/minimap2-rs/issues/new) and I will get to it.
+
+# Performance
+Effort has been made to make this as performant as possible, but if you need more performance, please use minimap2 directly and import the results.
 
 # Citation
 You should cite the minimap2 papers if you use this in your work.
@@ -80,7 +93,8 @@ and/or:
 
 # Changelog
 ## 0.1.0
-* Initial Idea
+* Initial Functions implemented
+* Return results as Polars dfs
 
 # Funding
-![Genomics Aotearoa](info/genomics-aotearoa.png)
+![Genomics Aotearoa](../info/genomics-aotearoa.png)

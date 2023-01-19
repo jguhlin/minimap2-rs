@@ -1,20 +1,41 @@
 use std::num::NonZeroI32;
+use std::sync::{Mutex, Arc};
 
 use mimalloc::MiMalloc;
-use pyo3::prelude::*;
 use minimap2::*;
 use minimap2_sys::{mm_set_opt, MM_F_CIGAR};
-use pyo3_polars::{
-    PyDataFrame
-};
-use pyo3_polars::error::PyPolarsErr;
-use polars::prelude::*;
-use polars::df;
+use pyo3::prelude::*;
+use pyo3_polars::{error::PyPolarsErr, PyDataFrame};
+use polars::{prelude::*, df};
+use crossbeam::queue::ArrayQueue;
+use fffx::{Fasta, Fastq};
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-// Reference: https://github.com/pola-rs/pyo3-polars
+mod multithreading;
+
+use multithreading::*;
+
+/// Sequence class for use with minimappers2
+#[pyclass]
+#[derive(Default, Debug, Clone)]
+pub struct Sequence {
+    pub id: String,
+    pub sequence: Vec<u8>,
+}
+
+#[pymethods]
+impl Sequence {
+    /// Create a new Sequence
+    #[new]
+    fn new(id: &str, sequence: &str) -> Self {
+        Sequence {
+            id: id.to_string(),
+            sequence: sequence.as_bytes().to_vec(),
+        }
+    }
+}
 
 /// Wrapper around minimap2::Aligner
 #[pyclass]
@@ -29,15 +50,100 @@ impl Aligner {
 
     // Mapping functions
     /// Map a single sequence
-    fn map1(&self, id: &str, seq: &str) -> PyResult<PyDataFrame> {
+    fn map1(&self, seq: &Sequence) -> PyResult<PyDataFrame> {
         let mut mappings = Mappings::default();
 
-        let results = self.aligner.map(seq.as_bytes(), true, true, None, None).unwrap();
+        let results = self.aligner.map(&seq.sequence, true, true, None, None).unwrap();
         results.into_iter().for_each(|mut r| {
-            r.query_name = Some(id.to_string());
-            println!("{:#?}", r);
+            r.query_name = Some(seq.id.clone());
             mappings.push(r)
         });
+
+        Ok(PyDataFrame(mappings.to_df().unwrap()))
+    }
+
+    /// Map multiple sequences - Multithreaded
+    fn map(&self, py: Python<'_>, seqs: Vec<Sequence>) -> PyResult<PyDataFrame> {
+        // Get GIL and allow_threads
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        // If single threaded, do not open a new thread...
+        if self.aligner.threads == 1 {
+            let mut mappings = Mappings::default();
+
+            for seq in seqs {
+                let results = self.aligner.map(&seq.sequence, true, true, None, None).unwrap();
+                results.into_iter().for_each(|mut r| {
+                    r.query_name = Some(seq.id.clone());
+                    mappings.push(r)
+                });
+            }
+
+            return Ok(PyDataFrame(mappings.to_df().unwrap()));
+        }
+
+        let work_queue = Arc::new(Mutex::new(seqs));
+        let results_queue = Arc::new(ArrayQueue::<WorkQueue<Vec<Mapping>>>::new(128));
+        let mut thread_handles = Vec::new();
+        for i in 0..(self.aligner.threads-1) {
+            let work_queue = Arc::clone(&work_queue);
+            let results_queue = Arc::clone(&results_queue);
+
+            let mut aligner = self.aligner.clone();
+
+            let handle = std::thread::spawn(move || loop {
+                let backoff = crossbeam::utils::Backoff::new();
+                let work = work_queue.lock().unwrap().pop();
+
+                match work {
+                    Some(sequence) => {
+                        let mut result = aligner
+                            .map(&sequence.sequence, true, true, None, None)
+                            .expect("Unable to align");
+
+                        result.iter_mut().for_each(|mut r| {
+                            r.query_name = Some(sequence.id.clone());
+                        });
+
+                        results_queue.push(WorkQueue::Work(result));
+                    }
+                    None => {
+                        // Means the work queue is empty...
+                        results_queue.push(WorkQueue::Done);
+                        break;
+                    }
+                }
+            });
+            thread_handles.push(handle);
+        }
+
+        let mut mappings = Mappings::default();
+        let mut finished_count = 0;
+
+        loop {
+            py.check_signals()?;
+            let result = results_queue.pop();
+            match result {
+                Some(WorkQueue::Work(result)) => {
+                    result.into_iter().for_each(|r| mappings.push(r));
+                },
+                Some(WorkQueue::Done) => {
+                    finished_count += 1;
+                    if finished_count == (self.aligner.threads - 1) {
+                        break;
+                    }
+                },
+                None => {
+                    // Probably should be backoff, but let's try this for now...
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+            }
+        }
+
+        for handle in thread_handles {
+            handle.join().unwrap();
+        }
 
         Ok(PyDataFrame(mappings.to_df().unwrap()))
     }
@@ -269,6 +375,7 @@ fn cdna() -> PyResult<Aligner> {
 /// This module is implemented in Rust.
 #[pymodule]
 fn minimappers2(py: Python<'_>, m: &PyModule) -> PyResult<()> {
+    m.add_class::<Sequence>()?;
     m.add_class::<Aligner>()?;
     m.add_function(wrap_pyfunction!(map_ont, m)?)?;
     m.add_function(wrap_pyfunction!(map_hifi, m)?)?;

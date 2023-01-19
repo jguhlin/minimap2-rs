@@ -22,7 +22,7 @@ libc = "0.2.139"
 bytelines = "2.4.0"
 simdutf8 = "0.1.4"
 flate2 = { version = "1.0.25", features = ["zlib-ng"], default-features = false }
-fffx = "0.1.1"
+fffx = { version = "0.1.1", optional = true }
 
 # Dep for development
 minimap2-sys = { path = "./minimap2-sys" }
@@ -38,8 +38,9 @@ rust-htslib = { version = "0.40.2", optional = true }
 opt-level = 3
 
 [features]
-default = []
+default = ["map-file"]
 mm2-fast = ["minimap2-sys/mm2-fast"]
 sse = ["minimap2-sys/sse"]
 htslib = ['rust-htslib']
 simde = ["minimap2-sys/simde"]
+map-file = ["fffx"]
