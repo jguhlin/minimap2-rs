@@ -47,7 +47,7 @@ pub enum Strand {
 }
 
 /// Preset's for minimap2 config
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Preset {
     MapOnt,
     AvaOnt,
@@ -370,6 +370,7 @@ impl Aligner {
     pub fn cdna(self) -> Self {
         self.preset(Preset::Cdna)
     }
+
     /// Create an aligner using a preset.
     pub fn preset(self, preset: Preset) -> Self {
         let mut idxopt = IdxOpt::default();
@@ -434,6 +435,13 @@ impl Aligner {
     /// Aligner::builder().map_ont().with_index("my_index.mmi", None);
     /// ```
     pub fn with_index(mut self, path: &str, output: Option<&str>) -> Result<Self, &'static str> {
+        return match self.set_index(path, output) {
+            Ok(_) => Ok(self),
+            Err(e) => Err(e),
+        };
+    }
+
+    pub fn set_index(&mut self, path: &str, output: Option<&str>) -> Result<(), &'static str> {
         // Confirm file exists
         if !Path::new(path).exists() {
             return Err("File does not exist");
@@ -482,7 +490,7 @@ impl Aligner {
 
         self.idx = Some(unsafe { *idx.assume_init() });
 
-        Ok(self)
+        Ok(())
     }
 
     /// Map a single sequence to an index
