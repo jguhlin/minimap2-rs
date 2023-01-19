@@ -2,10 +2,10 @@
 //!
 //!
 //! ```
+
 //! use minimap2::Aligner;
 //! use rust_htslib::bam::{Header, HeaderView};
 //! use rust_htslib::bam::record::Aux;
-//!
 //! let aligner = Aligner::builder()
 //!     .with_index("test_data/genome.fa", None)
 //!     .unwrap()
@@ -14,10 +14,13 @@
 //! aligner.populate_header(&mut header);
 //! let header_view = HeaderView::from_header(&header);
 //!
-//! let records = aligner.map_to_sam(
+//! let records = aligner
+//!     .map_to_sam(
 //!         b"TACGCCACACGGGCTACACTCTCGCCTTCTCGTCTCAACTACGAGATGGACTGTCGGCCTAGAGGATCTAACACGAGAAGTACTTGCCGGCAAGCCCTAA",
-//!         b"2222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222",
-//!     b"read1", &header_view, None, None).unwrap();
+//!         Some(b"2222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"),
+//!         Some(b"read1"),
+//!         &header_view, None, None)
+//!     .unwrap();
 //!
 //! assert_eq!(records.len(), 1);
 //! let record = records.first().unwrap();
@@ -25,6 +28,17 @@
 //!
 //! let nm = record.aux(b"NM").unwrap();
 //! assert_eq!(nm, Aux::U8(5));
+//!
+//! // you can also map reads with no quality/name
+//! let records = aligner
+//!     .map_to_sam(
+//!         b"TACGCCACACGGGCTACACTCTCGCCTTCTCGTCTCAACTACGAGATGGACTGTCGGCCTAGAGGATCTAACACGAGAAGTACTTGCCGGCAAGCCCTAA",
+//!         None, None,  &header_view, None, None)
+//!     .unwrap();
+//!
+//! assert_eq!(records.len(), 1);
+//! let record = records.first().unwrap();
+//! assert_eq!((record.tid(), record.pos(), record.mapq()), (0, 180, 13));
 //! ```
 
 use crate::{Aligner, Mapping, Strand, BUF};
@@ -36,6 +50,61 @@ use rust_htslib::bam::{Header, HeaderView, Record};
 use std::ffi::{CStr, CString};
 use std::mem::MaybeUninit;
 use std::ptr;
+
+/// A wrapper around mm_bseq1_t
+#[derive(Debug)]
+pub struct Query {
+    pub inner: mm_ffi::mm_bseq1_t,
+}
+
+impl Query {
+    pub fn new(seq: &[u8], qual: Option<&[u8]>, name: Option<&[u8]>) -> Self {
+        let l_seq = seq.len();
+        assert!(l_seq > 0, "Empty sequence supplied");
+        // clone into a CString
+        let seq = CString::new(seq).unwrap().into_raw();
+        let qual = match qual {
+            Some(qual) => {
+                assert_eq!(
+                    l_seq,
+                    qual.len(),
+                    "Sequence and quality strings are different lenght"
+                );
+                CString::new(qual).unwrap().into_raw()
+            }
+            None => ptr::null_mut(),
+        };
+        let name = CString::new(name.unwrap_or(b"query")).unwrap();
+
+        let inner = mm_ffi::mm_bseq1_t {
+            l_seq: l_seq as i32,
+            rid: 0, // TODO: pass a unique read id,
+            name: name.into_raw(),
+            seq,
+            qual,
+            comment: ptr::null_mut(), // TODO: pass SAM flags in comment
+        };
+        Query { inner }
+    }
+
+    pub fn as_unmapped_record(&self) -> Record {
+        let mut rec = Record::new();
+        rec.set(
+            unsafe { CStr::from_ptr(self.inner.name).to_bytes() },
+            None,
+            unsafe { CStr::from_ptr(self.inner.seq).to_bytes() },
+            unsafe { CStr::from_ptr(self.inner.qual).to_bytes() },
+        );
+        rec.set_unmapped();
+        rec.set_tid(-1);
+        rec.set_pos(-1);
+        rec.set_mapq(0);
+        rec.set_mpos(-1);
+        rec.set_mtid(-1);
+        rec.set_insert_size(0);
+        rec
+    }
+}
 
 impl Aligner {
     pub fn populate_header(&self, header: &mut Header) {
@@ -52,8 +121,8 @@ impl Aligner {
     pub fn map_to_sam(
         &self,
         seq: &[u8],
-        qual: &[u8],
-        qname: &[u8],
+        qual: Option<&[u8]>,
+        name: Option<&[u8]>,
         header: &HeaderView,
         max_frag_len: Option<usize>,
         extra_flags: Option<Vec<u64>>,
@@ -63,33 +132,7 @@ impl Aligner {
             return Err("No index");
         }
 
-        let mut seq = Vec::from(seq);
-        // Make sure sequence is not empty
-        if seq.len() == 0 {
-            return Err("Sequence is empty");
-        }
-        let mut qual = Vec::from(qual);
-        // TODO: support optional qual
-        assert_eq!(
-            seq.len(),
-            qual.len(),
-            "Sequence and quality should have same length"
-        );
-
-        let qname_cstr = CString::new(qname).unwrap();
-        let qname_raw = qname_cstr.into_raw();
-
-        let read = mm_ffi::mm_bseq1_t {
-            l_seq: seq.len() as i32,
-            rid: 0, // TODO: pass a unique read id,
-            name: qname_raw,
-            seq: seq.as_mut_ptr() as *mut i8,
-            qual: qual.as_mut_ptr() as *mut i8,
-            comment: ptr::null_mut(), // TODO: pass SAM flags in comment
-        };
-        let read_ptr = &read;
-        //let const_read = read_ptr as *const mm_ffi::mm_bseq1_t;
-
+        let query = Query::new(seq, qual, name);
         // Number of results
         let mut n_regs: i32 = 0;
         let mut map_opt = self.mapopt.clone();
@@ -118,28 +161,19 @@ impl Aligner {
             let mm_reg = MaybeUninit::new(unsafe {
                 mm_ffi::mm_map(
                     self.idx.as_ref().unwrap() as *const mm_ffi::mm_idx_t,
-                    read.l_seq,
-                    read.seq as *const i8,
+                    query.inner.l_seq,
+                    query.inner.seq as *const i8,
                     &mut n_regs,
                     buf.borrow_mut().buf,
-                    &mut map_opt,
-                    read.name,
+                    &map_opt,
+                    query.inner.name,
                 )
             });
             // FIXFIX: mm_map should return unmapped SAM records but it
             //  currently doesn't seem to work. To work around this we create the
             // record manually
             if (n_regs == 0) & ((map_opt.flag & mm_ffi::MM_F_SAM_HIT_ONLY as i64) == 0) {
-                let mut rec = Record::new();
-                rec.set(qname, None, &seq[..], &qual[..]);
-                rec.set_unmapped();
-                rec.set_tid(-1);
-                rec.set_pos(-1);
-                rec.set_mapq(0);
-                rec.set_mpos(-1);
-                rec.set_mtid(-1);
-                rec.set_insert_size(0);
-                return vec![rec];
+                return vec![query.as_unmapped_record()];
             }
 
             let mut mappings = Vec::with_capacity(n_regs as usize);
@@ -154,7 +188,7 @@ impl Aligner {
                     mm_ffi::mm_write_sam(
                         result.as_mut_ptr(),
                         self.idx.as_ref().unwrap() as *const mm_ffi::mm_idx_t,
-                        &read as *const mm_ffi::mm_bseq1_t,
+                        &query.inner as *const mm_ffi::mm_bseq1_t,
                         const_ptr,
                         n_regs,
                         *mm_reg.as_ptr() as *const mm_ffi::mm_reg1_t,
@@ -314,11 +348,9 @@ impl From<&Aligner> for MMIndex {
 #[cfg(feature = "htslib")]
 mod tests {
     use super::*;
-    use crate::{Aligner, Preset};
+    use crate::Aligner;
     use rust_htslib::bam::ext::BamRecordExtensions;
-    use rust_htslib::bam::header::{Header, HeaderRecord};
-    use rust_htslib::bam::record::Aux;
-    use rust_htslib::bam::{Format, Read, Reader, Record, Writer};
+    use rust_htslib::bam::{header::Header, record::Aux,  Read, Reader, Record, };
 
     #[test]
     fn test_index() {
@@ -362,7 +394,6 @@ mod tests {
         let mut reader = Reader::from_path(sam_path).unwrap();
         let records: Vec<Record> = reader
             .records()
-            .into_iter()
             .filter_map(|r| Some(r.unwrap()))
             .filter(|r| String::from_utf8_lossy(r.qname()) == *query_name)
             .collect();
@@ -430,7 +461,14 @@ mod tests {
     fn map_test_case(query_name: &str, spliced: bool) -> (Vec<Record>, Vec<Record>) {
         let (aligner, _, header_view, expected, seq, qual) = get_test_case(query_name, spliced);
         let observed = aligner
-            .map_to_sam(&seq, &qual, query_name.as_bytes(), &header_view, None, None)
+            .map_to_sam(
+                &seq,
+                Some(&qual),
+                Some(query_name.as_bytes()),
+                &header_view,
+                None,
+                None,
+            )
             .unwrap();
         (observed, expected)
     }
@@ -562,6 +600,32 @@ mod tests {
     }
 
     #[test]
+    fn test_optional_fields() {
+        let query_name = "perfect_read.fwd";
+        let (aligner, _, header_view, _, seq, _qual) = get_test_case(query_name, false);
+
+        let observed = aligner
+            .map_to_sam(
+                &seq,
+                None,
+                Some(query_name.as_bytes()),
+                &header_view,
+                None,
+                None,
+            )
+            .unwrap();
+        let rec = observed.first().unwrap();
+        assert_eq!(rec.qual(), vec![255; seq.len()]);
+
+        let observed = aligner
+            .map_to_sam(&seq, None, None, &header_view, None, None)
+            .unwrap();
+        let rec = observed.first().unwrap();
+        assert_eq!(rec.qual(), vec![255; seq.len()]);
+        assert_eq!(rec.qname(), b"query");
+    }
+
+    #[test]
     fn test_doctest() {
         let aligner = Aligner::builder()
             .with_index("test_data/genome.fa", None)
@@ -571,10 +635,13 @@ mod tests {
         aligner.populate_header(&mut header);
         let header_view = HeaderView::from_header(&header);
 
-        let records = aligner.map_to_sam(
+        let records = aligner
+            .map_to_sam(
                 b"TACGCCACACGGGCTACACTCTCGCCTTCTCGTCTCAACTACGAGATGGACTGTCGGCCTAGAGGATCTAACACGAGAAGTACTTGCCGGCAAGCCCTAA",
-                b"2222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222",
-            b"read1", &header_view, None, None).unwrap();
+                Some(b"2222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"),
+                Some(b"read1"),
+                &header_view, None, None)
+            .unwrap();
 
         assert_eq!(records.len(), 1);
         let record = records.first().unwrap();
@@ -582,5 +649,16 @@ mod tests {
 
         let nm = record.aux(b"NM").unwrap();
         assert_eq!(nm, Aux::U8(5));
+
+        // you can also map reads with no quality/name
+        let records = aligner
+            .map_to_sam(
+                b"TACGCCACACGGGCTACACTCTCGCCTTCTCGTCTCAACTACGAGATGGACTGTCGGCCTAGAGGATCTAACACGAGAAGTACTTGCCGGCAAGCCCTAA",
+                None, None,  &header_view, None, None)
+            .unwrap();
+
+        assert_eq!(records.len(), 1);
+        let record = records.first().unwrap();
+        assert_eq!((record.tid(), record.pos(), record.mapq()), (0, 180, 13));
     }
 }
