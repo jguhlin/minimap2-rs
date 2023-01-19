@@ -14,7 +14,19 @@ exclude = [
 	"libsfasta/test_data/",
 	"*.profdata",
 	"target",
-	"Cargo.lock"
+	"Cargo.lock",
+	"/minimap2/lib/simde/test",
+	".circlci",
+	".notest",
+	".github",
+	"docker",
+	"/mm2-fast/ext/TAL",
+	"/mm2-fast/lib/simde/test/",
+	".*",
+	"/mm2-fast/test",
+	"/minimap2/test",
+	"/mm2-fast/test_bench/"
+
 ]
 
 [lib]
