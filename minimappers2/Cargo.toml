@@ -1,0 +1,14 @@
+[package]
+name = "minimappers2"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "minimappers2"
+crate-type = ["cdylib"]
+
+[dependencies]
+fffx = "0.1.2"
+minimap2 = "0.1.9"
+pyo3 = { version = "0.18.0", features = ["extension-module"] }
+polars = "0.26.1"
