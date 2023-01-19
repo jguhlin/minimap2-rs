@@ -46,6 +46,17 @@ pub enum Strand {
     Reverse,
 }
 
+impl std::fmt::Display for Strand
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self
+        {
+            Forward => write!(f, "+"),
+            Reverse => write!(f, "-"),
+        }
+    }
+}
+
 /// Preset's for minimap2 config
 #[derive(Debug, Clone)]
 pub enum Preset {
