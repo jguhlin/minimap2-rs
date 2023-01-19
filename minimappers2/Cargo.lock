@@ -832,6 +832,8 @@ dependencies = [
 [[package]]
 name = "minimap2"
 version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af70ba1ade5a92513ec222a3f7fd81909bc122fbce5f931adadf05f09d611137"
 dependencies = [
  "bytelines",
  "fffx",
@@ -844,6 +846,8 @@ dependencies = [
 [[package]]
 name = "minimap2-sys"
 version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dcb8f3b17ae174c847b90454697898f067e1af9a63957a69e1084b5bbfea0723"
 dependencies = [
  "cc",
  "libc",
