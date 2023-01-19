@@ -135,9 +135,12 @@ and/or:
 # Changelog
 ### 0.1.10 IN DEVELOPMENT
 * HTS lib support by @eharr
-* HTS Lib: Output sam/bam files
+* HTS Lib: Output sam/bam files by @eharr
 * More tests by @eharr
-* Update minimap2-sys to latest version
+* Display impl for Strand thanks to @ahcm
+* Update minimap2-sys to latest version by @jguhlin
+* mm2fast added as additional backend by @jguhlin
+* zlib dep changes by @jguhlin (hopefully now it is more portable and robust)
 
 ## 0.1.9
 * Thanks for @Adoni5 for switching to builder pattern, and @eharr for adding additional fields to alignment.
