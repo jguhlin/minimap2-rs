@@ -9,7 +9,7 @@ minimap2-sys is the library of the raw FFI bindings to minimap2. minimap2 is the
 # How to use
 ## Requirements
 ```toml
-minimap2 = "0.1.9"
+minimap2 = "0.1.10"
 ```
 Also see [Features](#features)
 
