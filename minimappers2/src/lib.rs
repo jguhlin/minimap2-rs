@@ -33,7 +33,11 @@ impl Aligner {
         let mut mappings = Mappings::default();
 
         let results = self.aligner.map(seq.as_bytes(), true, true, None, None).unwrap();
-        results.into_iter().for_each(|r| mappings.push(r));
+        results.into_iter().for_each(|mut r| {
+            r.query_name = Some(id.to_string());
+            println!("{:#?}", r);
+            mappings.push(r)
+        });
 
         Ok(PyDataFrame(mappings.to_df().unwrap()))
     }
@@ -150,6 +154,14 @@ impl Aligner {
         }   
 }
 
+/*
+TODO - Destroy index when aligner is dropped or when new index is created
+impl Drop for Aligner {
+    fn drop(&mut self) {
+        
+  }
+} */
+
 /// Return a MapOnt aligner
 #[pyfunction]
 fn map_ont() -> PyResult<Aligner> {
@@ -256,7 +268,7 @@ fn cdna() -> PyResult<Aligner> {
 
 /// This module is implemented in Rust.
 #[pymodule]
-fn minimappers(py: Python<'_>, m: &PyModule) -> PyResult<()> {
+fn minimappers2(py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<Aligner>()?;
     m.add_function(wrap_pyfunction!(map_ont, m)?)?;
     m.add_function(wrap_pyfunction!(map_hifi, m)?)?;

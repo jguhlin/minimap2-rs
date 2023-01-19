@@ -5,3 +5,4 @@ test.mmi
 /*.mmi
 test_data/*.bam
 test_data/*.mmi
+.ipynb_checkpoints

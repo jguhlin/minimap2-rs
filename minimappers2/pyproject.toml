@@ -1,0 +1,23 @@
+[project]
+name = "minimappers2"
+requires-python = ">=3.7"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "License :: OSI Approved :: Apache Software License",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Rust"
+]
+description = "A Python wrapper for minimap2-rs"
+dependencies = [
+    "polars==0.15.15",
+    "pyarrow==10.0.1",
+]
+
+[build-system]
+requires = ["maturin>=0.13,<0.14"]
+build-backend = "maturin"
+
+[options]
+
