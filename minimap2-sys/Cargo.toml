@@ -20,7 +20,7 @@ exclude = [
 	".notest",
 	".github",
 	"docker",
-	"/mm2-fast/ext/TAL",
+	"/mm2-fast/ext/TAL/applications",
 	"/mm2-fast/lib/simde/test/",
 	".*",
 	"/mm2-fast/test",

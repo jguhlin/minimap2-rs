@@ -12,7 +12,8 @@ fn configure(mut cc: &mut cc::Build) {
     // mm2-fast is compiled with c++
     cc.cpp(true);
     cc.include("mm2-fast");
-    cc.include("mm2-fast/ext/TAL/src/dynamic-programming/");
+    cc.include("mm2-fast/ext/TAL/src/chaining/");
+    cc.include("mm2-fast/ext/TAL/src/");
     cc.target("native");
     cc.flag("-march=native");
     cc.flag("-DPARALLEL_CHAINING");
