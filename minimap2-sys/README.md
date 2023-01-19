@@ -2,10 +2,12 @@
 Use this if you need lower-level bindings for minimap2.
 
 ## TODO
-* Add SIMDe support
 * Can we decouple from pthread?
 
 ## Changelog
+### 0.1.9
+* Enable SIMD-everywhere compilation support
+
 ### 0.1.8
 * Changed how zlib is compiled
 * Dep versions update

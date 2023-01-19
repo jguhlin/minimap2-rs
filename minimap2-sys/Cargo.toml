@@ -1,6 +1,6 @@
 [package]
 name = "minimap2-sys"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 links = "libminimap2"
 authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
@@ -35,7 +35,9 @@ features = ["runtime", "which-rustfmt"]
 version = "1.0.78"
 
 [features]
-default = []
+default = ["map-file"]
 vendored = ["bindgen"]
 mm2-fast = []
 sse = []
+simde = []
+map-file = []

@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 // Configure for mm2-fast
 #[cfg(feature = "mm2-fast")]
-fn configure(cc: &mut cc::Build) {
+fn configure(mut cc: &mut cc::Build) {
     println!("cargo:rerun-if-changed=mm2-fast/*.c");
 
     // mm2-fast is compiled with c++
@@ -19,6 +19,9 @@ fn configure(cc: &mut cc::Build) {
     cc.flag("-DALIGN_AVX");
     cc.flag("-DAPPLY_AVX2");
     cc.opt_level(3);
+
+    #[cfg(feature = "simde")]
+    simde(&mut cc);
 
     let files: Vec<_> = std::fs::read_dir("mm2-fast")
         .unwrap()
@@ -62,6 +65,9 @@ fn configure(mut cc: &mut cc::Build) {
     #[cfg(feature = "sse")]
     sse(&mut cc);
 
+    #[cfg(feature = "simde")]
+    simde(&mut cc);
+
     let files: Vec<_> = std::fs::read_dir("minimap2")
         .unwrap()
         .map(|f| f.unwrap().path())
@@ -86,6 +92,13 @@ fn configure(mut cc: &mut cc::Build) {
             }
         }
     }
+}
+
+#[cfg(feature = "simde")]
+fn simde(cc: &mut cc::Build) {
+    cc.include("minimap2/lib/simde");
+    cc.flag("-DSIMDE_ENABLE_NATIVE_ALIASES");
+    cc.flag("-DUSE_SIMDE");
 }
 
 fn compile() {

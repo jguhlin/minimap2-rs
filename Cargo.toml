@@ -17,7 +17,6 @@ exclude = [
   "minimap2-sys/",
 ]
 
-
 [dependencies]
 libc = "0.2.139"
 bytelines = "2.4.0"
@@ -43,3 +42,4 @@ default = []
 mm2-fast = ["minimap2-sys/mm2-fast"]
 sse = ["minimap2-sys/sse"]
 htslib = ['rust-htslib']
+simde = ["minimap2-sys/simde"]

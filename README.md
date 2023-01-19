@@ -11,6 +11,7 @@ minimap2-sys is the library of the raw FFI bindings to minimap2. minimap2 is the
 ```toml
 minimap2 = "0.1.9"
 ```
+Also see [Features](#features)
 
 Tested with rustc 1.64.0 and nightly. So probably a good idea to upgrade before running. But let me know if you run into pain points with older versions and will try to fix!
 ```bash
@@ -87,9 +88,20 @@ let mappings: Result<Vec<Mapping>> = aligner.map_file("query.fa", false, false);
 ```
 
 ## Multithreading
-Untested, however the thread_local buffer is already set, so theoretically it could work. I may or may not implement it in here, torn between a hold-your-hand library and a lightweight library for those who want to use their own solutions. This may get split into two separate libraries for that very reason (following the [zstd](https://github.com/gyscos/zstd-rs) concept).
+Multithreading is supported, for implementation example see [fakeminimap2](https://github.com/jguhlin/minimap2-rs/blob/main/fakeminimap2/src/main.rs). Minimap2 also supports threading itself, and will use a minimum of 3 cores for building the index. Multithreading for mapping is left to the end-user.
 
-So far multithreading only works for building the index and not for mapping.
+```rust
+let mut aligner = Aligner::builder()
+    .map_ont()
+    .with_threads(8);
+```
+
+## Features
+The following crate features are available:
+* `mm2-fast` - Replace minimap2 with [mm2-fast](https://github.com/bwa-mem2/mm2-fast). This is likely not portable.
+* `htslib` - Support output of bam/sam files using htslib.
+* `map-file` - Convenience function for mapping an entire file. Caution, this is single-threaded.
+* `simde` - Compile minimap2 / mm2-fast with [simd-everywhere](https://github.com/simd-everywhere/simde) support. 
 
 ## Building for MUSL
 Follow these [instructions](https://github.com/rust-cross/rust-musl-cross#prebuilt-images).
@@ -120,6 +132,9 @@ Probably not freeing C memory somewhere.... Not sure yet, if so it's just leakin
 * Maybe should be split into 2 more libraries, minimap2-safe (lower but safe level) and minimap2 (high-level api) like zstd? - Then people can implement threading as they like or just fall back to a known-decent implementation?
 * Iterator interface for map_file
 * MORE TESTS
+* Get SSE working with "sse" feature (compiles and tests work in -sys crate, but not main crate)
+* Possible to decouple from pthread?
+* Enable Lisa-hash for mm2-fast? But must handle build arguments from the command-line.
 
 # Citation
 You should cite the minimap2 papers if you use this in your work.
@@ -139,8 +154,9 @@ and/or:
 * More tests by @eharr
 * Display impl for Strand thanks to @ahcm
 * Update minimap2-sys to latest version by @jguhlin
-* mm2fast added as additional backend by @jguhlin
+* -sys crate mm2fast added as additional backend by @jguhlin
 * zlib dep changes by @jguhlin (hopefully now it is more portable and robust)
+* -sys crate now supports SIMDe
 
 ## 0.1.9
 * Thanks for @Adoni5 for switching to builder pattern, and @eharr for adding additional fields to alignment.
@@ -153,8 +169,5 @@ and/or:
 * Support slightly older versions of rustc by using libc:: rather than std::ffi for c_char (Thanks dwpeng!)
 * Use fffx module for fasta/q parsing
 
-# TODO
-* Get SSE working with "sse" feature (compiles and tests work in -sys crate, but not main crate)
-* Possible to decouple from pthread?
-
+# Funding
 ![Genomics Aotearoa](info/genomics-aotearoa.png)
