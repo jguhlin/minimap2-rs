@@ -5,6 +5,8 @@ Use this if you need lower-level bindings for minimap2.
 * Can we decouple from pthread?
 
 ## Changelog
+### 0.1.10 IN DEVELOPMENT
+
 ### 0.1.9
 * Enable SIMD-everywhere compilation support
 

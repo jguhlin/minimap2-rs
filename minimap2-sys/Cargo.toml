@@ -1,6 +1,6 @@
 [package]
 name = "minimap2-sys"
-version = "0.1.9"
+version = "0.1.10"
 edition = "2021"
 links = "libminimap2"
 authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
@@ -25,7 +25,7 @@ exclude = [
 	".*",
 	"/mm2-fast/test",
 	"/minimap2/test",
-	"/mm2-fast/test_bench/"
+	"/mm2-fast/test_bench/",
 
 ]
 

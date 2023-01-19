@@ -10,11 +10,15 @@ categories = ["science"]
 keywords = ["bioinformatics", "fasta", "alignment", "fastq"]
 exclude = [
   "**/*.fasta",
-  "libsfasta/test_data/",
   "*.profdata",
   "*.mmi",
   "**/*.mmi",
-  "minimap2-sys/",
+  "/minimap2-sys/",
+  "/minimappers2/",
+  "/fakeminimap2",
+  "/test_data/",
+  ".*"
+
 ]
 
 [dependencies]
