@@ -89,12 +89,16 @@ impl Query {
 
     pub fn as_unmapped_record(&self) -> Record {
         let mut rec = Record::new();
-        rec.set(
-            unsafe { CStr::from_ptr(self.inner.name).to_bytes() },
-            None,
-            unsafe { CStr::from_ptr(self.inner.seq).to_bytes() },
-            unsafe { CStr::from_ptr(self.inner.qual).to_bytes() },
-        );
+
+        let qname = unsafe { CStr::from_ptr(self.inner.name).to_bytes() };
+        let seq = unsafe { CStr::from_ptr(self.inner.seq).to_bytes() };
+        let qual = if self.inner.qual.is_null() {
+            rec.set(qname, None, seq, &vec![255u8; seq.len()]);
+        } else {
+            rec.set(qname, None, seq, unsafe {
+                CStr::from_ptr(self.inner.qual).to_bytes()
+            });
+        };
         rec.set_unmapped();
         rec.set_tid(-1);
         rec.set_pos(-1);
@@ -350,7 +354,7 @@ mod tests {
     use super::*;
     use crate::Aligner;
     use rust_htslib::bam::ext::BamRecordExtensions;
-    use rust_htslib::bam::{header::Header, record::Aux,  Read, Reader, Record, };
+    use rust_htslib::bam::{header::Header, record::Aux, Read, Reader, Record};
 
     #[test]
     fn test_index() {
@@ -623,6 +627,15 @@ mod tests {
         let rec = observed.first().unwrap();
         assert_eq!(rec.qual(), vec![255; seq.len()]);
         assert_eq!(rec.qname(), b"query");
+    }
+
+    #[test]
+    fn test_optional_fields_unmappable() {
+        let query_name = "unmappable_read";
+        let (aligner, _, header_view, _, seq, _qual) = get_test_case(query_name, false);
+        let observed = aligner
+            .map_to_sam(&seq, None, None, &header_view, None, None)
+            .unwrap();
     }
 
     #[test]
