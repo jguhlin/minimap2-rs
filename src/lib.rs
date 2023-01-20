@@ -49,8 +49,8 @@ pub enum Strand {
 impl std::fmt::Display for Strand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Forward => write!(f, "+"),
-            Reverse => write!(f, "-"),
+            Strand::Forward => write!(f, "+"),
+            Strand::Reverse => write!(f, "-"),
         }
     }
 }
