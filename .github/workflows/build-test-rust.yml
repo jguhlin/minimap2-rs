@@ -10,6 +10,7 @@ env:
 jobs:
   test-musl:
     runs-on: ubuntu-latest
+    container: messense/rust-musl-cross:x86_64-musl
     steps:
     - uses: actions/checkout@v3
     - uses: NSCoder/rust-musl-action@v1.0.0
