@@ -2,6 +2,9 @@ A rust FFI library for [minimap2](https://github.com/lh3/minimap2/). In developm
 
 ![https://crates.io/crates/minimap2](https://img.shields.io/crates/v/minimap2.svg)
 ![https://docs.rs/minimap2/latest/minimap2/](https://img.shields.io/docsrs/minimap2)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/jguhlin/minimap2-rs/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/jguhlin/minimap2-rs/tree/main)
+[![codecov](https://codecov.io/gh/jguhlin/minimap2-rs/branch/main/graph/badge.svg?token=huw27ZC6Qy)](https://codecov.io/gh/jguhlin/minimap2-rs)
+
 
 # Structure
 minimap2-sys is the library of the raw FFI bindings to minimap2. minimap2 is the most rusty version.
