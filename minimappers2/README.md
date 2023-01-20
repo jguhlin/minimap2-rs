@@ -94,6 +94,8 @@ As this is a very-early stage library, error checking is not yet implemented. Wh
 * aarch64: Unknown
 * neon: No (Open an issue)
 
+* Google Colab: No, not sure why though.
+
 # Performance
 Effort has been made to make this as performant as possible, but if you need more performance, please use minimap2 directly and import the results.
 
