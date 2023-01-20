@@ -24,7 +24,6 @@ jobs:
       #- run: cargo install grcov
       #- run: cargo --version
       #- run: bash .scripts/grcov.bash
-      - run: cargo install cargo-tarpaulin
       - run: cargo build
       - run: cargo build --features htslib
       - run: cargo build --features mm2-fast
@@ -52,3 +51,4 @@ workflows:
   minimap2-test:
     jobs:
       - test
+      - coverage
