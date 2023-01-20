@@ -12,17 +12,23 @@ jobs:
       - checkout
       - restore_cache:
           key: project-cache
-      - run: cargo install grcov
-      - run: cargo --version
-      - run: bash .scripts/grcov.bash
-      - run: curl -Os https://uploader.codecov.io/latest/linux/codecov
-      - run: chmod +x codecov
-      - run: ./codecov
+      #- run: cargo install grcov
+      #- run: cargo --version
+      #- run: bash .scripts/grcov.bash
+      - run: cargo install cargo-tarpaulin
+      - run: cargo build
+      - run: cargo build --features htslib
+      - run: cargo build --features mm2-fast
+      - run: cargo build --features simde
+      - run: cargo build --features htslib,mm2-fast,simde
       - save_cache:
           key: project-cache
           paths:
             - "~/.cargo"
             - "./target"
+      - run: cargo tarpaulin --out Xml
+      - run: cargo tarpaulin --out Xml -r minimap2-sys
+      - run: bash <(curl -s https://codecov.io/bash)
       - run: cargo test
       - run: cargo test --features htslib
       - run: cargo test --features mm2-fast
