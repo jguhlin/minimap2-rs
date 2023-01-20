@@ -17,6 +17,11 @@ dependencies = [
     "pyarrow==10.0.1",
 ]
 
+[project.urls]
+homepage = "https://github.com/jguhlin/minimap2-rs"
+repository = "https://github.com/jguhlin/minimap2-rs"
+
+
 [build-system]
 requires = ["maturin>=0.14,<0.15"]
 build-backend = "maturin"

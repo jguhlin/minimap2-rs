@@ -8,7 +8,7 @@ export LLVM_PROFILE_FILE="sfasta-%p-%m.profraw"
 
 mkdir -p target/coverage
 
-cargo test
+cargo test --features htslib,mm2-fast,simde,map-file
 
 #grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing -o ./target/debug/coverage/
 grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o target/coverage/tests.lcov
