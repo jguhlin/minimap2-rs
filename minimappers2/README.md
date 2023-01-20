@@ -84,6 +84,16 @@ Here is an image of the resulting dataframe
 # Errors
 As this is a very-early stage library, error checking is not yet implemented. When things crash you will likely need to restart your python interpreter (jupyter kernel). Let me know what happened and [open an issue](https://github.com/jguhlin/minimap2-rs/issues/new) and I will get to it.
 
+## Compatability
+
+* Windows: Unlikely
+* Linux: Likely
+* Mac: Unknown
+
+* x86_64: Likely
+* aarch64: Unknown
+* neon: No (Open an issue)
+
 # Performance
 Effort has been made to make this as performant as possible, but if you need more performance, please use minimap2 directly and import the results.
 

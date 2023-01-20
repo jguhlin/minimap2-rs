@@ -1,6 +1,6 @@
 [package]
 name = "minimappers2"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 [lib]
@@ -9,8 +9,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 fffx = "0.1.2"
-minimap2 = { version = "0.1.10", features = ["simde"] }
-minimap2-sys = { version = "0.1.9", features = ["simde"] }
+minimap2 = { version = "0.1.11", features = ["simde"] }
+minimap2-sys = { version = "0.1.10", features = ["simde"] }
 #minimap2 = { path = "../", features = ["simde"] }
 #minimap2-sys = { path = "../minimap2-sys", features = ["simde"] }
 crossbeam = "0.8.2"

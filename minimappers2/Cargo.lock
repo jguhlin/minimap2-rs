@@ -150,15 +150,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cmake"
-version = "0.1.49"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db34956e100b30725f2eb215f90d4871051239535632f84fea3bc92722c66b7c"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -437,7 +428,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8a2db397cb1c8772f31494cb8917e48cd1e64f0fa7efac59fbd741a0a8ce841"
 dependencies = [
  "crc32fast",
- "libz-ng-sys",
  "libz-sys",
  "miniz_oxide",
 ]
@@ -738,16 +728,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "libz-ng-sys"
-version = "1.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4399ae96a9966bf581e726de86969f803a81b7ce795fcd5480e640589457e0f2"
-dependencies = [
- "cmake",
- "libc",
-]
-
-[[package]]
 name = "libz-sys"
 version = "1.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -831,9 +811,9 @@ dependencies = [
 
 [[package]]
 name = "minimap2"
-version = "0.1.10"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af70ba1ade5a92513ec222a3f7fd81909bc122fbce5f931adadf05f09d611137"
+checksum = "acce515adeecaa1ecce83f92fd55dae6d6bbd96731d9c053b2b3a90d1a535e58"
 dependencies = [
  "bytelines",
  "fffx",
@@ -845,9 +825,9 @@ dependencies = [
 
 [[package]]
 name = "minimap2-sys"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcb8f3b17ae174c847b90454697898f067e1af9a63957a69e1084b5bbfea0723"
+checksum = "f1f276571c6759045a1f4a4698aec870c40a1c69698edf788f1b439ce9b0483f"
 dependencies = [
  "cc",
  "libc",
@@ -857,7 +837,7 @@ dependencies = [
 
 [[package]]
 name = "minimappers2"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "crossbeam",
  "fffx",
