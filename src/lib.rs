@@ -882,14 +882,14 @@ pub fn detect_compression_format(buffer: &[u8]) -> Result<CompressionType, &'sta
     Ok(match buffer {
         [0x1F, 0x8B, ..] => CompressionType::GZIP,
         [0x42, 0x5A, ..] => CompressionType::BZIP2,
-        [0xFD, b'7', b'z', b'X', b'Z', 0x00] => CompressionType::XZ,
+        [0xFD, b'7', b'z', b'X', b'Z', 0x00, ..] => CompressionType::XZ,
         [0x28, 0xB5, 0x2F, 0xFD, ..] => CompressionType::LZMA,
         [0x5D, 0x00, ..] => CompressionType::LZMA,
         [0x1F, 0x9D, ..] => CompressionType::LZMA,
-        [0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C] => CompressionType::ZSTD,
+        [0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C, ..] => CompressionType::ZSTD,
         [0x04, 0x22, 0x4D, 0x18, ..] => CompressionType::LZ4,
         [0x08, 0x22, 0x4D, 0x18, ..] => CompressionType::LZ4,
-        [0x52, 0x61, 0x72, 0x21, 0x1A, 0x07] => CompressionType::RAR,
+        [0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, ..] => CompressionType::RAR,
         _ => CompressionType::NONE,
     })
 }
@@ -898,6 +898,34 @@ pub fn detect_compression_format(buffer: &[u8]) -> Result<CompressionType, &'sta
 mod tests {
     use super::*;
     use std::mem::MaybeUninit;
+
+    #[test]
+    fn compression_format_detections() {
+        let buf = [0x1F, 0x8B, 0x08, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF];
+        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::GZIP);
+
+        let buf = [0x42, 0x5A, 0x68, 0x39, 0x31, 0x41, 0x59, 0x26, 0x53, 0x59];
+        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::BZIP2);
+
+        let buf = [0x28, 0xB5, 0x2F, 0xFD, 0x37, 0x00, 0x00, 0x00, 0x00, 0x00];
+        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::LZMA);
+
+        let buf = [0x04, 0x22, 0x4D, 0x18, 0x40, 0x40, 0x00, 0x00, 0x00, 0x00];
+        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::LZ4);
+
+        let buf = [0x08, 0x22, 0x4D, 0x18, 0x40, 0x40, 0x00, 0x00, 0x00, 0x00];
+        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::LZ4);
+
+        let buf = [0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x00, 0x00, 0x00, 0x00];
+        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::RAR);
+
+        let buf = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::NONE);
+
+        let buf = [0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C, 0x00, 0x00, 0x00, 0x00];
+        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::ZSTD);
+
+    }
 
     #[test]
     fn does_it_work() {
@@ -959,6 +987,9 @@ mod tests {
         let mappings = aligner.map("TTTTGCATCGCTGAAAACCCCAAAGTATATTTTAGAACTCGTCTATAGGTTCTACGATTTAACATCCACAGCCTTCTGGTGTCGCTGGTGTTTCAAACACCTCGATATATCACTCCTTCTGAATAACATCCATGAAAGAAGAGCCCAATCCATACTACTAAAGCTATCGTCATATGCACCATGGTCTTTTGAGAAAATTTTGCCCTCTTTAATTGACTCTAAGCTAAAAAAGAAAATTTTAATCAGTCCTCAAATTACTTACGTAGTCTTCAAATCAATAAACTATATGATAACCACGAATGACGATAAAATACACAAGTCCGCTATTCCTTCTTCTTCCTCTCTACCGT".as_bytes(), false, false, None, None).unwrap();
         println!("Reverse Strand\n{:#?}", mappings);
         assert!(mappings[0].strand == Strand::Reverse);
+
+        // Assert the Display impl for strand works
+        println!("{}", mappings[0].strand);
 
         let mut aligner = aligner.with_cigar();
 

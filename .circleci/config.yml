@@ -5,6 +5,15 @@ version: 2.1
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
+  coverage: 
+    machine: true
+    steps:
+      - checkout
+      - run: docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin /bin/bash -c "apt-get update; apt-get install cmake -y; cargo build --features htslib; cargo tarpaulin --features htslib --out Xml"
+      # - run: cargo tarpaulin --out Xml --features htslib,map-file
+      # - run: cargo tarpaulin --out Xml -r minimap2-sys
+      - run: bash <(curl -s https://codecov.io/bash)
+
   test:
     docker:
       - image: cimg/rust:1.65.0
@@ -12,12 +21,14 @@ jobs:
       - checkout
       - restore_cache:
           key: project-cache
-      - run: cargo install grcov
-      - run: cargo --version
-      - run: bash .scripts/grcov.bash
-      - run: curl -Os https://uploader.codecov.io/latest/linux/codecov
-      - run: chmod +x codecov
-      - run: ./codecov
+      #- run: cargo install grcov
+      #- run: cargo --version
+      #- run: bash .scripts/grcov.bash
+      - run: cargo build
+      - run: cargo build --features htslib
+      - run: cargo build --features mm2-fast
+      - run: cargo build --features simde
+      - run: cargo build --features htslib,mm2-fast,simde
       - save_cache:
           key: project-cache
           paths:
@@ -40,3 +51,4 @@ workflows:
   minimap2-test:
     jobs:
       - test
+      - coverage

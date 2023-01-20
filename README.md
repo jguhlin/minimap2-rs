@@ -103,8 +103,10 @@ let mut aligner = Aligner::builder()
 The following crate features are available:
 * `mm2-fast` - Replace minimap2 with [mm2-fast](https://github.com/bwa-mem2/mm2-fast). This is likely not portable.
 * `htslib` - Support output of bam/sam files using htslib.
-* `map-file` - Convenience function for mapping an entire file. Caution, this is single-threaded.
 * `simde` - Compile minimap2 / mm2-fast with [simd-everywhere](https://github.com/simd-everywhere/simde) support. 
+* `map-file` - *Default* - Convenience function for mapping an entire file. Caution, this is single-threaded. 
+
+Map-file is a *default* feature and enabled unless otherwise specified.
 
 ## Building for MUSL
 Follow these [instructions](https://github.com/rust-cross/rust-musl-cross#prebuilt-images).
@@ -117,6 +119,12 @@ rust-musl-builder cargo build --release
 ```
 
 Please note minimap2 is only tested for x86_64. Other platforms may work, please open an issue if minimap2 compiles but minimap2-rs does not.
+
+### Features tested with MUSL
+* `mm2-fast` - **Fail**
+* `htslib` - **Success**
+* `simde` - **Success**
+
 
 # Want feedback
 * Many fields are i32 / i8 to mimic the C environment, but would it make more sense to convert to u32 / u8 / usize?
