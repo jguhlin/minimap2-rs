@@ -445,25 +445,29 @@ impl Aligner {
     /// // Use the previously built index
     /// Aligner::builder().map_ont().with_index("my_index.mmi", None);
     /// ```
-    pub fn with_index(mut self, path: &Path, output: Option<&str>) -> Result<Self, &'static str> {
+    pub fn with_index<P>(mut self, path: P, output: Option<&str>) -> Result<Self, &'static str>
+        where P: AsRef<Path>
+    {
         return match self.set_index(path, output) {
             Ok(_) => Ok(self),
             Err(e) => Err(e),
         };
     }
 
-    pub fn set_index(&mut self, path: &Path, output: Option<&str>) -> Result<(), &'static str> {
+    pub fn set_index<P>(&mut self, path: P, output: Option<&str>) -> Result<(), &'static str>
+        where P: AsRef<Path>
+    {
         // Confirm file exists
-        if !Path::new(path).exists() {
+        if !path.as_ref().exists() {
             return Err("File does not exist");
         }
 
         // Confirm file is not empty
-        if Path::new(path).metadata().unwrap().len() == 0 {
+        if path.as_ref().metadata().unwrap().len() == 0 {
             return Err("File is empty");
         }
 
-        let path = match std::ffi::CString::new(path.as_os_str().as_bytes()) {
+        let path = match std::ffi::CString::new(path.as_ref().as_os_str().as_bytes()) {
             Ok(path) => path,
             Err(_) => return Err("Invalid path"),
         };
