@@ -5,6 +5,8 @@ use std::mem::MaybeUninit;
 use std::num::NonZeroI32;
 use std::path::Path;
 
+use std::os::unix::ffi::OsStrExt;
+
 use minimap2_sys::*;
 
 #[cfg(feature = "map-file")]
@@ -443,14 +445,14 @@ impl Aligner {
     /// // Use the previously built index
     /// Aligner::builder().map_ont().with_index("my_index.mmi", None);
     /// ```
-    pub fn with_index(mut self, path: &str, output: Option<&str>) -> Result<Self, &'static str> {
+    pub fn with_index(mut self, path: &Path, output: Option<&str>) -> Result<Self, &'static str> {
         return match self.set_index(path, output) {
             Ok(_) => Ok(self),
             Err(e) => Err(e),
         };
     }
 
-    pub fn set_index(&mut self, path: &str, output: Option<&str>) -> Result<(), &'static str> {
+    pub fn set_index(&mut self, path: &Path, output: Option<&str>) -> Result<(), &'static str> {
         // Confirm file exists
         if !Path::new(path).exists() {
             return Err("File does not exist");
@@ -461,7 +463,7 @@ impl Aligner {
             return Err("File is empty");
         }
 
-        let path = match std::ffi::CString::new(path) {
+        let path = match std::ffi::CString::new(path.as_os_str().as_bytes()) {
             Ok(path) => path,
             Err(_) => return Err("Invalid path"),
         };
