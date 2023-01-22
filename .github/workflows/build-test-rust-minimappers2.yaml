@@ -29,7 +29,7 @@ jobs:
         with:
           python-version: '3.7'
 
-      - name: Publish wheel
+      - name: Test build
         uses: messense/maturin-action@v1
         env:
           RUSTFLAGS: -C target-feature=+fxsr,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+fma
