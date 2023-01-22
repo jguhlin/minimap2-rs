@@ -25,3 +25,5 @@ repository = "https://github.com/jguhlin/minimap2-rs"
 requires = ["maturin>=0.14,<0.15"]
 build-backend = "maturin"
 
+[tool.maturin]
+features = ["pyo3/extension-module", "pyo3/abi3-py37"]
