@@ -17,8 +17,8 @@ jobs:
       - image: cimg/rust:1.65.0
     steps:
       - checkout
-      - git submodule sync --recursive
-      - git submodule update --init --recursive
+      - run: git submodule sync --recursive
+      - run: git submodule update --init --recursive
       - restore_cache:
           key: project-cache
       #- run: cargo install grcov
