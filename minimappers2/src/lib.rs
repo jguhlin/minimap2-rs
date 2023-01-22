@@ -1,7 +1,7 @@
 use std::num::NonZeroI32;
 use std::sync::{Arc, Mutex};
 
-// use mimalloc::MiMalloc;
+use mimalloc::MiMalloc;
 use crossbeam::queue::ArrayQueue;
 use fffx::{Fasta, Fastq};
 use minimap2::*;
@@ -10,8 +10,8 @@ use polars::{df, prelude::*};
 use pyo3::prelude::*;
 use pyo3_polars::{error::PyPolarsErr, PyDataFrame};
 
-// #[global_allocator]
-// static GLOBAL: MiMalloc = MiMalloc;
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 mod multithreading;
 
