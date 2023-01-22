@@ -3,7 +3,6 @@ use std::sync::{Arc, Mutex};
 
 use mimalloc::MiMalloc;
 use crossbeam::queue::ArrayQueue;
-use fffx::{Fasta, Fastq};
 use minimap2::*;
 use minimap2_sys::{mm_set_opt, MM_F_CIGAR};
 use polars::{df, prelude::*};
@@ -547,5 +546,58 @@ impl Mappings {
             md,
             cs,
         ])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    #[test]
+    fn test_build_aligners() {
+        map_ont().expect("Failed to build minimap2 aligner");
+        map_hifi().expect("Failed to build minimap2 aligner");;
+        ava_ont().expect("Failed to build minimap2 aligner");;
+        map_10k().expect("Failed to build minimap2 aligner");;
+        ava_pb().expect("Failed to build minimap2 aligner");;
+        asm().expect("Failed to build minimap2 aligner");;
+        asm5().expect("Failed to build minimap2 aligner");;
+        asm10().expect("Failed to build minimap2 aligner");;
+        asm20().expect("Failed to build minimap2 aligner");;
+        short().expect("Failed to build minimap2 aligner");;
+        sr().expect("Failed to build minimap2 aligner");;
+        splice().expect("Failed to build minimap2 aligner");;
+        cdna().expect("Failed to build minimap2 aligner");;
+    }
+
+    #[test]
+    fn test_structs() {
+        // Test seq building - disabled for now
+        /*
+        let seq = Sequence { id: "test".to_string(), sequence: "ACGT".to_string() };
+
+        // Test default
+        let seq = Sequence::default();
+
+        // Test clone
+        let seq = seq.clone();
+
+        // Test debug derive
+        println!("{:#?}", seq);
+
+        // Test py new fn
+        let seq = Sequence::new("test", "ACGT");
+        */
+        
+        // Test Mappings struct
+        // Test default and push fn
+        let mut mappings = Mappings::default();
+
+        /// Disabled until crates update
+        // let mapping = minimap2::Mapping::default();
+        // mappings.push(mapping);
+
+        // Test to df
+        let df = mappings.to_df().unwrap();
     }
 }
