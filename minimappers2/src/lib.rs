@@ -1,17 +1,17 @@
 use std::num::NonZeroI32;
-use std::sync::{Mutex, Arc};
+use std::sync::{Arc, Mutex};
 
-use mimalloc::MiMalloc;
-use minimap2::*;
-use minimap2_sys::{mm_set_opt, MM_F_CIGAR};
-use pyo3::prelude::*;
-use pyo3_polars::{error::PyPolarsErr, PyDataFrame};
-use polars::{prelude::*, df};
+// use mimalloc::MiMalloc;
 use crossbeam::queue::ArrayQueue;
 use fffx::{Fasta, Fastq};
+use minimap2::*;
+use minimap2_sys::{mm_set_opt, MM_F_CIGAR};
+use polars::{df, prelude::*};
+use pyo3::prelude::*;
+use pyo3_polars::{error::PyPolarsErr, PyDataFrame};
 
-#[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
+// #[global_allocator]
+// static GLOBAL: MiMalloc = MiMalloc;
 
 mod multithreading;
 
@@ -47,13 +47,15 @@ unsafe impl Send for Aligner {}
 
 #[pymethods]
 impl Aligner {
-
     // Mapping functions
     /// Map a single sequence
     fn map1(&self, seq: &Sequence) -> PyResult<PyDataFrame> {
         let mut mappings = Mappings::default();
 
-        let results = self.aligner.map(&seq.sequence, true, true, None, None).unwrap();
+        let results = self
+            .aligner
+            .map(&seq.sequence, true, true, None, None)
+            .unwrap();
         results.into_iter().for_each(|mut r| {
             r.query_name = Some(seq.id.clone());
             mappings.push(r)
@@ -73,7 +75,10 @@ impl Aligner {
             let mut mappings = Mappings::default();
 
             for seq in seqs {
-                let results = self.aligner.map(&seq.sequence, true, true, None, None).unwrap();
+                let results = self
+                    .aligner
+                    .map(&seq.sequence, true, true, None, None)
+                    .unwrap();
                 results.into_iter().for_each(|mut r| {
                     r.query_name = Some(seq.id.clone());
                     mappings.push(r)
@@ -86,7 +91,7 @@ impl Aligner {
         let work_queue = Arc::new(Mutex::new(seqs));
         let results_queue = Arc::new(ArrayQueue::<WorkQueue<Vec<Mapping>>>::new(128));
         let mut thread_handles = Vec::new();
-        for i in 0..(self.aligner.threads-1) {
+        for i in 0..(self.aligner.threads - 1) {
             let work_queue = Arc::clone(&work_queue);
             let results_queue = Arc::clone(&results_queue);
 
@@ -127,13 +132,13 @@ impl Aligner {
             match result {
                 Some(WorkQueue::Work(result)) => {
                     result.into_iter().for_each(|r| mappings.push(r));
-                },
+                }
                 Some(WorkQueue::Done) => {
                     finished_count += 1;
                     if finished_count == (self.aligner.threads - 1) {
                         break;
                     }
-                },
+                }
                 None => {
                     // Probably should be backoff, but let's try this for now...
                     std::thread::sleep(std::time::Duration::from_millis(100));
@@ -203,7 +208,7 @@ impl Aligner {
         self.preset(Preset::AvaPb);
     }
 
-    /// Configure aligner for Asm 
+    /// Configure aligner for Asm
     fn asm(&mut self) {
         self.preset(Preset::Asm);
     }
@@ -245,26 +250,26 @@ impl Aligner {
 }
 
 impl Aligner {
-        /// Create an aligner using a preset.
-        fn preset(&mut self, preset: Preset) {
-            let mut idxopt = IdxOpt::default();
-            let mut mapopt = MapOpt::default();
-    
-            unsafe {
-                // Set preset
-                mm_set_opt(preset.into(), &mut idxopt, &mut mapopt)
-            };
-    
-            self.aligner.idxopt = idxopt;
-            self.aligner.mapopt = mapopt;
-        }   
+    /// Create an aligner using a preset.
+    fn preset(&mut self, preset: Preset) {
+        let mut idxopt = IdxOpt::default();
+        let mut mapopt = MapOpt::default();
+
+        unsafe {
+            // Set preset
+            mm_set_opt(preset.into(), &mut idxopt, &mut mapopt)
+        };
+
+        self.aligner.idxopt = idxopt;
+        self.aligner.mapopt = mapopt;
+    }
 }
 
 /*
 TODO - Destroy index when aligner is dropped or when new index is created
 impl Drop for Aligner {
     fn drop(&mut self) {
-        
+
   }
 } */
 
@@ -431,66 +436,77 @@ impl Mappings {
     }
 
     pub fn to_df(self) -> Result<DataFrame, PolarsError> {
-
         // Convert strand to string + or -
         let strand: Vec<String> = self.strand.iter().map(|x| x.to_string()).collect();
 
         // Convert query len to Option<u32>
         // let query_len: Vec<Option<u32>> = self.query_len.iter().map(|x| x.map(|y| y as u32.into())).collect();
-        let query_len: Vec<Option<u32>> = self.query_len.iter().map(|x|
-            match x {
+        let query_len: Vec<Option<u32>> = self
+            .query_len
+            .iter()
+            .map(|x| match x {
                 Some(y) => Some(y.get() as u32),
                 None => None,
-            }
-        ).collect();
+            })
+            .collect();
 
-        let nm: Vec<Option<i32>> = self.alignment.iter().map(|x|
-            match x {
+        let nm: Vec<Option<i32>> = self
+            .alignment
+            .iter()
+            .map(|x| match x {
                 // These are ugly but it's early in the morning...
                 Some(y) => Some(y.nm),
                 None => None,
-            }
-        ).collect();
+            })
+            .collect();
 
-        let cigar: Vec<Option<Vec<(u32, u8)>>> = self.alignment.iter().map(|x|
-            match x {
+        let cigar: Vec<Option<Vec<(u32, u8)>>> = self
+            .alignment
+            .iter()
+            .map(|x| match x {
                 Some(y) => match &y.cigar {
                     Some(z) => Some(z.clone()),
                     None => None,
                 },
                 None => None,
-            }
-        ).collect();
+            })
+            .collect();
 
-        let cigar_str: Vec<Option<String>> = self.alignment.iter().map(|x|
-            match x {
+        let cigar_str: Vec<Option<String>> = self
+            .alignment
+            .iter()
+            .map(|x| match x {
                 Some(y) => match &y.cigar_str {
                     Some(z) => Some(z.clone()),
                     None => None,
                 },
                 None => None,
-            }
-        ).collect();
+            })
+            .collect();
 
-        let md: Vec<Option<String>> = self.alignment.iter().map(|x|
-            match x {
+        let md: Vec<Option<String>> = self
+            .alignment
+            .iter()
+            .map(|x| match x {
                 Some(y) => match &y.md {
                     Some(z) => Some(z.clone()),
                     None => None,
                 },
                 None => None,
-            }
-        ).collect();
+            })
+            .collect();
 
-        let cs: Vec<Option<String>> = self.alignment.iter().map(|x|
-            match x {
+        let cs: Vec<Option<String>> = self
+            .alignment
+            .iter()
+            .map(|x| match x {
                 Some(y) => match &y.cs {
                     Some(z) => Some(z.clone()),
                     None => None,
                 },
                 None => None,
-            }
-        ).collect();
+            })
+            .collect();
 
         let query_name = Series::new("query_name", self.query_name);
         let query_len = Series::new("query_len", query_len);
@@ -531,16 +547,5 @@ impl Mappings {
             md,
             cs,
         ])
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
     }
 }

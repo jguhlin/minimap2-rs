@@ -13,18 +13,15 @@ license = { file = "LICENSE" }
 description = "A Python wrapper for minimap2-rs"
 keywords = ["minimap2", "bioinformatics", "alignment", "mapping"]
 dependencies = [
-    "polars==0.15.15",
-    "pyarrow==10.0.1",
+    "polars>=0.15.15",
+    "pyarrow>=10.0.1",
 ]
 
 [project.urls]
 homepage = "https://github.com/jguhlin/minimap2-rs"
 repository = "https://github.com/jguhlin/minimap2-rs"
 
-
 [build-system]
 requires = ["maturin>=0.14,<0.15"]
 build-backend = "maturin"
-
-[options]
 
