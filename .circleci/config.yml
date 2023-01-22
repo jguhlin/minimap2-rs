@@ -9,7 +9,9 @@ jobs:
     machine: true
     steps:
       - checkout
-      - run: docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin /bin/bash -c "apt-get update; apt-get install cmake -y; cargo build --features htslib; cargo tarpaulin --features htslib --out Xml; cd minimap2-sys; cargo tarpaulin; cd ../minimappers2; cargo tarpaulin --no-default-features;"
+      - run: git submodule sync --recursive
+      - run: git submodule update --init --recursive
+      - run: docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin /bin/bash -c "apt-get update; apt-get install cmake -y; cargo build --features htslib; cargo tarpaulin --features htslib --out Xml; cd minimap2-sys; cargo tarpaulin"
       - run: bash <(curl -s https://codecov.io/bash)
 
   test:
@@ -17,6 +19,8 @@ jobs:
       - image: cimg/rust:1.65.0
     steps:
       - checkout
+      - run: git submodule sync --recursive
+      - run: git submodule update --init --recursive
       - restore_cache:
           key: project-cache
       #- run: cargo install grcov
@@ -31,7 +35,6 @@ jobs:
           key: project-cache
           paths:
             - "~/.cargo"
-            - "./target"
       - run: cargo test
       - run: cargo test --features htslib
       - run: cargo test --features mm2-fast
