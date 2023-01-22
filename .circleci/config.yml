@@ -10,8 +10,6 @@ jobs:
     steps:
       - checkout
       - run: docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin /bin/bash -c "apt-get update; apt-get install cmake -y; cargo build --features htslib; cargo tarpaulin --features htslib --out Xml"
-      # - run: cargo tarpaulin --out Xml --features htslib,map-file
-      # - run: cargo tarpaulin --out Xml -r minimap2-sys
       - run: bash <(curl -s https://codecov.io/bash)
 
   test:
@@ -44,6 +42,9 @@ jobs:
       - run: cargo test --features mm2-fast
       - run: cargo test --features simde
       - run: cargo test --features mm2-fast,simde
+      - run: cd ..
+      - run: cd minimappers2
+      - run: cargo test
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
