@@ -9,7 +9,7 @@ jobs:
     machine: true
     steps:
       - checkout
-      - run: docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin /bin/bash -c "apt-get update; apt-get install cmake -y; cargo build --features htslib; cargo tarpaulin --features htslib --out Xml"
+      - run: docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin /bin/bash -c "apt-get update; apt-get install cmake -y; cargo build --features htslib; cargo tarpaulin --features htslib --out Xml; cd minimap2-sys; cargo tarpaulin; cd ../minimappers2; cargo tarpaulin;"
       # - run: cargo tarpaulin --out Xml --features htslib,map-file
       # - run: cargo tarpaulin --out Xml -r minimap2-sys
       - run: bash <(curl -s https://codecov.io/bash)
