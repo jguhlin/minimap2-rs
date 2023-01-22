@@ -24,7 +24,7 @@ pub type MapOpt = mm_mapopt_t;
 pub type IdxOpt = mm_idxopt_t;
 
 #[cfg(feature = "map-file")]
-pub use fffx::{Fasta, Fastq, Sequence};
+use fffx::{Fasta, Fastq, Sequence};
 
 // TODO: Probably a better way to handle this...
 static MAP_ONT: &str = "map-ont\0";
@@ -46,6 +46,12 @@ static CDNA: &str = "cdna\0";
 pub enum Strand {
     Forward,
     Reverse,
+}
+
+impl Default for Strand {
+    fn default() -> Self {
+        Strand::Forward
+    }
 }
 
 impl std::fmt::Display for Strand {
@@ -116,7 +122,7 @@ pub struct Alignment {
 }
 
 /// Mapping result
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Mapping {
     // The query sequence name.
     pub query_name: Option<String>,
