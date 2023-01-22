@@ -1,7 +1,7 @@
 use std::num::NonZeroI32;
 use std::sync::{Mutex, Arc};
 
-use mimalloc::MiMalloc;
+// use mimalloc::MiMalloc;
 use minimap2::*;
 use minimap2_sys::{mm_set_opt, MM_F_CIGAR};
 use pyo3::prelude::*;
@@ -10,8 +10,8 @@ use polars::{prelude::*, df};
 use crossbeam::queue::ArrayQueue;
 use fffx::{Fasta, Fastq};
 
-#[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
+// #[global_allocator]
+// static GLOBAL: MiMalloc = MiMalloc;
 
 mod multithreading;
 

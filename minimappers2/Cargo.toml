@@ -14,7 +14,7 @@ minimap2-sys = { version = "0.1.10", features = ["simde"] }
 #minimap2 = { path = "../", features = ["simde"] }
 #minimap2-sys = { path = "../minimap2-sys", features = ["simde"] }
 crossbeam = "0.8.2"
-mimalloc = {version = "0.1.34", default-features = false }
+# mimalloc = {version = "0.1.34", default-features = false }
 
 pyo3 = { version = "0.17.0", features = ["extension-module", "abi3-py37"] }
 polars = "0.26.1"
