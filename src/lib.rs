@@ -247,19 +247,6 @@ impl Aligner {
 }
 
 impl Aligner {
-    /// Ergonomic function for Aligner.
-    ///
-    /// TODO: Make it simpler (and less redundant) with functions?
-    /// Such that it'd be ..map_ont() or ..map_ava() instead?
-    ///
-    /// ```
-    /// # use minimap2::*;
-    /// Aligner::builder().preset(Preset::MapOnt).with_threads(1).with_cigar();
-    /// ```
-    // pub fn preset(preset: Preset) -> Aligner {
-    //     Aligner::builder().preset(preset)
-    // }
-
     /// Ergonomic function for Aligner. Just to see if people prefer this over the
     /// preset() function.
     /// ```
@@ -463,6 +450,17 @@ impl Aligner {
     pub fn set_index<P>(&mut self, path: P, output: Option<&str>) -> Result<(), &'static str>
         where P: AsRef<Path>
     {
+        let path_str = match std::ffi::CString::new(path.as_ref().as_os_str().as_bytes()) {
+            Ok(path) => {
+                println!("{:#?}", path);
+                path
+            },
+            Err(_) => { 
+                println!("Got error");
+                return Err("Invalid Path")
+            },
+        };
+
         // Confirm file exists
         if !path.as_ref().exists() {
             return Err("File does not exist");
@@ -473,21 +471,16 @@ impl Aligner {
             return Err("File is empty");
         }
 
-        let path = match std::ffi::CString::new(path.as_ref().as_os_str().as_bytes()) {
-            Ok(path) => path,
-            Err(_) => return Err("Invalid path"),
-        };
-
         let output = match output {
             Some(output) => match std::ffi::CString::new(output) {
                 Ok(output) => output,
-                Err(_) => return Err("Invalid output"),
+                Err(_) => return Err("Invalid Output"),
             },
             None => std::ffi::CString::new(Vec::new()).unwrap(),
         };
 
         let idx_reader = MaybeUninit::new(unsafe {
-            mm_idx_reader_open(path.as_ptr(), &self.idxopt, output.as_ptr())
+            mm_idx_reader_open(path_str.as_ptr(), &self.idxopt, output.as_ptr())
         });
 
         let mut idx: MaybeUninit<*mut mm_idx_t> = MaybeUninit::uninit();
@@ -909,6 +902,7 @@ pub fn detect_compression_format(buffer: &[u8]) -> Result<CompressionType, &'sta
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::CStr;
     use std::mem::MaybeUninit;
 
     #[test]
@@ -1118,4 +1112,63 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
             assert_eq!(align.cs.is_some(), *cs);
         }
     }
+
+    #[test]
+    fn test_strand_struct() {
+        let strand = Strand::default();
+        assert_eq!(strand, Strand::Forward);
+        println!("{}", strand);
+        let strand = Strand::Reverse;
+        println!("{}", strand);
+    }
+
+    #[test]
+    fn test_threadlocalbuffer() {
+        let tlb = ThreadLocalBuffer::default();
+        drop(tlb);
+    }
+
+    #[test]
+    fn test_aligner_struct() {
+        let aligner = Aligner::default();
+        drop(aligner);
+
+        let _aligner = Aligner::builder().map_ont();
+        let _aligner = Aligner::builder().ava_ont();
+        let _aligner = Aligner::builder().map10k();
+        let _aligner = Aligner::builder().ava_pb();
+        let _aligner = Aligner::builder().map_hifi();
+        let _aligner = Aligner::builder().asm();
+        let _aligner = Aligner::builder().asm5();
+        let _aligner = Aligner::builder().asm10();
+        let _aligner = Aligner::builder().asm20();
+        let _aligner = Aligner::builder().short();
+        let _aligner = Aligner::builder().sr();
+        let _aligner = Aligner::builder().splice();
+        let _aligner = Aligner::builder().cdna();
+
+        let mut aligner = Aligner::builder();
+        assert_eq!(aligner.map_file("test_data/MT-human.fa", false, false), Err("No index"));
+        let mut aligner = aligner.with_index("test_data/MT-human.fa", None).unwrap();
+        assert_eq!(aligner.map_file("test_data/file-does-not-exist", false, false), Err("File does not exist"));
+
+        if let Err("File is empty") = Aligner::builder().with_index("test_data/empty.fa", None) {
+            println!("File is empty - Success");
+        } else {
+            panic!("File is empty error not thrown");
+        }
+
+        if let Err("Invalid Path") = Aligner::builder().with_index("\0invalid_\0path\0", None) {
+            println!("Invalid Path - Success");
+        } else {
+            panic!("Invalid Path error not thrown");
+        }
+
+        if let Err("Invalid Output") = Aligner::builder().with_index("test_data/MT-human.fa", Some("test\0test")) {
+            println!("Invalid output - Success");
+        } else {
+            panic!("Invalid output error not thrown");
+        }
+    }
+
 }
