@@ -35,7 +35,7 @@ jobs:
     - name: Run tests simde
       run: cargo test --features simde
       
-  manylinux-x64_64:
+  build-manylinux-x64_64:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
