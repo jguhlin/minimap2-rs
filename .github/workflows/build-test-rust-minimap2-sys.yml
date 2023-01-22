@@ -3,6 +3,8 @@ name: Rust
 on:
   pull_request:
     branches: [ "main" ]
+    paths: 
+      - 'minimap2-sys/'
 
 env:
   CARGO_TERM_COLOR: always
@@ -19,7 +21,16 @@ jobs:
       run: cargo test
     - name: Run tests htslib
       run: cargo test --features htslib
-    
+    - run: cd minimap2-sys
+    - name: Run minimap2-sys tests
+      run: cargo test
+    - name: Run minimap2-sys simde tests
+      run: cargo test --features simde
+    - run: cd ..
+    - run: cd minimappers2
+    - name: Run minimappers2 Rust testss
+      run: cargo test
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -34,6 +45,17 @@ jobs:
       run: cargo test --features mm2-fast
     - name: Run tests simde
       run: cargo test --features simde
+    - run: cd minimap2-sys
+    - name: Run minimap2-sys tests
+      run: cargo test
+    - name: Run minimap2-sys mm2-fast tests
+      run: cargo test --features mm2-fast
+    - name: Run minimap2-sys simde tests
+      run: cargo test --features simde
+    - run: cd ..
+    - run: cd minimappers2
+    - name: Run minimappers2 Rust testss
+      run: cargo test
       
   build-manylinux-x64_64:
     runs-on: ubuntu-latest
