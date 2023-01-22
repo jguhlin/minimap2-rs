@@ -1,0 +1,40 @@
+name: Rust
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths: 
+      - 'minimappers2/src/'
+      - 'minimappers2/Cargo.toml'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: cd minimappers2
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+      
+  build-manylinux-x64_64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.7'
+
+      - name: Test build
+        uses: messense/maturin-action@v1
+        env:
+          RUSTFLAGS: -C target-feature=+fxsr,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+fma
+        with:
+          rust-toolchain: nightly-2023-01-19
+          maturin-version: '0.14.10'
+          command: build
+          args: -m minimappers2/Cargo.toml
