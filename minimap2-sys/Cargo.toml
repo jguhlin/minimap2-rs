@@ -41,12 +41,12 @@ libc = "0.2"
 
 [build-dependencies.bindgen]
 optional = true
-version = "0.63"
+version = "0.64"
 default-features = false
 features = ["runtime", "which-rustfmt"]
 
 [build-dependencies.cc]
-version = "1.0.78"
+version = "1.0.79"
 
 [features]
 default = []

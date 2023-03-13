@@ -5,6 +5,10 @@ Use this if you need lower-level bindings for minimap2.
 * Can we decouple from pthread?
 
 ## Changelog
+### 0.1.11 (UNRELEASED)
+* Update minimap2-sys minimap2 to latest git commit (single change - 1d3c3ee)
+* minimap2-sys: update libc, bindgen deps
+
 ### 0.1.10
 * Fix bug relating to compiling mm2-fast 
 

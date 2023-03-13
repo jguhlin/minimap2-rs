@@ -38,7 +38,10 @@ fn configure(mut cc: &mut cc::Build) {
     for file in files {
         // Skip "main.c" and "example.c"
         // For mm2fast also skip map.c...
-        if file.file_name().unwrap() == "example.c" || file.file_name().unwrap() == "main.c" || file.file_name().unwrap() == "map.c" {
+        if file.file_name().unwrap() == "example.c"
+            || file.file_name().unwrap() == "main.c"
+            || file.file_name().unwrap() == "map.c"
+        {
             continue;
         }
 
@@ -159,22 +162,13 @@ fn sse(cc: &mut cc::Build) {
     #[cfg(target_feature = "sse4.1")]
     cc.flag("-msse4.1");
 
-    #[cfg(all(
-        target_feature = "sse2",
-        not(target_feature = "sse4.1")
-    ))]
+    #[cfg(all(target_feature = "sse2", not(target_feature = "sse4.1")))]
     cc.flag("-DKSW_SSE2_ONLY");
 
-    #[cfg(all(
-        target_feature = "sse2",
-        not(target_feature = "sse4.1")
-    ))]
+    #[cfg(all(target_feature = "sse2", not(target_feature = "sse4.1")))]
     cc.flag("-mno-sse4.1");
 
-    #[cfg(all(
-        target_feature = "sse2",
-        not(target_feature = "sse4.1")
-    ))]
+    #[cfg(all(target_feature = "sse2", not(target_feature = "sse4.1")))]
     cc.flag("-msse2");
 }
 

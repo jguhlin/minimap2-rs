@@ -1,3 +1,18 @@
+//! API providing a rusty interface to minimap2 or mm2-fast libraries.
+//!
+//! This library supports statically linking and compiling minimap2 directly, no separate install is required.
+//!
+//! # Implementation
+//! This is a wrapper library around `minimap2-sys`, which are lower level bindings for minimap2.
+//!
+//! # Crate Features
+//! This crate has multiple create features available.
+//! * map-file - Enables the ability to map a file directly to a reference. Enabled by deafult
+//! * mm2-fast - Uses the mm2-fast library instead of standard minimap2
+//! * sse - Enables the use of SSE instructions
+//! * htslib - Provides an interface to minimap2 that returns rust_htslib::Records
+//! * simde - Enables SIMD Everywhere library in minimap2
+
 use std::cell::RefCell;
 
 use std::io::Read;
@@ -27,6 +42,7 @@ pub type IdxOpt = mm_idxopt_t;
 use fffx::{Fasta, Fastq, Sequence};
 
 // TODO: Probably a better way to handle this...
+/// C string constants for passing to minimap2
 static MAP_ONT: &str = "map-ont\0";
 static AVA_ONT: &str = "ava-ont\0";
 static MAP10K: &str = "map10k\0";
@@ -247,129 +263,116 @@ impl Aligner {
 }
 
 impl Aligner {
-    /// Ergonomic function for Aligner. Just to see if people prefer this over the
-    /// preset() function.
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to MapOnt.
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().preset(Preset::MapOnt);
+    /// Aligner::builder().map_ont();
     /// ```
     pub fn map_ont(self) -> Self {
         self.preset(Preset::MapOnt)
     }
 
-    /// Ergonomic function for Aligner. Just to see if people prefer this over the
-    /// preset() function.
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to AvaOnt.
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().preset(Preset::AvaOnt);
+    /// Aligner::builder().ava_ont();
     /// ```
     pub fn ava_ont(self) -> Self {
         self.preset(Preset::AvaOnt)
     }
 
-    /// Ergonomic function for Aligner. Just to see if people prefer this over the
-    /// preset() function.
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to Map10k
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().preset(Preset::Map10k);
+    /// Aligner::builder().map10k();
     /// ```
     pub fn map10k(self) -> Self {
         self.preset(Preset::Map10k)
     }
 
-    /// Ergonomic function for Aligner. Just to see if people prefer this over the
-    /// preset() function.
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to AvaPb
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().preset(Preset::AvaPb);
+    /// Aligner::builder().ava_pb();
     /// ```
     pub fn ava_pb(self) -> Self {
         self.preset(Preset::AvaPb)
     }
 
-    /// Ergonomic function for Aligner. Just to see if people prefer this over the
-    /// preset() function.
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to MapHifi
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().preset(Preset::MapHifi);
+    /// Aligner::builder().map_hifi();
     /// ```
     pub fn map_hifi(self) -> Self {
         self.preset(Preset::MapHifi)
     }
 
-    /// Ergonomic function for Aligner. Just to see if people prefer this over the
-    /// preset() function.
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().preset(Preset::Asm);
+    /// Aligner::builder().asm();
     /// ```
     pub fn asm(self) -> Self {
         self.preset(Preset::Asm)
     }
 
-    /// Ergonomic function for Aligner. Just to see if people prefer this over the
-    /// preset() function.
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm5
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().preset(Preset::Asm5);
+    /// Aligner::builder().asm5();
     /// ```
     pub fn asm5(self) -> Self {
         self.preset(Preset::Asm5)
     }
-    /// Ergonomic function for Aligner. Just to see if people prefer this over the
-    /// preset() function.
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm10
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().preset(Preset::Asm10);
+    /// Aligner::builder().asm10();
     /// ```
     pub fn asm10(self) -> Self {
         self.preset(Preset::Asm10)
     }
-    /// Ergonomic function for Aligner. Just to see if people prefer this over the
-    /// preset() function.
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm20
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().preset(Preset::Asm20);
+    /// Aligner::builder().asm20();
     /// ```
     pub fn asm20(self) -> Self {
         self.preset(Preset::Asm20)
     }
 
-    /// Ergonomic function for Aligner. Just to see if people prefer this over the
-    /// preset() function.
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to Short
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().preset(Preset::Short);
+    /// Aligner::builder().short();
     /// ```
     pub fn short(self) -> Self {
         self.preset(Preset::Short)
     }
 
-    /// Ergonomic function for Aligner. Just to see if people prefer this over the
-    /// preset() function.
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to sr
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().preset(Preset::Sr);
+    /// Aligner::builder().sr();
     /// ```
     pub fn sr(self) -> Self {
         self.preset(Preset::Sr)
     }
 
-    /// Ergonomic function for Aligner. Just to see if people prefer this over the
-    /// preset() function.
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to splice
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().preset(Preset::Splice);
+    /// Aligner::builder().splice();
     /// ```
     pub fn splice(self) -> Self {
         self.preset(Preset::Splice)
     }
 
-    /// Ergonomic function for Aligner. Just to see if people prefer this over the
-    /// preset() function.
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to cdna
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().preset(Preset::Cdna);
+    /// Aligner::builder().cdna();
     /// ```
     pub fn cdna(self) -> Self {
         self.preset(Preset::Cdna)
@@ -395,7 +398,7 @@ impl Aligner {
     /// Set Alignment mode / cigar mode in minimap2
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().preset(Preset::MapOnt).with_cigar();
+    /// Aligner::builder().map_ont().with_cigar();
     /// ```
     ///
     pub fn with_cigar(mut self) -> Self {
@@ -406,7 +409,7 @@ impl Aligner {
         self
     }
 
-    /// Set Alignment mode / cigar mode in minimap2
+    /// Sets the number of threads minimap2 will use for building the index
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().with_threads(10);
@@ -419,7 +422,8 @@ impl Aligner {
     }
 
     /// Set index parameters for minimap2 using builder pattern
-    /// Creates the index as well with the given number of threads (set at struct creation)
+    /// Creates the index as well with the given number of threads (set at struct creation).
+    /// You must set the number of threads before calling this function.
     ///
     /// Parameters:
     /// path: Location of pre-built index or FASTA/FASTQ file (may be gzipped or plaintext)
@@ -439,7 +443,8 @@ impl Aligner {
     /// Aligner::builder().map_ont().with_index("my_index.mmi", None);
     /// ```
     pub fn with_index<P>(mut self, path: P, output: Option<&str>) -> Result<Self, &'static str>
-        where P: AsRef<Path>
+    where
+        P: AsRef<Path>,
     {
         return match self.set_index(path, output) {
             Ok(_) => Ok(self),
@@ -447,18 +452,20 @@ impl Aligner {
         };
     }
 
+    /// Set the index (in-place, without builder pattern)
     pub fn set_index<P>(&mut self, path: P, output: Option<&str>) -> Result<(), &'static str>
-        where P: AsRef<Path>
+    where
+        P: AsRef<Path>,
     {
         let path_str = match std::ffi::CString::new(path.as_ref().as_os_str().as_bytes()) {
             Ok(path) => {
-                println!("{:#?}", path);
+                // println!("{:#?}", path);
                 path
-            },
-            Err(_) => { 
+            }
+            Err(_) => {
                 println!("Got error");
-                return Err("Invalid Path")
-            },
+                return Err("Invalid Path");
+            }
         };
 
         // Confirm file exists
@@ -507,28 +514,39 @@ impl Aligner {
         Ok(())
     }
 
-    /// Map a single sequence to an index
-    /// not implemented yet!
-    pub fn with_seq(self, seq: &[u8]) -> Result<Self, &'static str> {
-        let _seq = match std::ffi::CString::new(seq) {
-            Ok(seq) => seq,
-            Err(_) => return Err("Invalid sequence"),
-        };
+    /// Use a single sequence as the index. Sets the sequence ID to "N/A".
+    /// Can not be combined with `with_index` or `set_index`.
+    /// Following the mappy implementation, this also sets mapopt.mid_occ to 1000.
+    pub fn with_seq(self, seq: &[u8]) -> Result<Self, &'static str> 
+        // where T: AsRef<[u8]> + std::ops::Deref<Target = str>,
+    {
+        let default_id = "N/A";
+        self.with_seq_and_id(seq, default_id.as_bytes())
+    }
 
-        todo!();
+    pub fn with_seq_and_id(mut self, seq: &[u8], id: &[u8]) -> Result<Self, &'static str> 
+        // where T: AsRef<[u8]> + std::ops::Deref<Target = str>,
+        {
 
-        //let idx = MaybeUninit::new(unsafe {
-        /*mm_idx_str(
-            self.idx_opt.w,
-            self.idx_opt.k,
-            self.idx_opt.flag & 1,
-            self.idx_opt.bucket_bits,
-            str.encode(seq),
-            len(seq),
-        )*/
-        //});
+        let seq_clone: Vec<u8> = seq.as_ref().to_vec();
 
-        //self.idx = Some(idx);
+        let mut seq = vec![std::ffi::CString::new(seq_clone).expect("Invalid sequence")];
+        let mut name = vec![std::ffi::CString::new(id).unwrap()];
+
+        let idx = MaybeUninit::new(unsafe {
+            mm_idx_str(
+                self.idxopt.w as i32,
+                self.idxopt.k as i32,
+                (self.idxopt.flag & 1) as i32,
+                self.idxopt.bucket_bits as i32,
+                1 as i32,
+                seq.as_mut_ptr() as *mut *const i8,
+                name.as_mut_ptr() as *mut *const i8,
+            )
+        });
+
+        self.idx = Some(unsafe { *idx.assume_init() });
+        self.mapopt.mid_occ = 1000;
 
         Ok(self)
     }
@@ -552,7 +570,8 @@ impl Aligner {
         md: bool, // TODO
         max_frag_len: Option<usize>,
         extra_flags: Option<Vec<u64>>,
-    ) -> Result<Vec<Mapping>, &'static str> {
+    ) -> Result<Vec<Mapping>, &'static str>
+    {
         // Make sure index is set
         if !self.has_index() {
             return Err("No index");
@@ -902,35 +921,57 @@ pub fn detect_compression_format(buffer: &[u8]) -> Result<CompressionType, &'sta
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::ffi::CStr;
     use std::mem::MaybeUninit;
 
     #[test]
     fn compression_format_detections() {
         let buf = [0x1F, 0x8B, 0x08, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF];
-        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::GZIP);
+        assert_eq!(
+            detect_compression_format(&buf).unwrap(),
+            CompressionType::GZIP
+        );
 
         let buf = [0x42, 0x5A, 0x68, 0x39, 0x31, 0x41, 0x59, 0x26, 0x53, 0x59];
-        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::BZIP2);
+        assert_eq!(
+            detect_compression_format(&buf).unwrap(),
+            CompressionType::BZIP2
+        );
 
         let buf = [0x28, 0xB5, 0x2F, 0xFD, 0x37, 0x00, 0x00, 0x00, 0x00, 0x00];
-        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::LZMA);
+        assert_eq!(
+            detect_compression_format(&buf).unwrap(),
+            CompressionType::LZMA
+        );
 
         let buf = [0x04, 0x22, 0x4D, 0x18, 0x40, 0x40, 0x00, 0x00, 0x00, 0x00];
-        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::LZ4);
+        assert_eq!(
+            detect_compression_format(&buf).unwrap(),
+            CompressionType::LZ4
+        );
 
         let buf = [0x08, 0x22, 0x4D, 0x18, 0x40, 0x40, 0x00, 0x00, 0x00, 0x00];
-        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::LZ4);
+        assert_eq!(
+            detect_compression_format(&buf).unwrap(),
+            CompressionType::LZ4
+        );
 
         let buf = [0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x00, 0x00, 0x00, 0x00];
-        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::RAR);
+        assert_eq!(
+            detect_compression_format(&buf).unwrap(),
+            CompressionType::RAR
+        );
 
         let buf = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::NONE);
+        assert_eq!(
+            detect_compression_format(&buf).unwrap(),
+            CompressionType::NONE
+        );
 
         let buf = [0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C, 0x00, 0x00, 0x00, 0x00];
-        assert_eq!(detect_compression_format(&buf).unwrap(), CompressionType::ZSTD);
-
+        assert_eq!(
+            detect_compression_format(&buf).unwrap(),
+            CompressionType::ZSTD
+        );
     }
 
     #[test]
@@ -1129,6 +1170,21 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
     }
 
     #[test]
+    fn test_with_seq() {
+        let seq = "CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCGAAATTCTTTAACGGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
+        let query = "GGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTT";
+        let mut aligner = Aligner::builder().short();
+        let aligner = aligner.with_seq(seq.as_bytes()).unwrap();
+        let alignments = aligner.map(query.as_bytes(), false, false, None, None).unwrap();
+        assert_eq!(alignments.len(), 2);
+
+        for alignment in alignments {
+            println!("{:#?}", alignment);
+        }
+
+    }
+
+    #[test]
     fn test_aligner_struct() {
         let aligner = Aligner::default();
         drop(aligner);
@@ -1148,9 +1204,15 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
         let _aligner = Aligner::builder().cdna();
 
         let mut aligner = Aligner::builder();
-        assert_eq!(aligner.map_file("test_data/MT-human.fa", false, false), Err("No index"));
+        assert_eq!(
+            aligner.map_file("test_data/MT-human.fa", false, false),
+            Err("No index")
+        );
         let mut aligner = aligner.with_index("test_data/MT-human.fa", None).unwrap();
-        assert_eq!(aligner.map_file("test_data/file-does-not-exist", false, false), Err("File does not exist"));
+        assert_eq!(
+            aligner.map_file("test_data/file-does-not-exist", false, false),
+            Err("File does not exist")
+        );
 
         if let Err("File is empty") = Aligner::builder().with_index("test_data/empty.fa", None) {
             println!("File is empty - Success");
@@ -1164,11 +1226,12 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
             panic!("Invalid Path error not thrown");
         }
 
-        if let Err("Invalid Output") = Aligner::builder().with_index("test_data/MT-human.fa", Some("test\0test")) {
+        if let Err("Invalid Output") =
+            Aligner::builder().with_index("test_data/MT-human.fa", Some("test\0test"))
+        {
             println!("Invalid output - Success");
         } else {
             panic!("Invalid output error not thrown");
         }
     }
-
 }
