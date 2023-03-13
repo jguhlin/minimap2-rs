@@ -111,6 +111,10 @@ and/or:
 > *Bioinformatics*, **37**:4572-4574. [doi:10.1093/bioinformatics/btab705][doi2]
 
 # Changelog
+## 0.1.1 UNRELEASED
+* Update pyo3 and polars deps
+* Add with_seq for indexing TODO
+
 ## 0.1.0
 * Initial Functions implemented
 * Return results as Polars dfs
