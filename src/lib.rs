@@ -4,6 +4,10 @@
 //!
 //! # Implementation
 //! This is a wrapper library around `minimap2-sys`, which are lower level bindings for minimap2.
+//! 
+//! # Caveats
+//! Setting threads with the builder pattern applies only to building the index, not the mapping.
+//! For an example of using multiple threads with mapping, see: [fakeminimap2](https://github.com/jguhlin/minimap2-rs/blob/main/fakeminimap2/src/main.rs)
 //!
 //! # Crate Features
 //! This crate has multiple create features available.
@@ -12,6 +16,33 @@
 //! * sse - Enables the use of SSE instructions
 //! * htslib - Provides an interface to minimap2 that returns rust_htslib::Records
 //! * simde - Enables SIMD Everywhere library in minimap2
+//! 
+//! # Examples
+//! ## Mapping a file to a reference
+//! ```no_run
+//! use minimap2::{Aligner, Preset};
+//! let mut aligner = Aligner::builder()
+//! .map_ont()
+//! .with_threads(8)
+//! .with_cigar()
+//! .with_index("ReferenceFile.fasta", None)
+//! .expect("Unable to build index");
+//! 
+//! let seq = b"ACTGACTCACATCGACTACGACTACTAGACACTAGACTATCGACTACTGACATCGA";
+//! let alignment = aligner
+//! .map(seq, false, false, None, None)
+//! .expect("Unable to align");
+//! ```
+//! 
+//! ## Mapping a file to an individual target sequence
+//! ```no_run
+//! use minimap2::{Aligner, Preset};
+//! # let seq = "CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCGAAATTCTTTAACGGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
+//! let aligner = Aligner::builder().map_ont().with_seq(seq.as_bytes()).expect("Unable to build index");
+//! let query = b"CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCG";
+//! let hits = aligner.map(query, false, false, None, None);
+//! assert_eq!(hits.unwrap().len(), 1);
+//! ```
 
 use std::cell::RefCell;
 
@@ -517,6 +548,14 @@ impl Aligner {
     /// Use a single sequence as the index. Sets the sequence ID to "N/A".
     /// Can not be combined with `with_index` or `set_index`.
     /// Following the mappy implementation, this also sets mapopt.mid_occ to 1000.
+    /// ```
+    /// # use minimap2::*;
+    /// # let seq = "CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCGAAATTCTTTAACGGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
+    /// let aligner = Aligner::builder().map_ont().with_seq(seq.as_bytes()).expect("Unable to build index");
+    /// let query = b"CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCG";
+    /// let hits = aligner.map(query, false, false, None, None);
+    /// assert_eq!(hits.unwrap().len(), 1);
+    /// ```
     pub fn with_seq(self, seq: &[u8]) -> Result<Self, &'static str> 
         // where T: AsRef<[u8]> + std::ops::Deref<Target = str>,
     {
@@ -524,14 +563,66 @@ impl Aligner {
         self.with_seq_and_id(seq, default_id.as_bytes())
     }
 
-    pub fn with_seq_and_id(mut self, seq: &[u8], id: &[u8]) -> Result<Self, &'static str> 
+    /// Use a single sequence as the index. Sets the sequence ID to "N/A".
+    /// Can not be combined with `with_index` or `set_index`.
+    /// Following the mappy implementation, this also sets mapopt.mid_occ to 1000.
+    /// ```
+    /// # use minimap2::*;
+    /// # let seq = "CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCGAAATTCTTTAACGGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
+    /// # let id = "seq1";
+    /// let aligner = Aligner::builder().map_ont().with_seq_and_id(seq.as_bytes(), id.as_bytes()).expect("Unable to build index");
+    /// let query = b"CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCG";
+    /// let hits = aligner.map(query, false, false, None, None);
+    /// assert_eq!(hits.as_ref().unwrap().len(), 1);
+    /// assert_eq!(hits.as_ref().unwrap()[0].target_name.as_ref().unwrap(), id);
+    /// ```
+    pub fn with_seq_and_id(self, seq: &[u8], id: &[u8]) -> Result<Self, &'static str> 
         // where T: AsRef<[u8]> + std::ops::Deref<Target = str>,
         {
 
-        let seq_clone: Vec<u8> = seq.as_ref().to_vec();
+        assert!(self.idx.is_none(), "Index already set. Can not set sequence as index.");
+        assert!(seq.len() > 0, "Sequence is empty");
+        assert!(id.len() > 0, "ID is empty");
 
-        let mut seq = vec![std::ffi::CString::new(seq_clone).expect("Invalid sequence")];
-        let mut name = vec![std::ffi::CString::new(id).unwrap()];
+        self.with_seqs_and_ids(&vec![seq.to_vec()], &vec![id.to_vec()])
+    }
+
+    /// TODO: Does not work for more than 1 seq currently!
+    /// Pass multiple sequences to build an index functionally.
+    /// Following the mappy implementation, this also sets mapopt.mid_occ to 1000.
+    /// Can not be combined with `with_index` or `set_index`.
+    /// Sets the sequence IDs to "Unnamed Sequence n" where n is the sequence number.
+    pub fn with_seqs(self, seqs: &Vec<Vec<u8>>) -> Result<Self, &'static str> 
+        {
+
+        assert!(self.idx.is_none(), "Index already set. Can not set sequence as index.");
+        assert!(seqs.len() > 0, "Must have at least one sequence");
+
+        let mut ids: Vec<Vec<u8>> = Vec::new();
+        for i in 0..seqs.len() {
+            ids.push(format!("Unnamed Sequence {}", i).into_bytes());
+        }
+
+        self.with_seqs_and_ids(seqs, &ids)
+    }
+
+    /// TODO: Does not work for more than 1 seq currently!
+    /// Pass multiple sequences and corresponding IDs to build an index functionally.
+    /// Following the mappy implementation, this also sets mapopt.mid_occ to 1000.
+    // This works for a single sequence, but not for multiple sequences.
+    // Maybe convert the underlying function itself?
+    // https://github.com/lh3/minimap2/blob/c2f07ff2ac8bdc5c6768e63191e614ea9012bd5d/index.c#L408
+    pub fn with_seqs_and_ids(mut self, seqs: &Vec<Vec<u8>>, ids: &Vec<Vec<u8>>) -> Result<Self, &'static str> 
+        {
+        assert!(seqs.len() == ids.len(), "Number of sequences and IDs must be equal");
+        assert!(seqs.len() > 0, "Must have at least one sequence and ID");
+
+        let seqs: Vec<std::ffi::CString> = seqs.iter().map(|s| std::ffi::CString::new(s.clone()).expect("Invalid Sequence")).collect();
+        let ids: Vec<std::ffi::CString> = ids.iter().map(|s| std::ffi::CString::new(s.clone()).expect("Invalid ID")).collect();
+
+        println!("{:#?}", seqs);
+        println!("{:#?}", ids);
+        println!("{:#?}", seqs.len());
 
         let idx = MaybeUninit::new(unsafe {
             mm_idx_str(
@@ -539,9 +630,9 @@ impl Aligner {
                 self.idxopt.k as i32,
                 (self.idxopt.flag & 1) as i32,
                 self.idxopt.bucket_bits as i32,
-                1 as i32,
-                seq.as_mut_ptr() as *mut *const i8,
-                name.as_mut_ptr() as *mut *const i8,
+                seqs.len() as i32,
+                seqs.as_ptr() as *mut *const i8,
+                ids.as_ptr() as *mut *const i8,
             )
         });
 
@@ -620,7 +711,6 @@ impl Aligner {
             for i in 0..n_regs {
                 unsafe {
                     let reg_ptr = (*mm_reg.as_ptr()).offset(i as isize);
-                    // println!("{:#?}", *reg_ptr);
                     let const_ptr = reg_ptr as *const mm_reg1_t;
                     let reg: mm_reg1_t = *reg_ptr;
 
@@ -1173,16 +1263,49 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
     fn test_with_seq() {
         let seq = "CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCGAAATTCTTTAACGGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
         let query = "GGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTT";
-        let mut aligner = Aligner::builder().short();
+        let aligner = Aligner::builder().short();
         let aligner = aligner.with_seq(seq.as_bytes()).unwrap();
         let alignments = aligner.map(query.as_bytes(), false, false, None, None).unwrap();
         assert_eq!(alignments.len(), 2);
 
-        for alignment in alignments {
-            println!("{:#?}", alignment);
-        }
+        println!("----- Trying with_seqs 1");
+
+        let aligner = Aligner::builder().short();
+        let aligner = aligner.with_seqs(&vec![seq.as_bytes().to_vec()]).unwrap();
+        let alignments = aligner.map(query.as_bytes(), false, false, None, None).unwrap();
+        assert_eq!(alignments.len(), 2);
+
+        println!("----- Trying with_seqs and ids 1");
+
+        let id = "test";
+        let aligner = Aligner::builder().short();
+        let aligner = aligner.with_seqs_and_ids(&vec![seq.as_bytes().to_vec()], &vec![id.as_bytes().to_vec()]).unwrap();
+        let alignments = aligner.map(query.as_bytes(), false, false, None, None).unwrap();
+        assert_eq!(alignments.len(), 2);
+
+        println!("----- Trying with_seq and id");
+
+        let id = "test";
+        let aligner = Aligner::builder().short();
+        let aligner = aligner.with_seq_and_id(seq.as_bytes(), &id.as_bytes().to_vec()).unwrap();
+        let alignments = aligner.map(query.as_bytes(), false, false, None, None).unwrap();
+        assert_eq!(alignments.len(), 2);
+
+        // println!("----- Trying with_seqs 2");
+
+        // let aligner = Aligner::builder().short();
+        // let aligner = aligner.with_seqs(&vec![seq.as_bytes().to_vec(), seq.as_bytes().to_vec()]).unwrap();
+        // let alignments = aligner.map(query.as_bytes(), false, false, None, None).unwrap();
+        // assert_eq!(alignments.len(), 4);
+
+        // for alignment in alignments {
+            // println!("{:#?}", alignment);
+        // }
+
+
 
     }
+
 
     #[test]
     fn test_aligner_struct() {
@@ -1203,12 +1326,12 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
         let _aligner = Aligner::builder().splice();
         let _aligner = Aligner::builder().cdna();
 
-        let mut aligner = Aligner::builder();
+        let aligner = Aligner::builder();
         assert_eq!(
             aligner.map_file("test_data/MT-human.fa", false, false),
             Err("No index")
         );
-        let mut aligner = aligner.with_index("test_data/MT-human.fa", None).unwrap();
+        let aligner = aligner.with_index("test_data/MT-human.fa", None).unwrap();
         assert_eq!(
             aligner.map_file("test_data/file-does-not-exist", false, false),
             Err("File does not exist")
