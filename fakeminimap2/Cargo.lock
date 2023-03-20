@@ -193,9 +193,9 @@ dependencies = [
 
 [[package]]
 name = "fffx"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b448c7a8659bc75ecae6c8cefe3e6ea24097ab31efff4a19872e13baf9aba367"
+checksum = "f7ca98dd80388586fe34f240e19d44ee7e094cf75bdc9bd81ff72d5b5230d52f"
 dependencies = [
  "bytelines",
  "flate2",
@@ -211,6 +211,7 @@ checksum = "a8a2db397cb1c8772f31494cb8917e48cd1e64f0fa7efac59fbd741a0a8ce841"
 dependencies = [
  "crc32fast",
  "libz-ng-sys",
+ "libz-sys",
  "miniz_oxide",
 ]
 
@@ -363,7 +364,7 @@ dependencies = [
 
 [[package]]
 name = "minimap2"
-version = "0.1.10"
+version = "0.1.12"
 dependencies = [
  "bytelines",
  "fffx",
@@ -375,9 +376,9 @@ dependencies = [
 
 [[package]]
 name = "minimap2-sys"
-version = "0.1.8"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44aeb18f6bb0712d9694546a7d32e40e6ba0cc474f0597db64728fe899e5de68"
+checksum = "f1f276571c6759045a1f4a4698aec870c40a1c69698edf788f1b439ce9b0483f"
 dependencies = [
  "cc",
  "libc",

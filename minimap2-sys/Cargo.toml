@@ -1,6 +1,6 @@
 [package]
 name = "minimap2-sys"
-version = "0.1.10"
+version = "0.1.11+minimap2.2.24-r1155-dirty"
 edition = "2021"
 links = "libminimap2"
 authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]

@@ -131,7 +131,8 @@ Please note minimap2 is only tested for x86_64. Other platforms may work, please
 * Let me know pain points
 
 # Tools using this binding
-[Chopper](https://github.com/wdecoster/chopper)
+[Chopper](https://github.com/wdecoster/chopper) - Long read trimming and filtering
+[mappy-rs](https://github.com/Adoni5/mappy-rs) - Drop-in multi-threaded replacement for python's mappy
 
 # Pain Points
 Probably not freeing C memory somewhere.... Not sure yet, if so it's just leaking a little... Need to do a large run to test it.
@@ -159,7 +160,7 @@ and/or:
 
 # Changelog
 
-### 0.1.12
+### 0.1.12 UNRELEASED
 * Add with_seq to support indexing a single sequence (as per mappy: https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L115)
 * minimap2-rs: update rust-htslib dep
 * simdutf8 now optional dependency requiring map-file feature to be enabled

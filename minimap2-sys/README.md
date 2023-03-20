@@ -1,12 +1,22 @@
 # System Bindings for libminimap2
-Use this if you need lower-level bindings for minimap2.
+Use this if you need lower-level bindings for minimap2. Also works with mm2-fast.
+
+# Minimap2 Version
+Currently this is synced to a recent git commit of minimap2. If you have other needs, let me know and I can make a branch and publish a corresponding version.
+
+## Features 
+* vendored - Regenerate the bindings from the vendored minimap2 source. Requires llvm installed. Useful to update the bindings to a different version of minimap2.
+* mm2-fast - Use [mm2-fast](https://github.com/bwa-mem2/mm2-fast) as the backend rather than minimap2 itself.
+* simde - Enable simde support (SIMD-everywhere)
+* sse - Enable some sse bindings
 
 ## TODO
-* Can we decouple from pthread?
+* Can we decouple from pthread? This would allow Windows and (possibly) WASM compilation.
 
 ## Changelog
-### 0.1.11 (UNRELEASED)
-* Update minimap2-sys minimap2 to latest git commit (single change - 1d3c3ee)
+### 0.1.11 minimap2.2.24-r1155-dirty (UNRELEASED)
+* More transparent versioning of upstream minimap2
+* Update minimap2-sys minimap2 to latest git commit (single change - 6ce0dd8)
 * minimap2-sys: update libc, bindgen deps
 
 ### 0.1.10

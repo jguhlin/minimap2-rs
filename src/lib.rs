@@ -13,9 +13,9 @@
 //! This crate has multiple create features available.
 //! * map-file - Enables the ability to map a file directly to a reference. Enabled by deafult
 //! * mm2-fast - Uses the mm2-fast library instead of standard minimap2
-//! * sse - Enables the use of SSE instructions
 //! * htslib - Provides an interface to minimap2 that returns rust_htslib::Records
 //! * simde - Enables SIMD Everywhere library in minimap2
+//! * sse - Enables the use of SSE instructions
 //! 
 //! # Examples
 //! ## Mapping a file to a reference
@@ -619,10 +619,6 @@ impl Aligner {
 
         let seqs: Vec<std::ffi::CString> = seqs.iter().map(|s| std::ffi::CString::new(s.clone()).expect("Invalid Sequence")).collect();
         let ids: Vec<std::ffi::CString> = ids.iter().map(|s| std::ffi::CString::new(s.clone()).expect("Invalid ID")).collect();
-
-        println!("{:#?}", seqs);
-        println!("{:#?}", ids);
-        println!("{:#?}", seqs.len());
 
         let idx = MaybeUninit::new(unsafe {
             mm_idx_str(
@@ -1356,5 +1352,20 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
         } else {
             panic!("Invalid output error not thrown");
         }
+    }
+
+    #[test]
+    fn test_struct_config() {
+        let mut aligner = Aligner {
+            mapopt: MapOpt {
+                best_n: 1,
+                ..sr().mapopt
+            },
+            idxopt: IdxOpt {
+                k: 7,
+                ..sr().idxopt
+            },
+            ..sr()
+        };
     }
 }

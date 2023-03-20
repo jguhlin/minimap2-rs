@@ -127,7 +127,7 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
 name = "minimap2-sys"
-version = "0.1.10"
+version = "0.1.11+minimap2.2.24-r1155-dirty"
 dependencies = [
  "bindgen",
  "cc",

@@ -22,7 +22,7 @@ exclude = [
 ]
 
 [dependencies]
-libc = "0.2.139"
+libc = "0.2.140"
 bytelines = "2.4.0"
 simdutf8 = {version = "0.1.4", optional = true}
 flate2 = { version = "1.0.25", default-features = false }
