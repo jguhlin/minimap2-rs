@@ -1359,13 +1359,13 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
         let mut aligner = Aligner {
             mapopt: MapOpt {
                 best_n: 1,
-                ..sr().mapopt
+                ..Aligner::builder::sr().mapopt
             },
             idxopt: IdxOpt {
                 k: 7,
-                ..sr().idxopt
+                ..Aligner::builder::sr().idxopt
             },
-            ..sr()
+            ..Aligner::builder::sr()
         };
     }
 }
