@@ -1356,16 +1356,21 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
 
     #[test]
     fn test_struct_config() {
-        let mut aligner = Aligner {
+
+        let mut sr = Aligner::builder().sr();
+        sr.mapopt.best_n = 1;
+        sr.idxopt.k = 7;
+
+        let aligner = Aligner {
             mapopt: MapOpt {
                 best_n: 1,
-                ..Aligner::builder::sr().mapopt
+                ..Aligner::builder().sr().mapopt
             },
             idxopt: IdxOpt {
                 k: 7,
-                ..Aligner::builder::sr().idxopt
+                ..Aligner::builder().sr().idxopt
             },
-            ..Aligner::builder::sr()
+            ..sr
         };
     }
 }
