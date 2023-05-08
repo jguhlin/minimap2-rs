@@ -125,6 +125,11 @@ fn compile() {
 
     let mut cc = cc::Build::new();
 
+    #[cfg(target_arch = "aarch64")]
+    cc.flag("-fsigned-char");
+
+    cc.flag("-D_FILE_OFFSET_BITS=64");
+
     cc.warnings(false);
     cc.flag("-Wc++-compat");
     cc.out_dir(&out_path);
