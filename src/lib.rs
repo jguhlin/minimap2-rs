@@ -440,6 +440,22 @@ impl Aligner {
         self
     }
 
+    pub fn with_sam_out(mut self) -> Self {
+        // Make sure MM_F_CIGAR flag isn't already set
+        assert!((self.mapopt.flag & MM_F_OUT_SAM as i64) == 0);
+
+        self.mapopt.flag |= MM_F_OUT_SAM as i64;
+        self
+    }
+
+    pub fn with_sam_hit_only(mut self) -> Self {
+        // Make sure MM_F_CIGAR flag isn't already set
+        assert!((self.mapopt.flag & MM_F_SAM_HIT_ONLY as i64) == 0);
+
+        self.mapopt.flag |= MM_F_SAM_HIT_ONLY as i64;
+        self
+    }
+
     /// Sets the number of threads minimap2 will use for building the index
     /// ```
     /// # use minimap2::*;
@@ -730,6 +746,12 @@ impl Aligner {
                                 .iter()
                                 .map(|c| ((c >> 4) as u32, (c & 0xf) as u8)) // unpack the length and op code
                                 .collect::<Vec<(u32, u8)>>();
+
+                            // Fix for adding in soft clipping cigar strings
+                            // TAken from minimap2 write_sam_cigar function
+                            // clip_len[0] = r->rev? qlen - r->qe : r->qs;
+                            // clip_len[1] = r->rev? r->qs : qlen - r->qe;
+
                             let cigar_str = cigar
                                 .iter()
                                 .map(|(len, code)| {
@@ -1286,6 +1308,19 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
         let aligner = aligner.with_seq_and_id(seq.as_bytes(), &id.as_bytes().to_vec()).unwrap();
         let alignments = aligner.map(query.as_bytes(), false, false, None, None).unwrap();
         assert_eq!(alignments.len(), 2);
+
+        let seq = "CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCGAAATTCTTTAACGGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
+        let query = "CAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
+
+        let aligner = Aligner::builder().asm5().with_cigar().with_sam_out().with_sam_hit_only();
+        let aligner = aligner.with_seq_and_id(seq.as_bytes(), &id.as_bytes().to_vec()).unwrap();
+        let alignments = aligner.map(query.as_bytes(), true, true, None, None).unwrap();
+        assert_eq!(alignments.len(), 1);
+        println!("{:#?}", alignments[0].alignment.as_ref().unwrap().cigar.as_ref().unwrap());
+        assert_eq!(alignments[0].alignment.as_ref().unwrap().cigar_str.as_ref().unwrap(), "FDSA");
+        // assert_eq!(alignments[0].alignment.unwrap().cigar.unwrap(), );
+
+
 
         // println!("----- Trying with_seqs 2");
 
