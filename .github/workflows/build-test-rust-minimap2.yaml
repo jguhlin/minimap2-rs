@@ -38,7 +38,7 @@ jobs:
     - name: Run tests simde
       run: cargo test --features simde
 
-  test:
+  test-macos:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v3

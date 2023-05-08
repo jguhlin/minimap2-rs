@@ -164,6 +164,7 @@ and/or:
 * Add with_seq to support indexing a single sequence (as per mappy: https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L115)
 * minimap2-rs: update rust-htslib dep
 * simdutf8 now optional dependency requiring map-file feature to be enabled
+* Support soft-clipping string in CIGAR. WARNING: Does not support hard clipping. Please open an issue if you need this.
 
 
 ### 0.1.11 
