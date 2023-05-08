@@ -4,7 +4,7 @@
 //!
 //! # Implementation
 //! This is a wrapper library around `minimap2-sys`, which are lower level bindings for minimap2.
-//! 
+//!
 //! # Caveats
 //! Setting threads with the builder pattern applies only to building the index, not the mapping.
 //! For an example of using multiple threads with mapping, see: [fakeminimap2](https://github.com/jguhlin/minimap2-rs/blob/main/fakeminimap2/src/main.rs)
@@ -16,7 +16,7 @@
 //! * htslib - Provides an interface to minimap2 that returns rust_htslib::Records
 //! * simde - Enables SIMD Everywhere library in minimap2
 //! * sse - Enables the use of SSE instructions
-//! 
+//!
 //! # Examples
 //! ## Mapping a file to a reference
 //! ```no_run
@@ -27,13 +27,13 @@
 //! .with_cigar()
 //! .with_index("ReferenceFile.fasta", None)
 //! .expect("Unable to build index");
-//! 
+//!
 //! let seq = b"ACTGACTCACATCGACTACGACTACTAGACACTAGACTATCGACTACTGACATCGA";
 //! let alignment = aligner
 //! .map(seq, false, false, None, None)
 //! .expect("Unable to align");
 //! ```
-//! 
+//!
 //! ## Mapping a file to an individual target sequence
 //! ```no_run
 //! use minimap2::{Aligner, Preset};
@@ -572,8 +572,8 @@ impl Aligner {
     /// let hits = aligner.map(query, false, false, None, None);
     /// assert_eq!(hits.unwrap().len(), 1);
     /// ```
-    pub fn with_seq(self, seq: &[u8]) -> Result<Self, &'static str> 
-        // where T: AsRef<[u8]> + std::ops::Deref<Target = str>,
+    pub fn with_seq(self, seq: &[u8]) -> Result<Self, &'static str>
+// where T: AsRef<[u8]> + std::ops::Deref<Target = str>,
     {
         let default_id = "N/A";
         self.with_seq_and_id(seq, default_id.as_bytes())
@@ -592,11 +592,13 @@ impl Aligner {
     /// assert_eq!(hits.as_ref().unwrap().len(), 1);
     /// assert_eq!(hits.as_ref().unwrap()[0].target_name.as_ref().unwrap(), id);
     /// ```
-    pub fn with_seq_and_id(self, seq: &[u8], id: &[u8]) -> Result<Self, &'static str> 
-        // where T: AsRef<[u8]> + std::ops::Deref<Target = str>,
-        {
-
-        assert!(self.idx.is_none(), "Index already set. Can not set sequence as index.");
+    pub fn with_seq_and_id(self, seq: &[u8], id: &[u8]) -> Result<Self, &'static str>
+// where T: AsRef<[u8]> + std::ops::Deref<Target = str>,
+    {
+        assert!(
+            self.idx.is_none(),
+            "Index already set. Can not set sequence as index."
+        );
         assert!(seq.len() > 0, "Sequence is empty");
         assert!(id.len() > 0, "ID is empty");
 
@@ -608,10 +610,11 @@ impl Aligner {
     /// Following the mappy implementation, this also sets mapopt.mid_occ to 1000.
     /// Can not be combined with `with_index` or `set_index`.
     /// Sets the sequence IDs to "Unnamed Sequence n" where n is the sequence number.
-    pub fn with_seqs(self, seqs: &Vec<Vec<u8>>) -> Result<Self, &'static str> 
-        {
-
-        assert!(self.idx.is_none(), "Index already set. Can not set sequence as index.");
+    pub fn with_seqs(self, seqs: &Vec<Vec<u8>>) -> Result<Self, &'static str> {
+        assert!(
+            self.idx.is_none(),
+            "Index already set. Can not set sequence as index."
+        );
         assert!(seqs.len() > 0, "Must have at least one sequence");
 
         let mut ids: Vec<Vec<u8>> = Vec::new();
@@ -628,13 +631,25 @@ impl Aligner {
     // This works for a single sequence, but not for multiple sequences.
     // Maybe convert the underlying function itself?
     // https://github.com/lh3/minimap2/blob/c2f07ff2ac8bdc5c6768e63191e614ea9012bd5d/index.c#L408
-    pub fn with_seqs_and_ids(mut self, seqs: &Vec<Vec<u8>>, ids: &Vec<Vec<u8>>) -> Result<Self, &'static str> 
-        {
-        assert!(seqs.len() == ids.len(), "Number of sequences and IDs must be equal");
+    pub fn with_seqs_and_ids(
+        mut self,
+        seqs: &Vec<Vec<u8>>,
+        ids: &Vec<Vec<u8>>,
+    ) -> Result<Self, &'static str> {
+        assert!(
+            seqs.len() == ids.len(),
+            "Number of sequences and IDs must be equal"
+        );
         assert!(seqs.len() > 0, "Must have at least one sequence and ID");
 
-        let seqs: Vec<std::ffi::CString> = seqs.iter().map(|s| std::ffi::CString::new(s.clone()).expect("Invalid Sequence")).collect();
-        let ids: Vec<std::ffi::CString> = ids.iter().map(|s| std::ffi::CString::new(s.clone()).expect("Invalid ID")).collect();
+        let seqs: Vec<std::ffi::CString> = seqs
+            .iter()
+            .map(|s| std::ffi::CString::new(s.clone()).expect("Invalid Sequence"))
+            .collect();
+        let ids: Vec<std::ffi::CString> = ids
+            .iter()
+            .map(|s| std::ffi::CString::new(s.clone()).expect("Invalid ID"))
+            .collect();
 
         let idx = MaybeUninit::new(unsafe {
             mm_idx_str(
@@ -673,8 +688,7 @@ impl Aligner {
         md: bool, // TODO
         max_frag_len: Option<usize>,
         extra_flags: Option<Vec<u64>>,
-    ) -> Result<Vec<Mapping>, &'static str>
-    {
+    ) -> Result<Vec<Mapping>, &'static str> {
         // Make sure index is set
         if !self.has_index() {
             return Err("No index");
@@ -706,6 +720,20 @@ impl Aligner {
         let mappings = BUF.with(|buf| {
             let km = unsafe { mm_tbuf_get_km(buf.borrow_mut().buf) };
 
+            // let name = std::ffi::CString::new("Unnamed Sequence").unwrap();
+
+            let mut result: MaybeUninit<kstring_t> = MaybeUninit::zeroed();
+
+            /*
+            let bseq = mm_bseq1_t {
+                l_seq: seq.len() as i32,
+                rid: 0,
+                name: name.as_ref().as_ptr() as *mut i8, // seqid.as_ref().as_ptr() as *mut i8,
+                seq: seq.as_ptr() as *mut i8,
+                qual: std::ptr::null_mut(),
+                comment: std::ptr::null_mut(),
+            }; */
+
             mm_reg = MaybeUninit::new(unsafe {
                 mm_map(
                     self.idx.as_ref().unwrap() as *const mm_idx_t,
@@ -726,7 +754,6 @@ impl Aligner {
                     let const_ptr = reg_ptr as *const mm_reg1_t;
                     let reg: mm_reg1_t = *reg_ptr;
 
-                    // TODO: Get all contig names and store as Cow<String> somewhere centralized...
                     let contig: *mut ::std::os::raw::c_char =
                         (*(self.idx.unwrap()).seq.offset(reg.rid as isize)).name;
 
@@ -737,6 +764,37 @@ impl Aligner {
                         // calculate the edit distance
                         let nm = reg.blen - reg.mlen + p.n_ambi() as i32;
                         let n_cigar = p.n_cigar;
+
+                        /*
+                        // Cstring
+                        let mut cigar_str = CString::new("").unwrap();
+
+                        // void mm_write_sam3(kstring_t *s,
+                        // const mm_idx_t *mi,
+                        // const mm_bseq1_t *t,
+                        // int seg_idx,
+                        // int reg_idx,
+                        // int n_seg,
+                        // const int *n_regss,
+                        // const mm_reg1_t *const* regss,
+                        // void *km,
+                        // int64_t opt_flag,
+                        // int rep_len
+
+                        mm_write_sam3(
+                            cigar_str.as_ptr() as *mut i8,
+                            self.idx.as_ref().unwrap() as *const mm_idx_t,
+                            bseq,
+                            0,
+                            1,
+                            &n_regs,
+                            &const_ptr,
+                            km,
+                            p.opt.flag,
+                            0,
+                        );
+                        */
+
                         // Create a vector of the cigar blocks
                         let (cigar, cigar_str) = if n_cigar > 0 {
                             let cigar = p
@@ -752,7 +810,19 @@ impl Aligner {
                             // clip_len[0] = r->rev? qlen - r->qe : r->qs;
                             // clip_len[1] = r->rev? r->qs : qlen - r->qe;
 
-                            let cigar_str = cigar
+                            let clip_len0 = if reg.rev() != 0 {
+                                seq.len() as i32 - reg.qe
+                            } else {
+                                reg.qs
+                            };
+
+                            let clip_len1 = if reg.rev() != 0 {
+                                reg.qs
+                            } else {
+                                seq.len() as i32 - reg.qe
+                            };
+
+                            let mut cigar_str = cigar
                                 .iter()
                                 .map(|(len, code)| {
                                     let cigar_char = match code {
@@ -771,6 +841,28 @@ impl Aligner {
                                 })
                                 .collect::<Vec<String>>()
                                 .join("");
+
+                            // int clip_char = (((sam_flag&0x800) || ((sam_flag&0x100) && (opt_flag&MM_F_SECONDARY_SEQ))) &&
+                            // !(opt_flag&MM_F_SOFTCLIP)) ? 'H' : 'S';
+
+                            // let clip_char = if (reg.flag & 0x800 != 0) || ((reg.flag & 0x100 != 0) && (map_opt.flag & 0x100 != 0)) && (map_opt.flag & 0x4 == 0) {
+                            // 'H'
+                            // } else {
+                            // 'S'
+                            // };
+
+                            // TODO: Support hard clipping
+                            let clip_char = 'S';
+
+                            // Append soft clip identifiers to start and end
+                            if clip_len0 > 0 {
+                                cigar_str = format!("{}{}{}", clip_len0, clip_char, cigar_str);
+                            }
+
+                            if clip_len1 > 0 {
+                                cigar_str = format!("{}{}{}", cigar_str, clip_char, clip_len1);
+                            }
+
                             (Some(cigar), Some(cigar_str))
                         } else {
                             (None, None)
@@ -1228,7 +1320,7 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
         );
         assert_eq!(
             align.cigar_str,
-            Some(String::from("14M2D4M3I37M1D85M1D48M"))
+            Some(String::from("14M2D4M3I37M1D85M1D48MS9"))
         );
         assert_eq!(
             align.md,
@@ -1283,44 +1375,83 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
         let query = "GGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTT";
         let aligner = Aligner::builder().short();
         let aligner = aligner.with_seq(seq.as_bytes()).unwrap();
-        let alignments = aligner.map(query.as_bytes(), false, false, None, None).unwrap();
+        let alignments = aligner
+            .map(query.as_bytes(), false, false, None, None)
+            .unwrap();
         assert_eq!(alignments.len(), 2);
 
         println!("----- Trying with_seqs 1");
 
         let aligner = Aligner::builder().short();
         let aligner = aligner.with_seqs(&vec![seq.as_bytes().to_vec()]).unwrap();
-        let alignments = aligner.map(query.as_bytes(), false, false, None, None).unwrap();
+        let alignments = aligner
+            .map(query.as_bytes(), false, false, None, None)
+            .unwrap();
         assert_eq!(alignments.len(), 2);
 
         println!("----- Trying with_seqs and ids 1");
 
         let id = "test";
         let aligner = Aligner::builder().short();
-        let aligner = aligner.with_seqs_and_ids(&vec![seq.as_bytes().to_vec()], &vec![id.as_bytes().to_vec()]).unwrap();
-        let alignments = aligner.map(query.as_bytes(), false, false, None, None).unwrap();
+        let aligner = aligner
+            .with_seqs_and_ids(
+                &vec![seq.as_bytes().to_vec()],
+                &vec![id.as_bytes().to_vec()],
+            )
+            .unwrap();
+        let alignments = aligner
+            .map(query.as_bytes(), false, false, None, None)
+            .unwrap();
         assert_eq!(alignments.len(), 2);
 
         println!("----- Trying with_seq and id");
 
         let id = "test";
         let aligner = Aligner::builder().short();
-        let aligner = aligner.with_seq_and_id(seq.as_bytes(), &id.as_bytes().to_vec()).unwrap();
-        let alignments = aligner.map(query.as_bytes(), false, false, None, None).unwrap();
+        let aligner = aligner
+            .with_seq_and_id(seq.as_bytes(), &id.as_bytes().to_vec())
+            .unwrap();
+        let alignments = aligner
+            .map(query.as_bytes(), false, false, None, None)
+            .unwrap();
         assert_eq!(alignments.len(), 2);
 
         let seq = "CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCGAAATTCTTTAACGGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
         let query = "CAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
 
-        let aligner = Aligner::builder().asm5().with_cigar().with_sam_out().with_sam_hit_only();
-        let aligner = aligner.with_seq_and_id(seq.as_bytes(), &id.as_bytes().to_vec()).unwrap();
-        let alignments = aligner.map(query.as_bytes(), true, true, None, None).unwrap();
+        let aligner = Aligner::builder()
+            .asm5()
+            .with_cigar()
+            .with_sam_out()
+            .with_sam_hit_only();
+        let aligner = aligner
+            .with_seq_and_id(seq.as_bytes(), &id.as_bytes().to_vec())
+            .unwrap();
+        let alignments = aligner
+            .map(query.as_bytes(), true, true, None, None)
+            .unwrap();
         assert_eq!(alignments.len(), 1);
-        println!("{:#?}", alignments[0].alignment.as_ref().unwrap().cigar.as_ref().unwrap());
-        assert_eq!(alignments[0].alignment.as_ref().unwrap().cigar_str.as_ref().unwrap(), "FDSA");
+        println!(
+            "{:#?}",
+            alignments[0]
+                .alignment
+                .as_ref()
+                .unwrap()
+                .cigar
+                .as_ref()
+                .unwrap()
+        );
+        assert_eq!(
+            alignments[0]
+                .alignment
+                .as_ref()
+                .unwrap()
+                .cigar_str
+                .as_ref()
+                .unwrap(),
+            "282M"
+        );
         // assert_eq!(alignments[0].alignment.unwrap().cigar.unwrap(), );
-
-
 
         // println!("----- Trying with_seqs 2");
 
@@ -1330,13 +1461,9 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
         // assert_eq!(alignments.len(), 4);
 
         // for alignment in alignments {
-            // println!("{:#?}", alignment);
+        // println!("{:#?}", alignment);
         // }
-
-
-
     }
-
 
     #[test]
     fn test_aligner_struct() {
@@ -1391,7 +1518,6 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
 
     #[test]
     fn test_struct_config() {
-
         let mut sr = Aligner::builder().sr();
         sr.mapopt.best_n = 1;
         sr.idxopt.k = 7;
