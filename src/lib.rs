@@ -186,7 +186,6 @@ pub struct Mapping {
     pub mapq: u32,
     pub is_primary: bool,
     pub alignment: Option<Alignment>,
-
 }
 
 // Thread local buffer (memory management) for minimap2

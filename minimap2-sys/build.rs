@@ -141,10 +141,6 @@ fn compile() {
     cc.flag("-lm");
     cc.flag("-lpthread");
 
-    //cc.flag("lib/simde");
-    //cc.flag("-DUSE_SIMDE");
-    //cc.flag("-DSIMDE_ENABLE_NATIVE_ALIASES");
-
     cc.static_flag(true);
 
     if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
