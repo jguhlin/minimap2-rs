@@ -111,13 +111,6 @@ fn compile() {
 
     println!("cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR");
 
-    /*
-    if !target.contains("msvc") && !target.contains("wasm") {
-        pkg_config::Config::new().probe("zlib").unwrap();
-    } else if !target.contains("musl") {
-        println!("cargo:rustc-link-lib=z");
-    } */
-
     println!("cargo:rustc-link-lib=m");
     println!("cargo:rustc-link-lib=pthread");
 
@@ -131,7 +124,6 @@ fn compile() {
     cc.warnings(false);
     cc.flag("-Wc++-compat");
     cc.out_dir(&out_path);
-    // cc.cpp_link_stdlib(None);
 
     configure(&mut cc);
 
