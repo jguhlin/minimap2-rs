@@ -3,11 +3,11 @@ name: Rust
 on:
   pull_request:
     types: [opened, synchronize]
-    paths: 
-      - 'src/'
-      - 'Cargo.toml'
-      - 'test_data/'   
-      - 'minimap2-sys/'
+#    paths: 
+#      - 'src/'
+#      - 'Cargo.toml'
+#      - 'test_data/'   
+#      - 'minimap2-sys/'
 env:
   CARGO_TERM_COLOR: always
 
