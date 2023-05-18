@@ -2,8 +2,6 @@ use pkg_config;
 use std::env;
 use std::path::PathBuf;
 
-// TODO: Default to using simde
-
 // Configure for mm2-fast
 #[cfg(feature = "mm2-fast")]
 fn configure(mut cc: &mut cc::Build) {
@@ -29,7 +27,7 @@ fn configure(mut cc: &mut cc::Build) {
         .map(|f| f.unwrap().path())
         .collect();
 
-    assert!(files.len() != 0, "No files found in mm2-fast directory -- Did you forget to clone the submodule? git submodule init --recursive");
+    assert!(files.len() != 0, "No files found in mm2-fast directory -- Make sure to clone recursively. git submodule init --recursive");
 
     cc.file("mm2-fast/map.c");
 
