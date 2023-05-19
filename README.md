@@ -161,7 +161,7 @@ and/or:
 
 # Changelog
 
-### 0.1.12 UNRELEASED
+### 0.1.13 minimap2 2.26
 * Add with_seq to support indexing a single sequence (as per mappy: https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L115)
 * minimap2-rs: update rust-htslib deps
 * simdutf8 now optional dependency requiring map-file feature to be enabled
