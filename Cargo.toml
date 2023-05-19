@@ -29,8 +29,8 @@ flate2 = { version = "1.0.25", default-features = false }
 fffx = { version = "0.1.2", optional = true }
 
 # Dep for development
-minimap2-sys = { path = "./minimap2-sys" }
-# minimap2-sys = "0.1.11+minimap2.2.26"
+#minimap2-sys = { path = "./minimap2-sys" }
+minimap2-sys = "0.1.12+minimap2.2.26"
 rust-htslib = { version = "0.41.1", optional = true }
 
 # [profile.release]

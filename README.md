@@ -167,6 +167,7 @@ and/or:
 * simdutf8 now optional dependency requiring map-file feature to be enabled
 * Support soft-clipping string in CIGAR. WARNING: Does not support hard clipping. Please open an issue if you need this.
 * Update minimap to 2.26
+* Not convinced SSE41/SSE2 are working properly. Recommend simde.
 
 
 ### 0.1.11 
