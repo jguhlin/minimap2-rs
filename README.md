@@ -105,6 +105,7 @@ The following crate features are available:
 * `htslib` - Support output of bam/sam files using htslib.
 * `simde` - Compile minimap2 / mm2-fast with [simd-everywhere](https://github.com/simd-everywhere/simde) support. 
 * `map-file` - *Default* - Convenience function for mapping an entire file. Caution, this is single-threaded. 
+* `sse2only` - Compiles for SSE2 support only (Default is to try to compile for SSE4.1, SSE2 only is default on aarch64)
 
 Map-file is a *default* feature and enabled unless otherwise specified.
 

@@ -14,6 +14,9 @@ Currently this is synced to a recent git commit of minimap2. If you have other n
 * Can we decouple from pthread? This would allow Windows and (possibly) WASM compilation.
 
 ## Changelog
+### 0.1.12 minimap2.2.26
+ * Fix bug with SSE2/SSE4...
+ 
 ### 0.1.11 minimap2.2.26
 * More transparent versioning of upstream minimap2
 * Update minimap2-sys minimap2 to release 2.26

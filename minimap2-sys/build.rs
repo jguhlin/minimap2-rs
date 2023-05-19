@@ -71,8 +71,8 @@ fn configure(mut cc: &mut cc::Build) {
     simde(&mut cc);
 
     // Include ksw2.h kalloc.h
-    cc.include("minimap2/kalloc");
-    cc.include("minimap2/ksw2");
+    cc.include("minimap2/kalloc.h");
+    cc.include("minimap2/ksw2.h");
 
     let files: Vec<_> = std::fs::read_dir("minimap2")
         .unwrap()
@@ -103,6 +103,8 @@ fn configure(mut cc: &mut cc::Build) {
             }
         }
     }
+
+    cc.file("minimap2/ksw2_ll_sse.c");
  
     target_specific(&mut cc);
 }
@@ -115,7 +117,6 @@ fn target_specific(cc: &mut cc::Build) {
     cc.file("minimap2/ksw2_extz2_neon.c");
     cc.file("minimap2/ksw2_extd2_neon.c");
     cc.file("minimap2/ksw2_exts2_neon.c");
-    cc.flag("-D__SSE2__");
     cc.flag("-DKSW_SSE2_ONLY");
 
     // CFLAGS+=-D_FILE_OFFSET_BITS=64 -fsigned-char
@@ -131,7 +132,6 @@ fn target_specific(cc: &mut cc::Build) {
     cc.file("minimap2/ksw2_extz2_sse.c");
     cc.file("minimap2/ksw2_extd2_sse.c");
     cc.file("minimap2/ksw2_exts2_sse.c");
-    cc.flag("-D__SSE2__");
     cc.flag("-DKSW_SSE2_ONLY");
 
     // CFLAGS+=-D_FILE_OFFSET_BITS=64 -mfpu=neon -fsigned-char
@@ -142,20 +142,26 @@ fn target_specific(cc: &mut cc::Build) {
 
 #[cfg(target_arch = "x86_64")]
 fn target_specific(cc: &mut cc::Build) {
-    #[cfg(all(target_feature = "sse4.1", not(feature = "simde"), not(feature = "sse2")))]
+    #[cfg(all(target_feature = "sse4.1", not(feature = "simde"), not(feature = "sse2only")))]
     cc.flag("-msse4.1");
 
-    #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2", not(feature = "simde")))]
+    #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
     cc.flag("-msse2");
 
-    #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2", not(feature = "simde")))]
+    #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
     cc.flag("-DKSW_SSE2_ONLY");
+
+    // #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
+    // cc.flag("-DKSW_CPU_DISPATCH");
+
+    #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
+    cc.flag("-mno-sse4.1");
 
     // OBJS+=ksw2_extz2_sse41.o ksw2_extd2_sse41.o ksw2_exts2_sse41.o ksw2_extz2_sse2.o ksw2_extd2_sse2.o ksw2_exts2_sse2.o ksw2_dispatch.o
     cc.file("minimap2/ksw2_extz2_sse.c");
     cc.file("minimap2/ksw2_extd2_sse.c");
     cc.file("minimap2/ksw2_exts2_sse.c");
-    cc.file("minimap2/ksw2_dispatch.c");
+    // cc.file("minimap2/ksw2_dispatch.c");
 }
 
 
@@ -178,8 +184,6 @@ fn compile() {
     println!("cargo:rustc-link-lib=pthread");
 
     let mut cc = cc::Build::new();
-
-    cc.flag("-DKSW_CPU_DISPATCH");
 
     cc.warnings(false);
     cc.flag("-Wc++-compat");
