@@ -82,7 +82,7 @@ impl Aligner {
                     r.query_name = Some(seq.id.clone());
                     mappings.push(r)
                 });
-            }
+            }spawn
 
             return Ok(PyDataFrame(mappings.to_df().unwrap()));
         }
@@ -161,6 +161,12 @@ impl Aligner {
         }
     }
 
+    fn rustnew() -> Self {
+        Aligner {
+            aligner: minimap2::Aligner::builder(),
+        }
+    }
+
     /// Set the number of threads for minimap2 to use to build index and perform mapping
     fn threads(&mut self, threads: usize) {
         self.aligner.threads = threads;
@@ -169,6 +175,11 @@ impl Aligner {
     /// Build the minimap2 index
     fn index(&mut self, index: &str) {
         self.aligner.set_index(index, None);
+    }
+
+    /// Use a sequence instead of a file for an index
+    fn with_seq(&mut self, seq: &Sequence) {
+        self.aligner.with_seq_and_id(&seq.sequence, &seq.id);
     }
 
     /// Index and save index to output
