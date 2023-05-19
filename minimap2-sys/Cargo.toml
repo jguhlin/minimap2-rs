@@ -52,5 +52,5 @@ version = "1.0.79"
 default = []
 vendored = ["bindgen"]
 mm2-fast = []
-sse = []
+sse2only = []
 simde = []

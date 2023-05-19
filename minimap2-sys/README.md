@@ -14,10 +14,15 @@ Currently this is synced to a recent git commit of minimap2. If you have other n
 * Can we decouple from pthread? This would allow Windows and (possibly) WASM compilation.
 
 ## Changelog
-### 0.1.11 minimap2.2.24-r1155-dirty (UNRELEASED)
+### 0.1.12 minimap2.2.26
+ * Fix bug with SSE2/SSE4...
+ 
+### 0.1.11 minimap2.2.26
 * More transparent versioning of upstream minimap2
-* Update minimap2-sys minimap2 to latest git commit (single change - 6ce0dd8)
+* Update minimap2-sys minimap2 to release 2.26
 * minimap2-sys: update libc, bindgen deps
+* Better sse support. Renamed sse flag to sse2only, sse4.1 is otherwise enabled by default (if detected)
+* Hopefully better macos, aarch64, and NEON support
 
 ### 0.1.10
 * Fix bug relating to compiling mm2-fast 

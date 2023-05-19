@@ -186,29 +186,6 @@ pub struct Mapping {
     pub mapq: u32,
     pub is_primary: bool,
     pub alignment: Option<Alignment>,
-    // cdef int _ctg_len, _r_st, _r_en
-    // pub contig_len: usize,
-    // pub reference_start: i32,
-    // pub reference_end: i32,
-    // cdef int _q_st, _q_en
-    // cdef int _NM, _mlen, _blen
-    // pub nm: i32,
-    // pub match_len: i32,
-    // pub block_len: i32,
-    // cdef int8_t _strand, _trans_strand
-    // pub strand: Strand,
-    // pub trans_strand: Strand,
-    // cdef uint8_t _mapq, _is_primary
-
-    // pub is_primary: bool,
-    // cdef int _seg_id
-    // pub seg_id: u32,
-    // cdef _ctg, _cigar, _cs, _MD # these are python objects
-    // pub contig: String,
-    // pub cs: Option<String>,
-    // pub md: Option<String>,
-    // pub score: i32,
-    // pub score0: i32,
 }
 
 // Thread local buffer (memory management) for minimap2

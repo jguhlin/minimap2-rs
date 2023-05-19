@@ -105,6 +105,7 @@ The following crate features are available:
 * `htslib` - Support output of bam/sam files using htslib.
 * `simde` - Compile minimap2 / mm2-fast with [simd-everywhere](https://github.com/simd-everywhere/simde) support. 
 * `map-file` - *Default* - Convenience function for mapping an entire file. Caution, this is single-threaded. 
+* `sse2only` - Compiles for SSE2 support only (Default is to try to compile for SSE4.1, SSE2 only is default on aarch64)
 
 Map-file is a *default* feature and enabled unless otherwise specified.
 
@@ -162,9 +163,11 @@ and/or:
 
 ### 0.1.12 UNRELEASED
 * Add with_seq to support indexing a single sequence (as per mappy: https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L115)
-* minimap2-rs: update rust-htslib dep
+* minimap2-rs: update rust-htslib deps
 * simdutf8 now optional dependency requiring map-file feature to be enabled
 * Support soft-clipping string in CIGAR. WARNING: Does not support hard clipping. Please open an issue if you need this.
+* Update minimap to 2.26
+* Not convinced SSE41/SSE2 are working properly. Recommend simde.
 
 
 ### 0.1.11 
