@@ -1,0 +1,53 @@
+name: Rust
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+#    paths: 
+#      - 'src/'
+#      - 'Cargo.toml'
+#      - 'test_data/'   
+#      - 'minimap2-sys/'
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test-musl:
+    runs-on: ubuntu-latest
+    container: messense/rust-musl-cross:x86_64-musl
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test
+    - name: Run tests htslib
+      run: cargo test --features htslib
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+    - name: Run tests htslib
+      run: cargo test --features htslib
+    - name: Run tests mm2-fast
+      run: cargo test --features mm2-fast
+    - name: Run tests simde
+      run: cargo test --features simde
+
+  test-macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+    - name: Run tests htslib
+      run: cargo test --features htslib
+    - name: Run tests simde
+      run: cargo test --features simde

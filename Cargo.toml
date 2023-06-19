@@ -1,6 +1,6 @@
 [package]
 name = "minimap2"
-version = "0.1.8"
+version = "0.1.13+minimap2.2.26"
 edition = "2021"
 authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
 license = "MIT OR Apache-2.0"
@@ -9,29 +9,45 @@ repository = "https://github.com/jguhlin/minimap2-rs"
 categories = ["science"]
 keywords = ["bioinformatics", "fasta", "alignment", "fastq"]
 exclude = [
-	"**/*.fasta",
-	"libsfasta/test_data/",
-	"*.profdata",
+  "**/*.fasta",
+  "*.profdata",
+  "*.mmi",
+  "**/*.mmi",
+  "/minimap2-sys/",
+  "/minimappers2/",
+  "/fakeminimap2",
+  "/test_data/",
+  ".*"
+
 ]
 
 [dependencies]
-libc = "0.2.134"
+libc = "0.2.140"
 bytelines = "2.4.0"
-simdutf8 = "0.1.4"
-flate2 = { version = "1.0.17", features = ["zlib-ng"], default-features = false }
+simdutf8 = {version = "0.1.4", optional = true}
+flate2 = { version = "1.0.25", default-features = false }
+fffx = { version = "0.1.2", optional = true }
 
 # Dep for development
-# minimap2-sys = { path = "./minimap2-sys" }
-minimap2-sys = "0.1.6"
-fffx = "0.1.1"
+#minimap2-sys = { path = "./minimap2-sys" }
+minimap2-sys = "0.1.12+minimap2.2.26"
+rust-htslib = { version = "0.41.1", optional = true }
 
-[profile.release]
-opt-level = 3
-lto = "fat"
-codegen-units  = 1
-
-[profile.dev]
-debug = true
+# [profile.release]
+# opt-level = 3
+# lto = "fat"
+# codegen-units  = 1
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[features]
+default = ["map-file"]
+mm2-fast = ["minimap2-sys/mm2-fast"]
+sse2only = ["minimap2-sys/sse2only"]
+htslib = ['rust-htslib']
+simde = ["minimap2-sys/simde"]
+map-file = ["fffx", "simdutf8"]
+
+[package.metadata.docs.rs]
+features = ["map-file", "htslib"]

@@ -1,0 +1,58 @@
+# Use the latest 2.1 version of CircleCI pipeline process engine.
+# See: https://circleci.com/docs/2.0/configuration-reference
+version: 2.1
+
+# Define a job to be invoked later in a workflow.
+# See: https://circleci.com/docs/2.0/configuration-reference/#jobs
+jobs:
+  coverage: 
+    machine: true
+    steps:
+      - checkout
+      - run: git submodule sync --recursive
+      - run: git submodule update --init --recursive
+      - run: docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin /bin/bash -c "apt-get update; apt-get install cmake -y; cargo build --features htslib; cargo tarpaulin --features htslib --out Xml; cd minimap2-sys; cargo tarpaulin"
+      - run: bash <(curl -s https://codecov.io/bash)
+
+  test:
+    docker:
+      - image: cimg/rust:1.65.0
+    steps:
+      - checkout
+      - run: git submodule sync --recursive
+      - run: git submodule update --init --recursive
+      - restore_cache:
+          key: project-cache
+      #- run: cargo install grcov
+      #- run: cargo --version
+      #- run: bash .scripts/grcov.bash
+      - run: cargo build
+      - run: cargo build --features htslib
+      - run: cargo build --features mm2-fast
+      - run: cargo build --features simde
+      - run: cargo build --features htslib,mm2-fast,simde
+      - save_cache:
+          key: project-cache
+          paths:
+            - "~/.cargo"
+      - run: cargo test
+      - run: cargo test --features htslib
+      - run: cargo test --features mm2-fast
+      - run: cargo test --features simde
+      - run: cargo test --features htslib,mm2-fast,simde
+      - run: cd minimap2-sys
+      - run: cargo test
+      - run: cargo test --features mm2-fast
+      - run: cargo test --features simde
+      - run: cargo test --features mm2-fast,simde
+      - run: cd ..
+      - run: cd minimappers2
+      - run: cargo test
+
+# Invoke jobs via workflows
+# See: https://circleci.com/docs/2.0/configuration-reference/#workflows
+workflows:
+  minimap2-test:
+    jobs:
+      - test
+      - coverage

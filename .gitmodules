@@ -4,3 +4,6 @@
 [submodule "minimap2-sys/minimap2"]
 	path = minimap2-sys/minimap2
 	url = https://github.com/lh3/minimap2
+[submodule "minimap2-sys/mm2-fast"]
+	path = minimap2-sys/mm2-fast
+	url = https://github.com/bwa-mem2/mm2-fast

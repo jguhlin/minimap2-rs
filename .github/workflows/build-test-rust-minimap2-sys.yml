@@ -1,0 +1,36 @@
+name: Rust
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths: 
+      - 'minimap2-sys/'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test-musl:
+    runs-on: ubuntu-latest
+    container: messense/rust-musl-cross:x86_64-musl
+    steps:
+    - uses: actions/checkout@v3
+    - run: cd minimap2-sys
+    - name: Build
+      run: cargo build
+    - name: Run minimap2-sys tests
+      run: cargo test
+    - name: Run minimap2-sys simde tests
+      run: cargo test --features simde
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: cd minimap2-sys
+    - name: Run minimap2-sys tests
+      run: cargo test
+    - name: Run minimap2-sys mm2-fast tests
+      run: cargo test --features mm2-fast
+    - name: Run minimap2-sys simde tests
+      run: cargo test --features simde

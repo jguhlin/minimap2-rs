@@ -1,0 +1,29 @@
+[project]
+name = "minimappers2"
+requires-python = ">=3.7"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "License :: OSI Approved :: Apache Software License",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Rust"
+]
+license = { file = "LICENSE" }
+description = "A Python wrapper for minimap2-rs"
+keywords = ["minimap2", "bioinformatics", "alignment", "mapping"]
+dependencies = [
+    "polars>=0.15.15",
+    "pyarrow>=10.0.1",
+]
+
+[project.urls]
+homepage = "https://github.com/jguhlin/minimap2-rs"
+repository = "https://github.com/jguhlin/minimap2-rs"
+
+[build-system]
+requires = ["maturin>=0.14,<0.15"]
+build-backend = "maturin"
+
+[tool.maturin]
+features = ["pyo3/extension-module", "pyo3/abi3-py37"]
