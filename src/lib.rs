@@ -871,8 +871,6 @@ impl Aligner {
                                 None
                             };
 
-                            libc::free(cs_string as *mut c_void);
-
                             let md_str = if md {
                                 let _md_len = mm_gen_MD(
                                     km,
@@ -890,6 +888,7 @@ impl Aligner {
                             } else {
                                 None
                             };
+                            libc::free(cs_string as *mut c_void);
                             (cs_str, md_str)
                         } else {
                             (None, None)
@@ -1255,12 +1254,12 @@ mod tests {
             .map(
                 "ATGAGCAAAATATTCTAAAGTGGAAACGGCACTAAGGTGAACTAAGCAACTTAGTGCAAAAc".as_bytes(),
                 true,
-                false,
+                true,
                 None,
                 None,
             )
             .unwrap();
-        let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagGGACatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), true, true, None, None).unwrap();
+        let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagGGACatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), false, false, None, None).unwrap();
         println!("{:#?}", mappings);
     }
 
@@ -1274,8 +1273,8 @@ mod tests {
             .with_cigar();
 
         let mut mappings = aligner.map(
-b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGTTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG",
-        true, true, None, None).unwrap();
+    b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGTTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG",
+            true, true, None, None).unwrap();
         assert_eq!(mappings.len(), 1);
 
         let observed = mappings.pop().unwrap();
@@ -1440,18 +1439,18 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
                 .unwrap(),
             "282M"
         );
-        // assert_eq!(alignments[0].alignment.unwrap().cigar.unwrap(), );
+        //     // assert_eq!(alignments[0].alignment.unwrap().cigar.unwrap(), );
 
-        // println!("----- Trying with_seqs 2");
+        //     // println!("----- Trying with_seqs 2");
 
-        // let aligner = Aligner::builder().short();
-        // let aligner = aligner.with_seqs(&vec![seq.as_bytes().to_vec(), seq.as_bytes().to_vec()]).unwrap();
-        // let alignments = aligner.map(query.as_bytes(), false, false, None, None).unwrap();
-        // assert_eq!(alignments.len(), 4);
+        //     // let aligner = Aligner::builder().short();
+        //     // let aligner = aligner.with_seqs(&vec![seq.as_bytes().to_vec(), seq.as_bytes().to_vec()]).unwrap();
+        //     // let alignments = aligner.map(query.as_bytes(), false, false, None, None).unwrap();
+        //     // assert_eq!(alignments.len(), 4);
 
-        // for alignment in alignments {
-        // println!("{:#?}", alignment);
-        // }
+        //     // for alignment in alignments {
+        //     // println!("{:#?}", alignment);
+        //     // }
     }
 
     #[test]
