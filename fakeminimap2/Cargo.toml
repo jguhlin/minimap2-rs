@@ -7,8 +7,6 @@ edition = "2021"
 
 [dependencies]
 minimap2 = { path = ".."}
-clap = {version = "4.0.10", features = ["derive"] }
-flate2 = { version = "1.0.17", features = ["zlib-ng"], default-features = false }
 crossbeam = "0.8.2"
 needletail = "0.5.1"
 fern = { version = "0.6.2", features = ["colored", "chrono"] }
