@@ -203,7 +203,6 @@ struct ThreadLocalBuffer {
 
 impl ThreadLocalBuffer {
     pub fn new() -> Self {
-        println!("NEW THREADBIFFER");
         let buf = unsafe { mm_tbuf_init() };
         Self {
             buf,
