@@ -53,6 +53,7 @@ use std::path::Path;
 
 use std::os::unix::ffi::OsStrExt;
 
+use libc::c_void;
 use minimap2_sys::*;
 
 #[cfg(feature = "map-file")]
@@ -196,12 +197,36 @@ thread_local! {
 /// ThreadLocalBuffer for minimap2 memory management
 struct ThreadLocalBuffer {
     buf: *mut mm_tbuf_t,
+    max_uses: usize,
+    uses: usize,
 }
 
 impl ThreadLocalBuffer {
     pub fn new() -> Self {
         let buf = unsafe { mm_tbuf_init() };
-        Self { buf }
+        Self {
+            buf,
+            max_uses: 15,
+            uses: 0,
+        }
+    }
+    /// Return the buffer, checking how many times it has been borrowed.
+    /// Free the memory of the old buffer and reinitialise a new one If
+    /// num_uses exceeds max_uses.
+    pub fn get_buf(&mut self) -> *mut mm_tbuf_t {
+        if self.uses > self.max_uses {
+            // println!("renewing threadbuffer");
+            self.free_buffer();
+            let buf = unsafe { mm_tbuf_init() };
+            self.buf = buf;
+            self.uses = 0;
+        }
+        self.uses += 1;
+        self.buf
+    }
+
+    fn free_buffer(&mut self) {
+        unsafe { mm_tbuf_destroy(self.buf) };
     }
 }
 
@@ -217,6 +242,14 @@ impl Default for ThreadLocalBuffer {
         Self::new()
     }
 }
+
+// @property
+// def buffer(self):
+//     if self.uses > self.max_uses:
+//         self._b = ThreadBuffer()
+//         self.uses = 0
+//     self.uses += 1
+//     return self._b
 
 /// Aligner struct, mimicking minimap2's python interface
 ///
@@ -695,11 +728,11 @@ impl Aligner {
         }
 
         let mappings = BUF.with(|buf| {
-            let km = unsafe { mm_tbuf_get_km(buf.borrow_mut().buf) };
+            let km = unsafe { mm_tbuf_get_km(buf.borrow_mut().get_buf()) };
 
             // let name = std::ffi::CString::new("Unnamed Sequence").unwrap();
 
-            let mut result: MaybeUninit<kstring_t> = MaybeUninit::zeroed();
+            // let mut result: MaybeUninit<kstring_t> = MaybeUninit::zeroed();
 
             /*
             let bseq = mm_bseq1_t {
@@ -717,12 +750,11 @@ impl Aligner {
                     seq.len() as i32,
                     seq.as_ptr() as *const i8,
                     &mut n_regs,
-                    buf.borrow_mut().buf,
+                    buf.borrow_mut().get_buf(),
                     &mut map_opt,
                     std::ptr::null(),
                 )
             });
-
             let mut mappings = Vec::with_capacity(n_regs as usize);
 
             for i in 0..n_regs {
@@ -741,36 +773,6 @@ impl Aligner {
                         // calculate the edit distance
                         let nm = reg.blen - reg.mlen + p.n_ambi() as i32;
                         let n_cigar = p.n_cigar;
-
-                        /*
-                        // Cstring
-                        let mut cigar_str = CString::new("").unwrap();
-
-                        // void mm_write_sam3(kstring_t *s,
-                        // const mm_idx_t *mi,
-                        // const mm_bseq1_t *t,
-                        // int seg_idx,
-                        // int reg_idx,
-                        // int n_seg,
-                        // const int *n_regss,
-                        // const mm_reg1_t *const* regss,
-                        // void *km,
-                        // int64_t opt_flag,
-                        // int rep_len
-
-                        mm_write_sam3(
-                            cigar_str.as_ptr() as *mut i8,
-                            self.idx.as_ref().unwrap() as *const mm_idx_t,
-                            bseq,
-                            0,
-                            1,
-                            &n_regs,
-                            &const_ptr,
-                            km,
-                            p.opt.flag,
-                            0,
-                        );
-                        */
 
                         // Create a vector of the cigar blocks
                         let (cigar, cigar_str) = if n_cigar > 0 {
@@ -885,6 +887,7 @@ impl Aligner {
                             } else {
                                 None
                             };
+                            libc::free(cs_string as *mut c_void);
                             (cs_str, md_str)
                         } else {
                             (None, None)
@@ -925,11 +928,17 @@ impl Aligner {
                         is_primary,
                         alignment,
                     });
+                    libc::free(reg.p as *mut c_void);
                 }
             }
-
             mappings
         });
+        // free some stuff here
+        unsafe {
+            let ptr: *mut mm_reg1_t = mm_reg.assume_init();
+            let c_void_ptr: *mut c_void = ptr as *mut c_void;
+            libc::free(c_void_ptr);
+        }
         Ok(mappings)
     }
 
@@ -1032,19 +1041,20 @@ impl Aligner {
 // Since Rust is now handling the structs, I think memory gets freed that way, maybe this is no longer
 // necessary?
 // TODO: Test for memory leaks
-
-impl Drop for Aligner {
-    fn drop(&mut self) {
-        if self.idx.is_some() {
-            println!("Doing the drop");
-            let mut idx: mm_idx_t = self.idx.take().unwrap();
-            let ptr: *mut mm_idx_t = &mut idx;
-            unsafe { mm_idx_destroy(ptr) };
-            std::mem::forget(idx);
-            println!("Done the drop");
-        }
-    }
-}*/
+*/
+// impl Drop for Aligner {
+//     fn drop(&mut self) {
+//         println!("Get dropped");
+//         if self.idx.is_some() {
+//             println!("Doing the drop");
+//             let mut idx: mm_idx_t = self.idx.take().unwrap();
+//             let ptr: *mut mm_idx_t = &mut idx;
+//             unsafe { mm_idx_destroy(ptr) };
+//             std::mem::forget(idx);
+//             println!("Done the drop");
+//         }
+//     }
+// }
 
 #[derive(PartialEq, Eq)]
 pub enum FileFormat {
@@ -1243,12 +1253,12 @@ mod tests {
             .map(
                 "ATGAGCAAAATATTCTAAAGTGGAAACGGCACTAAGGTGAACTAAGCAACTTAGTGCAAAAc".as_bytes(),
                 true,
-                false,
+                true,
                 None,
                 None,
             )
             .unwrap();
-        let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagGGACatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), true, true, None, None).unwrap();
+        let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagGGACatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), false, false, None, None).unwrap();
         println!("{:#?}", mappings);
     }
 
@@ -1262,8 +1272,8 @@ mod tests {
             .with_cigar();
 
         let mut mappings = aligner.map(
-b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGTTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG",
-        true, true, None, None).unwrap();
+    b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGTTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG",
+            true, true, None, None).unwrap();
         assert_eq!(mappings.len(), 1);
 
         let observed = mappings.pop().unwrap();
@@ -1428,18 +1438,18 @@ b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGT
                 .unwrap(),
             "282M"
         );
-        // assert_eq!(alignments[0].alignment.unwrap().cigar.unwrap(), );
+        //     // assert_eq!(alignments[0].alignment.unwrap().cigar.unwrap(), );
 
-        // println!("----- Trying with_seqs 2");
+        //     // println!("----- Trying with_seqs 2");
 
-        // let aligner = Aligner::builder().short();
-        // let aligner = aligner.with_seqs(&vec![seq.as_bytes().to_vec(), seq.as_bytes().to_vec()]).unwrap();
-        // let alignments = aligner.map(query.as_bytes(), false, false, None, None).unwrap();
-        // assert_eq!(alignments.len(), 4);
+        //     // let aligner = Aligner::builder().short();
+        //     // let aligner = aligner.with_seqs(&vec![seq.as_bytes().to_vec(), seq.as_bytes().to_vec()]).unwrap();
+        //     // let alignments = aligner.map(query.as_bytes(), false, false, None, None).unwrap();
+        //     // assert_eq!(alignments.len(), 4);
 
-        // for alignment in alignments {
-        // println!("{:#?}", alignment);
-        // }
+        //     // for alignment in alignments {
+        //     // println!("{:#?}", alignment);
+        //     // }
     }
 
     #[test]
