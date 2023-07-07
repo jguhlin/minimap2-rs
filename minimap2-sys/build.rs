@@ -115,7 +115,6 @@ fn target_specific(cc: &mut cc::Build) {
 
     cc.include("minimap2/sse2neon/");
 
-    println!("Building for aarch64 neon");
     // For aarch64 targets with neon
     // Add the following files:
     // ksw2_extz2_neon.o ksw2_extd2_neon.o ksw2_exts2_neon.o
@@ -131,7 +130,6 @@ fn target_specific(cc: &mut cc::Build) {
 
 #[cfg(all(target_arch = "aarch64", not(feature = "neon")))]
 fn target_specific(cc: &mut cc::Build) {
-    println!("Building for aarch64");
     // For aarch64 targets with neon
     // Add the following files:
     // ksw2_extz2_neon.o ksw2_extd2_neon.o ksw2_exts2_neon.o
@@ -148,7 +146,6 @@ fn target_specific(cc: &mut cc::Build) {
 
 #[cfg(target_arch = "x86_64")]
 fn target_specific(cc: &mut cc::Build) {
-    println!("Building for x86_64");
     #[cfg(all(target_feature = "sse4.1", not(feature = "simde"), not(feature = "sse2only")))]
     cc.flag("-msse4.1");
 
