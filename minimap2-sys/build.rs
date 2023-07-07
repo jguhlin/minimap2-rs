@@ -71,8 +71,8 @@ fn configure(mut cc: &mut cc::Build) {
     simde(&mut cc);
 
     // Include ksw2.h kalloc.h
-    cc.include("minimap2/kalloc.h");
-    cc.include("minimap2/ksw2.h");
+    cc.include("minimap2/");
+    // cc.include("minimap2/");
 
     let files: Vec<_> = std::fs::read_dir("minimap2")
         .unwrap()
@@ -105,12 +105,17 @@ fn configure(mut cc: &mut cc::Build) {
     }
 
     cc.file("minimap2/ksw2_ll_sse.c");
- 
+
+    #[cfg(not(feature = "noopt"))] 
     target_specific(&mut cc);
 }
 
 #[cfg(all(target_arch = "aarch64", feature = "neon"))]
 fn target_specific(cc: &mut cc::Build) {
+
+    cc.include("minimap2/sse2neon/");
+
+    println!("Building for aarch64 neon");
     // For aarch64 targets with neon
     // Add the following files:
     // ksw2_extz2_neon.o ksw2_extd2_neon.o ksw2_exts2_neon.o
@@ -126,6 +131,7 @@ fn target_specific(cc: &mut cc::Build) {
 
 #[cfg(all(target_arch = "aarch64", not(feature = "neon")))]
 fn target_specific(cc: &mut cc::Build) {
+    println!("Building for aarch64");
     // For aarch64 targets with neon
     // Add the following files:
     // ksw2_extz2_neon.o ksw2_extd2_neon.o ksw2_exts2_neon.o
@@ -142,6 +148,7 @@ fn target_specific(cc: &mut cc::Build) {
 
 #[cfg(target_arch = "x86_64")]
 fn target_specific(cc: &mut cc::Build) {
+    println!("Building for x86_64");
     #[cfg(all(target_feature = "sse4.1", not(feature = "simde"), not(feature = "sse2only")))]
     cc.flag("-msse4.1");
 
@@ -154,7 +161,7 @@ fn target_specific(cc: &mut cc::Build) {
     // #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
     // cc.flag("-DKSW_CPU_DISPATCH");
 
-    #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
+    #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2", target_arch = "aarch64"))]
     cc.flag("-mno-sse4.1");
 
     // OBJS+=ksw2_extz2_sse41.o ksw2_extd2_sse41.o ksw2_exts2_sse41.o ksw2_extz2_sse2.o ksw2_extd2_sse2.o ksw2_exts2_sse2.o ksw2_dispatch.o
@@ -177,6 +184,8 @@ fn compile() {
 
     let _host = env::var("HOST").unwrap();
     let _target = env::var("TARGET").unwrap();
+
+    println!("{}", _target);
 
     println!("cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR");
 
