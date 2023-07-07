@@ -14,6 +14,9 @@ Currently this is synced to a recent git commit of minimap2. If you have other n
 * Can we decouple from pthread? This would allow Windows and (possibly) WASM compilation.
 
 ## Changelog
+### 0.1.14 minimap2.2.6
+ * Fix regression by reverting to minimap2 release version
+
 ### 0.1.13 minimap2.2.26
  * Possible fixes for aarch64 compilation
  * Cleaner build system
