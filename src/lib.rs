@@ -1021,7 +1021,7 @@ impl Aligner {
             let mut seq_mappings = self
                 .map(&seq.sequence.unwrap(), cs, md, None, None)
                 .unwrap();
-            for mut mapping in seq_mappings.iter_mut() {
+            for mapping in seq_mappings.iter_mut() {
                 mapping.query_name = seq.id.clone();
             }
 
@@ -1167,6 +1167,36 @@ mod tests {
         let mut mm_mapopt = MaybeUninit::uninit();
 
         unsafe { mm_set_opt(&0, mm_idxopt.as_mut_ptr(), mm_mapopt.as_mut_ptr()) };
+    }
+
+    #[test]
+    fn idxopt() {
+      let _x: IdxOpt = Default::default();
+    }
+
+    #[test]
+    fn mapopt() {
+      let _x: mm_mapopt_t = Default::default();
+      drop(_x);
+      println!("One done...");
+      let _x: MapOpt = Default::default();
+      drop(_x);
+      println!("Second...");
+    }
+
+    #[test]
+    fn aligner_builder() {
+        let result = Aligner::builder();
+    }
+
+    #[test]
+    fn aligner_builder_preset() {
+        let result = Aligner::builder().preset(Preset::MapOnt);
+    }
+
+    #[test]
+    fn aligner_builder_preset_with_threads() {
+        let result = Aligner::builder().preset(Preset::MapOnt).with_threads(1);
     }
 
     #[test]

@@ -22,15 +22,14 @@ exclude = [
 ]
 
 [dependencies]
-libc = "0.2.140"
-bytelines = "2.4.0"
+libc = "0.2.147"
 simdutf8 = {version = "0.1.4", optional = true}
 flate2 = { version = "1.0.25", default-features = false }
 fffx = { version = "0.1.2", optional = true }
 
 # Dep for development
-#minimap2-sys = { path = "./minimap2-sys" }
-minimap2-sys = "0.1.13+minimap2.2.26"
+minimap2-sys = { path = "./minimap2-sys" }
+#minimap2-sys = "0.1.13+minimap2.2.26"
 rust-htslib = { version = "0.44.1", optional = true }
 
 # [profile.release]
