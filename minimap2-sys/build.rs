@@ -243,6 +243,7 @@ fn gen_bindings() {
     let mut bindgen = bindgen.header("minimap2.h");
 
     bindgen
+        .generate_cstr(true)
         .generate()
         .expect("Couldn't write bindings!")
         .write_to_file(out_path.join("bindings.rs"))
