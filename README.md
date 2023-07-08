@@ -157,6 +157,8 @@ and/or:
 > *Bioinformatics*, **37**:4572-4574. [doi:10.1093/bioinformatics/btab705][doi2]
 
 # Changelog
+### 0.1.15 minimap2 2.26 UNRELEASED
+* Update fffx to a version that uses bytelines without tokio. Drastically reduces compile times and dependency tree.
 
 ### 0.1.14 minimap2 2.26
 * Memory leak fixed by @Adoni5
