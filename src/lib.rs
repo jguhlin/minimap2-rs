@@ -1171,17 +1171,17 @@ mod tests {
 
     #[test]
     fn idxopt() {
-      let _x: IdxOpt = Default::default();
+        let _x: IdxOpt = Default::default();
     }
 
     #[test]
     fn mapopt() {
-      let _x: mm_mapopt_t = Default::default();
-      drop(_x);
-      println!("One done...");
-      let _x: MapOpt = Default::default();
-      drop(_x);
-      println!("Second...");
+        let _x: mm_mapopt_t = Default::default();
+        drop(_x);
+        println!("One done...");
+        let _x: MapOpt = Default::default();
+        drop(_x);
+        println!("Second...");
     }
 
     #[test]

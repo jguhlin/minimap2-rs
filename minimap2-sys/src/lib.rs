@@ -51,9 +51,9 @@ mod tests {
         println!("{:#?}", unsafe { mm_idxopt.assume_init() });
         println!("{:#?}", unsafe { mm_mapopt.assume_init() }); // Run tests with --nocapture to see the output
     }
-    
+
     #[test]
     fn mapopt() {
-      let _x: mm_mapopt_t = Default::default();
+        let _x: mm_mapopt_t = Default::default();
     }
 }

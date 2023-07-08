@@ -106,13 +106,12 @@ fn configure(mut cc: &mut cc::Build) {
 
     cc.file("minimap2/ksw2_ll_sse.c");
 
-    #[cfg(not(feature = "noopt"))] 
+    #[cfg(not(feature = "noopt"))]
     target_specific(&mut cc);
 }
 
 #[cfg(all(target_arch = "aarch64", feature = "neon"))]
 fn target_specific(cc: &mut cc::Build) {
-
     cc.include("minimap2/sse2neon/");
 
     // For aarch64 targets with neon
@@ -146,7 +145,11 @@ fn target_specific(cc: &mut cc::Build) {
 
 #[cfg(target_arch = "x86_64")]
 fn target_specific(cc: &mut cc::Build) {
-    #[cfg(all(target_feature = "sse4.1", not(feature = "simde"), not(feature = "sse2only")))]
+    #[cfg(all(
+        target_feature = "sse4.1",
+        not(feature = "simde"),
+        not(feature = "sse2only")
+    ))]
     cc.flag("-msse4.1");
 
     #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
@@ -158,7 +161,11 @@ fn target_specific(cc: &mut cc::Build) {
     // #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
     // cc.flag("-DKSW_CPU_DISPATCH");
 
-    #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2", target_arch = "aarch64"))]
+    #[cfg(all(
+        not(target_feature = "sse4.1"),
+        target_feature = "sse2",
+        target_arch = "aarch64"
+    ))]
     cc.flag("-mno-sse4.1");
 
     // OBJS+=ksw2_extz2_sse41.o ksw2_extd2_sse41.o ksw2_exts2_sse41.o ksw2_extz2_sse2.o ksw2_extd2_sse2.o ksw2_exts2_sse2.o ksw2_dispatch.o
@@ -167,7 +174,6 @@ fn target_specific(cc: &mut cc::Build) {
     cc.file("minimap2/ksw2_exts2_sse.c");
     // cc.file("minimap2/ksw2_dispatch.c");
 }
-
 
 #[cfg(feature = "simde")]
 fn simde(cc: &mut cc::Build) {
