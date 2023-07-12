@@ -1,7 +1,7 @@
 A rust FFI library for [minimap2](https://github.com/lh3/minimap2/). In development! Feedback appreciated!
 
-![https://crates.io/crates/minimap2](https://img.shields.io/crates/v/minimap2.svg)
-![https://docs.rs/minimap2/latest/minimap2/](https://img.shields.io/docsrs/minimap2)
+[![https://crates.io/crates/minimap2](https://img.shields.io/crates/v/minimap2.svg)](https://crates.io/crates/minimap2)
+[![https://docs.rs/minimap2/latest/minimap2/](https://img.shields.io/docsrs/minimap2)](https://docs.rs/minimap2/latest/minimap2/)
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/jguhlin/minimap2-rs/tree/main.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/jguhlin/minimap2-rs/tree/main)
 [![codecov](https://codecov.io/gh/jguhlin/minimap2-rs/branch/main/graph/badge.svg?token=huw27ZC6Qy)](https://codecov.io/gh/jguhlin/minimap2-rs)
 
