@@ -48,7 +48,7 @@ features = ["which-rustfmt", "runtime"]
 version = "1.0.79"
 
 [features]
-default = ["libz-sys/libc", "libz-sys/stock-zlib"]
+default = ["libz-sys/libc"]
 vendored = ["bindgen"]
 mm2-fast = []
 sse2only = []
