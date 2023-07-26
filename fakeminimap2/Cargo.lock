@@ -420,6 +420,7 @@ dependencies = [
 [[package]]
 name = "minimap2"
 version = "0.1.14+minimap2.2.26"
+source = "git+https://github.com/jguhlin/minimap2-rs?branch=static#a0952eee7a0147a59bd5ea796912432617b8080d"
 dependencies = [
  "fffx",
  "flate2",
@@ -431,6 +432,7 @@ dependencies = [
 [[package]]
 name = "minimap2-sys"
 version = "0.1.14+minimap2.2.26"
+source = "git+https://github.com/jguhlin/minimap2-rs?branch=static#a0952eee7a0147a59bd5ea796912432617b8080d"
 dependencies = [
  "cc",
  "libc",
