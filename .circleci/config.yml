@@ -107,6 +107,7 @@ jobs:
 workflows:
   minimap2-test:
     jobs:
-      - test
+      - test-linux
+      - test-mac-m1
       - coverage
 

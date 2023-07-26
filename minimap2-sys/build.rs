@@ -12,6 +12,7 @@ fn configure(mut cc: &mut cc::Build) {
     cc.include("mm2-fast");
     cc.include("mm2-fast/ext/TAL/src/chaining/");
     cc.include("mm2-fast/ext/TAL/src/");
+    cc.include("ext/TAL/src/chaining/");
     cc.target("native");
     cc.flag("-march=native");
     cc.flag("-DPARALLEL_CHAINING");
