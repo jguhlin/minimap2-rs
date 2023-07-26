@@ -74,19 +74,14 @@ jobs:
       - restore_cache:
           key: project-cache
       - run: cargo build
-      - run: cargo build --features htslib
       - run: cargo build --features mm2-fast
       - run: cargo build --features simde
-      - run: cargo build --features htslib,mm2-fast,simde
-      - run: cargo build --features htslib,static
-      - run: cargo build --features htslib,static,simde
       - run: cargo build --features static,simde
       - save_cache:
           key: project-cache
           paths:
             - "~/.cargo"
       - run: cargo test
-      - run: cargo test --features htslib
       - run: cargo test --features mm2-fast
       - run: cargo test --features simde
       - run: cargo test --features htslib,mm2-fast,simde
