@@ -193,7 +193,13 @@ fn compile() {
     println!("cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR");
 
     println!("cargo:rustc-link-lib=m");
+
+    #[cfg(not(feature = "static"))]
     println!("cargo:rustc-link-lib=pthread");
+
+    #[cfg(feature = "static")]
+    println!("cargo:rustc-link-lib=static=pthread");
+
 
     let mut cc = cc::Build::new();
 
@@ -209,9 +215,6 @@ fn compile() {
 
     #[cfg(feature = "static")]
     cc.static_flag(true);
-
-    #[cfg(feature = "static")]
-    cc.flag("-fPIE");
 
     if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
         cc.include(include);
