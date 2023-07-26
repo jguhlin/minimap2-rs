@@ -211,7 +211,7 @@ fn compile() {
     cc.static_flag(true);
 
     #[cfg(feature = "static")]
-    cc.flag("-fPIC");
+    cc.flag("-fPIE");
 
     if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
         cc.include(include);
