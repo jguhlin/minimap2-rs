@@ -194,12 +194,7 @@ fn compile() {
 
     println!("cargo:rustc-link-lib=m");
 
-    #[cfg(not(feature = "static"))]
     println!("cargo:rustc-link-lib=pthread");
-
-    #[cfg(feature = "static")]
-    println!("cargo:rustc-link-lib=static=pthread");
-
 
     let mut cc = cc::Build::new();
 
