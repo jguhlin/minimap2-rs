@@ -111,6 +111,7 @@ fn configure(mut cc: &mut cc::Build) {
     target_specific(&mut cc);
 }
 
+/*
 #[cfg(all(target_arch = "aarch64", feature = "neon"))]
 fn target_specific(cc: &mut cc::Build) {
     cc.include("minimap2/sse2neon/");
@@ -127,9 +128,12 @@ fn target_specific(cc: &mut cc::Build) {
     cc.flag("-D_FILE_OFFSET_BITS=64");
     cc.flag("-fsigned-char");
 }
+*/
 
-#[cfg(all(target_arch = "aarch64", not(feature = "neon")))]
+//Include neon for all "aarch64".
+#[cfg(all(target_arch = "aarch64"))]
 fn target_specific(cc: &mut cc::Build) {
+    cc.include("minimap2/sse2neon/");
     // For aarch64 targets with neon
     // Add the following files:
     // ksw2_extz2_neon.o ksw2_extd2_neon.o ksw2_exts2_neon.o
@@ -138,10 +142,12 @@ fn target_specific(cc: &mut cc::Build) {
     cc.file("minimap2/ksw2_exts2_sse.c");
     cc.flag("-DKSW_SSE2_ONLY");
 
-    // CFLAGS+=-D_FILE_OFFSET_BITS=64 -mfpu=neon -fsigned-char
+    // CFLAGS+=-D_FILE_OFFSET_BITS=64 -fsigned-char -Isse2neon -D__SSE2__
     cc.flag("-D_FILE_OFFSET_BITS=64");
-    cc.flag("-mfpu=neon");
     cc.flag("-fsigned-char");
+    cc.flag("-Isse2neon");
+    cc.flag("-D__SSE2__");
+
 }
 
 #[cfg(target_arch = "x86_64")]
