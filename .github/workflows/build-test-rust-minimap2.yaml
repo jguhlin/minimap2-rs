@@ -17,7 +17,7 @@ jobs:
     container: messense/rust-musl-cross:x86_64-musl
     steps:
     - uses: actions/checkout@v3
-      with: 
+      with:
         submodules: 'recursive'
     - name: Build
       run: cargo build --verbose
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-      with: 
+      with:
         submodules: 'recursive'
     - name: Build
       run: cargo build --verbose
@@ -47,7 +47,7 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v3
-      with: 
+      with:
         submodules: 'recursive'
     - name: Build
       run: cargo build --verbose
@@ -62,7 +62,7 @@ jobs:
     runs-on: [macos-latest, aarch64]
     steps:
     - uses: actions/checkout@v3
-      with: 
+      with:
         submodules: 'recursive'
     - name: Build
       run: cargo build --verbose

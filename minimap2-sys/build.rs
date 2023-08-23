@@ -12,6 +12,7 @@ fn configure(mut cc: &mut cc::Build) {
     cc.include("mm2-fast");
     cc.include("mm2-fast/ext/TAL/src/chaining/");
     cc.include("mm2-fast/ext/TAL/src/");
+    cc.include("ext/TAL/src/chaining/");
     cc.target("native");
     cc.flag("-march=native");
     cc.flag("-DPARALLEL_CHAINING");
@@ -199,6 +200,7 @@ fn compile() {
     println!("cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR");
 
     println!("cargo:rustc-link-lib=m");
+
     println!("cargo:rustc-link-lib=pthread");
 
     let mut cc = cc::Build::new();
@@ -213,6 +215,7 @@ fn compile() {
     cc.flag("-lm");
     cc.flag("-lpthread");
 
+    #[cfg(feature = "static")]
     cc.static_flag(true);
 
     if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
