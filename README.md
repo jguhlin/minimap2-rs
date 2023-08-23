@@ -159,7 +159,6 @@ and/or:
 # Changelog
 ### 0.1.15 minimap2 2.26 
 * Compilation on aarch64 thanks to @leiste375
-* Memory leaks fixed by @Adoni5
 * README corrections thanks to @wdecoster
 * Better support for static builds / linking
 * Update fffx to a version that uses bytelines without tokio. Drastically reduces compile times and dependency tree.
