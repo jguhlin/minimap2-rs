@@ -1,8 +1,8 @@
 use std::num::NonZeroI32;
 use std::sync::{Arc, Mutex};
 
-use mimalloc::MiMalloc;
 use crossbeam::queue::ArrayQueue;
+use mimalloc::MiMalloc;
 use minimap2::*;
 use minimap2_sys::{mm_set_opt, MM_F_CIGAR};
 use polars::{df, prelude::*};
@@ -65,10 +65,6 @@ impl Aligner {
 
     /// Map multiple sequences - Multithreaded
     fn map(&self, py: Python<'_>, seqs: Vec<Sequence>) -> PyResult<PyDataFrame> {
-        // Get GIL and allow_threads
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
         // If single threaded, do not open a new thread...
         if self.aligner.threads == 1 {
             let mut mappings = Mappings::default();
@@ -83,73 +79,72 @@ impl Aligner {
                     mappings.push(r)
                 });
             }
+            Ok(PyDataFrame(mappings.to_df().unwrap()))
+        } else {
+            let work_queue = Arc::new(Mutex::new(seqs));
+            let results_queue = Arc::new(ArrayQueue::<WorkQueue<Vec<Mapping>>>::new(128));
+            let mut thread_handles = Vec::new();
+            for i in 0..(self.aligner.threads - 1) {
+                let work_queue = Arc::clone(&work_queue);
+                let results_queue = Arc::clone(&results_queue);
 
-            return Ok(PyDataFrame(mappings.to_df().unwrap()));
-        }
+                let mut aligner = self.aligner.clone();
 
-        let work_queue = Arc::new(Mutex::new(seqs));
-        let results_queue = Arc::new(ArrayQueue::<WorkQueue<Vec<Mapping>>>::new(128));
-        let mut thread_handles = Vec::new();
-        for i in 0..(self.aligner.threads - 1) {
-            let work_queue = Arc::clone(&work_queue);
-            let results_queue = Arc::clone(&results_queue);
+                let handle = std::thread::spawn(move || loop {
+                    let backoff = crossbeam::utils::Backoff::new();
+                    let work = work_queue.lock().unwrap().pop();
 
-            let mut aligner = self.aligner.clone();
+                    match work {
+                        Some(sequence) => {
+                            let mut result = aligner
+                                .map(&sequence.sequence, true, true, None, None)
+                                .expect("Unable to align");
 
-            let handle = std::thread::spawn(move || loop {
-                let backoff = crossbeam::utils::Backoff::new();
-                let work = work_queue.lock().unwrap().pop();
+                            result.iter_mut().for_each(|mut r| {
+                                r.query_name = Some(sequence.id.clone());
+                            });
 
-                match work {
-                    Some(sequence) => {
-                        let mut result = aligner
-                            .map(&sequence.sequence, true, true, None, None)
-                            .expect("Unable to align");
+                            results_queue.push(WorkQueue::Work(result));
+                        }
+                        None => {
+                            // Means the work queue is empty...
+                            results_queue.push(WorkQueue::Done);
+                            break;
+                        }
+                    }
+                });
+                thread_handles.push(handle);
+            }
 
-                        result.iter_mut().for_each(|mut r| {
-                            r.query_name = Some(sequence.id.clone());
-                        });
+            let mut mappings = Mappings::default();
+            let mut finished_count = 0;
 
-                        results_queue.push(WorkQueue::Work(result));
+            loop {
+                py.check_signals()?;
+                let result = results_queue.pop();
+                match result {
+                    Some(WorkQueue::Work(result)) => {
+                        result.into_iter().for_each(|r| mappings.push(r));
+                    }
+                    Some(WorkQueue::Done) => {
+                        finished_count += 1;
+                        if finished_count == (self.aligner.threads - 1) {
+                            break;
+                        }
                     }
                     None => {
-                        // Means the work queue is empty...
-                        results_queue.push(WorkQueue::Done);
-                        break;
+                        // Probably should be backoff, but let's try this for now...
+                        std::thread::sleep(std::time::Duration::from_millis(100));
                     }
-                }
-            });
-            thread_handles.push(handle);
-        }
-
-        let mut mappings = Mappings::default();
-        let mut finished_count = 0;
-
-        loop {
-            py.check_signals()?;
-            let result = results_queue.pop();
-            match result {
-                Some(WorkQueue::Work(result)) => {
-                    result.into_iter().for_each(|r| mappings.push(r));
-                }
-                Some(WorkQueue::Done) => {
-                    finished_count += 1;
-                    if finished_count == (self.aligner.threads - 1) {
-                        break;
-                    }
-                }
-                None => {
-                    // Probably should be backoff, but let's try this for now...
-                    std::thread::sleep(std::time::Duration::from_millis(100));
                 }
             }
-        }
 
-        for handle in thread_handles {
-            handle.join().unwrap();
-        }
+            for handle in thread_handles {
+                handle.join().unwrap();
+            }
 
-        Ok(PyDataFrame(mappings.to_df().unwrap()))
+            Ok(PyDataFrame(mappings.to_df().unwrap()))
+        }
     }
 
     // Builder functions
@@ -556,18 +551,18 @@ mod tests {
     #[test]
     fn test_build_aligners() {
         map_ont().expect("Failed to build minimap2 aligner");
-        map_hifi().expect("Failed to build minimap2 aligner");;
-        ava_ont().expect("Failed to build minimap2 aligner");;
-        map_10k().expect("Failed to build minimap2 aligner");;
-        ava_pb().expect("Failed to build minimap2 aligner");;
-        asm().expect("Failed to build minimap2 aligner");;
-        asm5().expect("Failed to build minimap2 aligner");;
-        asm10().expect("Failed to build minimap2 aligner");;
-        asm20().expect("Failed to build minimap2 aligner");;
-        short().expect("Failed to build minimap2 aligner");;
-        sr().expect("Failed to build minimap2 aligner");;
-        splice().expect("Failed to build minimap2 aligner");;
-        cdna().expect("Failed to build minimap2 aligner");;
+        map_hifi().expect("Failed to build minimap2 aligner");
+        ava_ont().expect("Failed to build minimap2 aligner");
+        map_10k().expect("Failed to build minimap2 aligner");
+        ava_pb().expect("Failed to build minimap2 aligner");
+        asm().expect("Failed to build minimap2 aligner");
+        asm5().expect("Failed to build minimap2 aligner");
+        asm10().expect("Failed to build minimap2 aligner");
+        asm20().expect("Failed to build minimap2 aligner");
+        short().expect("Failed to build minimap2 aligner");
+        sr().expect("Failed to build minimap2 aligner");
+        splice().expect("Failed to build minimap2 aligner");
+        cdna().expect("Failed to build minimap2 aligner");
     }
 
     #[test]
@@ -588,7 +583,7 @@ mod tests {
         // Test py new fn
         let seq = Sequence::new("test", "ACGT");
         */
-        
+
         // Test Mappings struct
         // Test default and push fn
         let mut mappings = Mappings::default();
