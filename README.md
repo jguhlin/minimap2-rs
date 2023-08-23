@@ -157,7 +157,11 @@ and/or:
 > *Bioinformatics*, **37**:4572-4574. [doi:10.1093/bioinformatics/btab705][doi2]
 
 # Changelog
-### 0.1.15 minimap2 2.26 UNRELEASED
+### 0.1.15 minimap2 2.26 
+* Compilation on aarch64 thanks to @leiste375
+* Memory leaks fixed by @Adoni5
+* README corrections thanks to @wdecoster
+* Better support for static builds / linking
 * Update fffx to a version that uses bytelines without tokio. Drastically reduces compile times and dependency tree.
 
 ### 0.1.14 minimap2 2.26
