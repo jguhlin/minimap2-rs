@@ -5,21 +5,21 @@ edition = "2021"
 
 [lib]
 name = "minimappers2"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # fffx = "0.1.2"
 
-minimap2 = { version = "0.1.11", features = ["simde"] }
-minimap2-sys = { version = "0.1.10", features = ["simde"] }
+minimap2 = { version = "0.1.15", features = ["simde"] }
+minimap2-sys = { version = "0.1.15", features = ["simde"] }
 #minimap2 = { path = "../", features = ["simde"] }
 #minimap2-sys = { path = "../minimap2-sys", features = ["simde"] }
 crossbeam = "0.8.2"
 mimalloc = {version = "0.1.34", default-features = false }
 
-pyo3 = { version = "0.18.1" }
-polars = "0.27.2"
-pyo3-polars = "0.2.0"
+pyo3 = { version = "0.19.2" }
+polars = "0.32.1"
+pyo3-polars = "0.6.0"
 
 [profile.release]
 opt-level = 3
