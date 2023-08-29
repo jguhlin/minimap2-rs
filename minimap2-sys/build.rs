@@ -12,6 +12,7 @@ fn configure(mut cc: &mut cc::Build) {
     cc.include("mm2-fast");
     cc.include("mm2-fast/ext/TAL/src/chaining/");
     cc.include("mm2-fast/ext/TAL/src/");
+    cc.include("ext/TAL/src/chaining/");
     cc.target("native");
     cc.flag("-march=native");
     cc.flag("-DPARALLEL_CHAINING");
@@ -71,8 +72,8 @@ fn configure(mut cc: &mut cc::Build) {
     simde(&mut cc);
 
     // Include ksw2.h kalloc.h
-    cc.include("minimap2/kalloc.h");
-    cc.include("minimap2/ksw2.h");
+    cc.include("minimap2/");
+    // cc.include("minimap2/");
 
     let files: Vec<_> = std::fs::read_dir("minimap2")
         .unwrap()
@@ -105,12 +106,16 @@ fn configure(mut cc: &mut cc::Build) {
     }
 
     cc.file("minimap2/ksw2_ll_sse.c");
- 
+
+    #[cfg(not(feature = "noopt"))]
     target_specific(&mut cc);
 }
 
+/*
 #[cfg(all(target_arch = "aarch64", feature = "neon"))]
 fn target_specific(cc: &mut cc::Build) {
+    cc.include("minimap2/sse2neon/");
+
     // For aarch64 targets with neon
     // Add the following files:
     // ksw2_extz2_neon.o ksw2_extd2_neon.o ksw2_exts2_neon.o
@@ -123,9 +128,12 @@ fn target_specific(cc: &mut cc::Build) {
     cc.flag("-D_FILE_OFFSET_BITS=64");
     cc.flag("-fsigned-char");
 }
+*/
 
-#[cfg(all(target_arch = "aarch64", not(feature = "neon")))]
+//Include neon for all "aarch64".
+#[cfg(all(target_arch = "aarch64"))]
 fn target_specific(cc: &mut cc::Build) {
+    cc.include("minimap2/sse2neon/");
     // For aarch64 targets with neon
     // Add the following files:
     // ksw2_extz2_neon.o ksw2_extd2_neon.o ksw2_exts2_neon.o
@@ -134,15 +142,21 @@ fn target_specific(cc: &mut cc::Build) {
     cc.file("minimap2/ksw2_exts2_sse.c");
     cc.flag("-DKSW_SSE2_ONLY");
 
-    // CFLAGS+=-D_FILE_OFFSET_BITS=64 -mfpu=neon -fsigned-char
+    // CFLAGS+=-D_FILE_OFFSET_BITS=64 -fsigned-char -Isse2neon -D__SSE2__
     cc.flag("-D_FILE_OFFSET_BITS=64");
-    cc.flag("-mfpu=neon");
     cc.flag("-fsigned-char");
+    cc.flag("-Isse2neon");
+    cc.flag("-D__SSE2__");
+
 }
 
 #[cfg(target_arch = "x86_64")]
 fn target_specific(cc: &mut cc::Build) {
-    #[cfg(all(target_feature = "sse4.1", not(feature = "simde"), not(feature = "sse2only")))]
+    #[cfg(all(
+        target_feature = "sse4.1",
+        not(feature = "simde"),
+        not(feature = "sse2only")
+    ))]
     cc.flag("-msse4.1");
 
     #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
@@ -154,7 +168,11 @@ fn target_specific(cc: &mut cc::Build) {
     // #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
     // cc.flag("-DKSW_CPU_DISPATCH");
 
-    #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
+    #[cfg(all(
+        not(target_feature = "sse4.1"),
+        target_feature = "sse2",
+        target_arch = "aarch64"
+    ))]
     cc.flag("-mno-sse4.1");
 
     // OBJS+=ksw2_extz2_sse41.o ksw2_extd2_sse41.o ksw2_exts2_sse41.o ksw2_extz2_sse2.o ksw2_extd2_sse2.o ksw2_exts2_sse2.o ksw2_dispatch.o
@@ -163,7 +181,6 @@ fn target_specific(cc: &mut cc::Build) {
     cc.file("minimap2/ksw2_exts2_sse.c");
     // cc.file("minimap2/ksw2_dispatch.c");
 }
-
 
 #[cfg(feature = "simde")]
 fn simde(cc: &mut cc::Build) {
@@ -178,9 +195,12 @@ fn compile() {
     let _host = env::var("HOST").unwrap();
     let _target = env::var("TARGET").unwrap();
 
+    println!("{}", _target);
+
     println!("cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR");
 
     println!("cargo:rustc-link-lib=m");
+
     println!("cargo:rustc-link-lib=pthread");
 
     let mut cc = cc::Build::new();
@@ -195,6 +215,7 @@ fn compile() {
     cc.flag("-lm");
     cc.flag("-lpthread");
 
+    #[cfg(feature = "static")]
     cc.static_flag(true);
 
     if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
@@ -237,6 +258,7 @@ fn gen_bindings() {
     let mut bindgen = bindgen.header("minimap2.h");
 
     bindgen
+        .generate_cstr(true)
         .generate()
         .expect("Couldn't write bindings!")
         .write_to_file(out_path.join("bindings.rs"))

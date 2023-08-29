@@ -1,18 +1,18 @@
 A rust FFI library for [minimap2](https://github.com/lh3/minimap2/). In development! Feedback appreciated!
 
-![https://crates.io/crates/minimap2](https://img.shields.io/crates/v/minimap2.svg)
-![https://docs.rs/minimap2/latest/minimap2/](https://img.shields.io/docsrs/minimap2)
+[![https://crates.io/crates/minimap2](https://img.shields.io/crates/v/minimap2.svg)](https://crates.io/crates/minimap2)
+[![https://docs.rs/minimap2/latest/minimap2/](https://img.shields.io/docsrs/minimap2)](https://docs.rs/minimap2/latest/minimap2/)
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/jguhlin/minimap2-rs/tree/main.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/jguhlin/minimap2-rs/tree/main)
 [![codecov](https://codecov.io/gh/jguhlin/minimap2-rs/branch/main/graph/badge.svg?token=huw27ZC6Qy)](https://codecov.io/gh/jguhlin/minimap2-rs)
 
 
 # Structure
-minimap2-sys is the library of the raw FFI bindings to minimap2. minimap2 is the most rusty version.
+minimap2-sys is the library of the raw FFI bindings to minimap2. minimap2 is the more rusty version.
 
 # How to use
 ## Requirements
 ```toml
-minimap2 = "0.1.10"
+minimap2 = "0.1.14+minimap2.2.26"
 ```
 Also see [Features](#features)
 
@@ -135,9 +135,6 @@ Please note minimap2 is only tested for x86_64. Other platforms may work, please
 [Chopper](https://github.com/wdecoster/chopper) - Long read trimming and filtering
 [mappy-rs](https://github.com/Adoni5/mappy-rs) - Drop-in multi-threaded replacement for python's mappy
 
-# Pain Points
-Probably not freeing C memory somewhere.... Not sure yet, if so it's just leaking a little... Need to do a large run to test it.
-
 # Next things todo
 * Print other tags so we can have an entire PAF format
 * -sys Compile with SSE2 / SSE4.1 (auto-detect, but also make with features)
@@ -160,6 +157,15 @@ and/or:
 > *Bioinformatics*, **37**:4572-4574. [doi:10.1093/bioinformatics/btab705][doi2]
 
 # Changelog
+### 0.1.15 minimap2 2.26 
+* Compilation on aarch64 thanks to @leiste375
+* README corrections thanks to @wdecoster
+* Better support for static builds / linking
+* Update fffx to a version that uses bytelines without tokio. Drastically reduces compile times and dependency tree.
+
+### 0.1.14 minimap2 2.26
+* Memory leak fixed by @Adoni5
+* Updated deps
 
 ### 0.1.13 minimap2 2.26
 * Add with_seq to support indexing a single sequence (as per mappy: https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L115)
@@ -168,7 +174,6 @@ and/or:
 * Support soft-clipping string in CIGAR. WARNING: Does not support hard clipping. Please open an issue if you need this.
 * Update minimap to 2.26
 * Not convinced SSE41/SSE2 are working properly. Recommend simde.
-
 
 ### 0.1.11 
 * HTS lib: add support for optional quality scores by @eharr

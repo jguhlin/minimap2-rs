@@ -1,6 +1,6 @@
 [package]
 name = "minimap2-sys"
-version = "0.1.12+minimap2.2.26"
+version = "0.1.15+minimap2.2.26"
 edition = "2021"
 links = "libminimap2"
 authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
@@ -33,24 +33,26 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-libz-sys = { version = "1.1.8", default-features = false, features = ["libc"] }
+libz-sys = { version = "1.1.11", default-features = false }
 
 [build-dependencies]
-pkg-config = "0.3.26"
-libc = "0.2"
+pkg-config = "0.3.27"
 
 [build-dependencies.bindgen]
 optional = true
-version = "0.64"
+version = "0.66.1"
 default-features = false
-features = ["runtime", "which-rustfmt"]
+features = ["which-rustfmt", "runtime"]
 
 [build-dependencies.cc]
 version = "1.0.79"
 
 [features]
-default = []
+default = ["libz-sys/libc"]
 vendored = ["bindgen"]
 mm2-fast = []
 sse2only = []
 simde = []
+noopt = []
+zlib-ng = ["libz-sys/zlib-ng"]
+static = ["libz-sys/static"]
