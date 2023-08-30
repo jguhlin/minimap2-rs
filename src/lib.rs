@@ -773,7 +773,10 @@ impl Aligner {
 
             mm_reg = MaybeUninit::new(unsafe {
                 //  conditionally compile using the correct pointer type (u8 or i8) for the platform
-                #[cfg(all(target_arch = "aarch64", target_os = "linux"))]
+                #[cfg(any(
+                    all(target_arch = "aarch64", target_os = "linux"),
+                    all(target_arch = "arm", target_os = "linux")
+                ))]
                 {
                     mm_map(
                         self.idx.as_ref().unwrap() as *const mm_idx_t,
