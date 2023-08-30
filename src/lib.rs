@@ -150,6 +150,27 @@ impl From<Preset> for *const i8 {
     }
 }
 
+// Convert to c string for input into minimap2
+impl From<Preset> for *const u8 {
+    fn from(preset: Preset) -> Self {
+        match preset {
+            Preset::MapOnt => MAP_ONT.as_bytes().as_ptr(),
+            Preset::AvaOnt => AVA_ONT.as_bytes().as_ptr(),
+            Preset::Map10k => MAP10K.as_bytes().as_ptr(),
+            Preset::AvaPb => AVA_PB.as_bytes().as_ptr(),
+            Preset::MapHifi => MAP_HIFI.as_bytes().as_ptr(),
+            Preset::Asm => ASM.as_bytes().as_ptr(),
+            Preset::Asm5 => ASM5.as_bytes().as_ptr(),
+            Preset::Asm10 => ASM10.as_bytes().as_ptr(),
+            Preset::Asm20 => ASM20.as_bytes().as_ptr(),
+            Preset::Short => SHORT.as_bytes().as_ptr(),
+            Preset::Sr => SR.as_bytes().as_ptr(),
+            Preset::Splice => SPLICE.as_bytes().as_ptr(),
+            Preset::Cdna => CDNA.as_bytes().as_ptr(),
+        }
+    }
+}
+
 /// Alignment type
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AlignmentType {
@@ -662,15 +683,30 @@ impl Aligner {
             .collect();
 
         let idx = MaybeUninit::new(unsafe {
-            mm_idx_str(
-                self.idxopt.w as i32,
-                self.idxopt.k as i32,
-                (self.idxopt.flag & 1) as i32,
-                self.idxopt.bucket_bits as i32,
-                seqs.len() as i32,
-                seqs.as_ptr() as *mut *const i8,
-                ids.as_ptr() as *mut *const i8,
-            )
+            #[cfg(target_arch = "x86_64")]
+            {
+                mm_idx_str(
+                    self.idxopt.w as i32,
+                    self.idxopt.k as i32,
+                    (self.idxopt.flag & 1) as i32,
+                    self.idxopt.bucket_bits as i32,
+                    seqs.len() as i32,
+                    seqs.as_ptr() as *mut *const i8,
+                    ids.as_ptr() as *mut *const i8,
+                )
+            }
+            #[cfg(target_arch = "aarch64")]
+            {
+                mm_idx_str(
+                    self.idxopt.w as i32,
+                    self.idxopt.k as i32,
+                    (self.idxopt.flag & 1) as i32,
+                    self.idxopt.bucket_bits as i32,
+                    seqs.len() as i32,
+                    seqs.as_ptr() as *mut *const i8,
+                    ids.as_ptr() as *mut *const i8,
+                )
+            }
         });
 
         self.idx = Some(unsafe { *idx.assume_init() });
