@@ -158,12 +158,17 @@ fn target_specific(cc: &mut cc::Build) {
     ))]
     cc.flag("-msse4.1");
     // Not sure how this works, do we come into this block on x86?
-    #[cfg(all(
-        not(target_feature = "sse4.1"),
-        target_feature = "sse2",
-        not(target_arch = "aarch64")
-    ))]
-    cc.flag("-msse2");
+    let target = env::var("TARGET").unwrap_or_default();
+    if !target.contains("aarch64") {
+        #[cfg(all(
+            not(target_feature = "sse4.1"),
+            target_feature = "sse2",
+            not(target_arch = "aarch64")
+        ))]
+        {
+            cc.flag("-msse2");
+        }
+    }
 
     #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
     cc.flag("-DKSW_SSE2_ONLY");
@@ -190,6 +195,7 @@ fn simde(cc: &mut cc::Build) {
     cc.include("minimap2/lib/simde");
     cc.flag("-DSIMDE_ENABLE_NATIVE_ALIASES");
     cc.flag("-DUSE_SIMDE");
+    cc.flag("-std=c99");
 }
 
 fn compile() {
@@ -241,13 +247,17 @@ fn sse2only(cc: &mut cc::Build) {
 
     #[cfg(all(target_feature = "sse2", not(target_feature = "sse4.1")))]
     cc.flag("-mno-sse4.1");
-
-    #[cfg(all(
-        target_feature = "sse2",
-        not(target_feature = "sse4.1"),
-        not(target_arch = "aarch64")
-    ))]
-    cc.flag("-msse2");
+    let target = env::var("TARGET").unwrap_or_default();
+    if !target.contains("aarch64") {
+        #[cfg(all(
+            not(target_feature = "sse4.1"),
+            target_feature = "sse2",
+            not(target_arch = "aarch64")
+        ))]
+        {
+            cc.flag("-msse2");
+        }
+    }
 }
 
 #[cfg(feature = "bindgen")]
