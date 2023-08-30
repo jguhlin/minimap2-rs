@@ -703,8 +703,8 @@ impl Aligner {
                     (self.idxopt.flag & 1) as i32,
                     self.idxopt.bucket_bits as i32,
                     seqs.len() as i32,
-                    seqs.as_ptr() as *mut *const i8,
-                    ids.as_ptr() as *mut *const i8,
+                    seqs.as_ptr() as *mut *const u8,
+                    ids.as_ptr() as *mut *const u8,
                 )
             }
         });
