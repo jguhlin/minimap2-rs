@@ -195,6 +195,7 @@ fn simde(cc: &mut cc::Build) {
     cc.include("minimap2/lib/simde");
     cc.flag("-DSIMDE_ENABLE_NATIVE_ALIASES");
     cc.flag("-DUSE_SIMDE");
+    cc.flag("-std=c99");
 }
 
 fn compile() {
