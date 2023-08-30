@@ -147,7 +147,6 @@ fn target_specific(cc: &mut cc::Build) {
     cc.flag("-fsigned-char");
     cc.flag("-Isse2neon");
     cc.flag("-D__SSE2__");
-
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -158,8 +157,12 @@ fn target_specific(cc: &mut cc::Build) {
         not(feature = "sse2only")
     ))]
     cc.flag("-msse4.1");
-
-    #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
+    // Not sure how this works, do we come into this block on x86?
+    #[cfg(all(
+        not(target_feature = "sse4.1"),
+        target_feature = "sse2",
+        not(target_arch = "aarch64")
+    ))]
     cc.flag("-msse2");
 
     #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
@@ -239,7 +242,11 @@ fn sse2only(cc: &mut cc::Build) {
     #[cfg(all(target_feature = "sse2", not(target_feature = "sse4.1")))]
     cc.flag("-mno-sse4.1");
 
-    #[cfg(all(target_feature = "sse2", not(target_feature = "sse4.1")))]
+    #[cfg(all(
+        target_feature = "sse2",
+        not(target_feature = "sse4.1"),
+        not(target_arch = "aarch64")
+    ))]
     cc.flag("-msse2");
 }
 
