@@ -684,7 +684,10 @@ impl Aligner {
 
         let idx = MaybeUninit::new(unsafe {
             //  conditionally compile using the correct pointer type (u8 or i8) for the platform
-            #[cfg(all(target_arch = "aarch64", target_os = "linux"))]
+            #[cfg(any(
+                all(target_arch = "aarch64", target_os = "linux"),
+                all(target_arch = "arm", target_os = "linux")
+            ))]
             {
                 mm_idx_str(
                     self.idxopt.w as i32,
@@ -903,7 +906,10 @@ impl Aligner {
 
                             let cs_str = if cs {
                                 //  conditionally compile using the correct pointer type (u8 or i8) for the platform
-                                #[cfg(all(target_arch = "aarch64", target_os = "linux"))]
+                                #[cfg(any(
+                                    all(target_arch = "aarch64", target_os = "linux"),
+                                    all(target_arch = "arm", target_os = "linux")
+                                ))]
                                 {
                                     let _cs_len = mm_gen_cs(
                                         km,
@@ -947,7 +953,10 @@ impl Aligner {
 
                             let md_str = if md {
                                 //  conditionally compile using the correct pointer type (u8 or i8) for the platform
-                                #[cfg(all(target_arch = "aarch64", target_os = "linux"))]
+                                #[cfg(any(
+                                    all(target_arch = "aarch64", target_os = "linux"),
+                                    all(target_arch = "arm", target_os = "linux")
+                                ))]
                                 {
                                     let _md_len = mm_gen_MD(
                                         km,
