@@ -970,7 +970,7 @@ impl Aligner {
         // Read the first 50 bytes of the file
         let mut f = std::fs::File::open(file).unwrap();
         let mut buffer = [0; 50];
-        f.read(&mut buffer).unwrap();
+        f.read_exact(&mut buffer).unwrap();
         // Close the file
         drop(f);
 
@@ -989,7 +989,7 @@ impl Aligner {
 
         // Check the file type
         let mut buffer = [0; 4];
-        reader.read(&mut buffer).unwrap();
+        reader.read_exact(&mut buffer).unwrap();
         let file_type = detect_file_format(&buffer).unwrap();
         if file_type != FileFormat::FASTA && file_type != FileFormat::FASTQ {
             return Err("File type is not supported");
