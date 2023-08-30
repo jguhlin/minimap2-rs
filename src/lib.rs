@@ -771,20 +771,6 @@ impl Aligner {
         let mappings = BUF.with(|buf| {
             let km = unsafe { mm_tbuf_get_km(buf.borrow_mut().get_buf()) };
 
-            // let name = std::ffi::CString::new("Unnamed Sequence").unwrap();
-
-            // let mut result: MaybeUninit<kstring_t> = MaybeUninit::zeroed();
-
-            /*
-            let bseq = mm_bseq1_t {
-                l_seq: seq.len() as i32,
-                rid: 0,
-                name: name.as_ref().as_ptr() as *mut i8, // seqid.as_ref().as_ptr() as *mut i8,
-                seq: seq.as_ptr() as *mut i8,
-                qual: std::ptr::null_mut(),
-                comment: std::ptr::null_mut(),
-            }; */
-
             mm_reg = MaybeUninit::new(unsafe {
                 //  conditionally compile using the correct pointer type (u8 or i8) for the platform
                 #[cfg(all(target_arch = "aarch64", target_os = "linux"))]
