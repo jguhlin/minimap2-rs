@@ -15,9 +15,16 @@ exclude = [
   "**/*.mmi",
   "/minimap2-sys/",
   "/minimappers2/",
+  "/fakeminimap2",
   "/test_data/",
-  ".*"
+  ".*",
+]
 
+[workspace]
+
+members = [
+    "fakeminimap2",
+    "minimap2-sys"
 ]
 
 [dependencies]
@@ -43,6 +50,7 @@ opt-level = 3
 [features]
 default = ["map-file"]
 mm2-fast = ["minimap2-sys/mm2-fast"]
+sse2only = ["minimap2-sys/sse2only"]
 htslib = ['rust-htslib']
 simde = ["minimap2-sys/simde"]
 map-file = ["fffx", "simdutf8"]
