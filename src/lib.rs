@@ -150,6 +150,27 @@ impl From<Preset> for *const i8 {
     }
 }
 
+// Convert to c string for input into minimap2
+impl From<Preset> for *const u8 {
+    fn from(preset: Preset) -> Self {
+        match preset {
+            Preset::MapOnt => MAP_ONT.as_bytes().as_ptr(),
+            Preset::AvaOnt => AVA_ONT.as_bytes().as_ptr(),
+            Preset::Map10k => MAP10K.as_bytes().as_ptr(),
+            Preset::AvaPb => AVA_PB.as_bytes().as_ptr(),
+            Preset::MapHifi => MAP_HIFI.as_bytes().as_ptr(),
+            Preset::Asm => ASM.as_bytes().as_ptr(),
+            Preset::Asm5 => ASM5.as_bytes().as_ptr(),
+            Preset::Asm10 => ASM10.as_bytes().as_ptr(),
+            Preset::Asm20 => ASM20.as_bytes().as_ptr(),
+            Preset::Short => SHORT.as_bytes().as_ptr(),
+            Preset::Sr => SR.as_bytes().as_ptr(),
+            Preset::Splice => SPLICE.as_bytes().as_ptr(),
+            Preset::Cdna => CDNA.as_bytes().as_ptr(),
+        }
+    }
+}
+
 /// Alignment type
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AlignmentType {
@@ -662,15 +683,38 @@ impl Aligner {
             .collect();
 
         let idx = MaybeUninit::new(unsafe {
-            mm_idx_str(
-                self.idxopt.w as i32,
-                self.idxopt.k as i32,
-                (self.idxopt.flag & 1) as i32,
-                self.idxopt.bucket_bits as i32,
-                seqs.len() as i32,
-                seqs.as_ptr() as *mut *const i8,
-                ids.as_ptr() as *mut *const i8,
-            )
+            //  conditionally compile using the correct pointer type (u8 or i8) for the platform
+            #[cfg(any(
+                all(target_arch = "aarch64", target_os = "linux"),
+                all(target_arch = "arm", target_os = "linux")
+            ))]
+            {
+                mm_idx_str(
+                    self.idxopt.w as i32,
+                    self.idxopt.k as i32,
+                    (self.idxopt.flag & 1) as i32,
+                    self.idxopt.bucket_bits as i32,
+                    seqs.len() as i32,
+                    seqs.as_ptr() as *mut *const u8,
+                    ids.as_ptr() as *mut *const u8,
+                )
+            }
+            #[cfg(any(
+                all(target_arch = "aarch64", target_os = "macos"),
+                all(target_arch = "x86_64", target_os = "linux"),
+                all(target_arch = "x86_64", target_os = "macos")
+            ))]
+            {
+                mm_idx_str(
+                    self.idxopt.w as i32,
+                    self.idxopt.k as i32,
+                    (self.idxopt.flag & 1) as i32,
+                    self.idxopt.bucket_bits as i32,
+                    seqs.len() as i32,
+                    seqs.as_ptr() as *mut *const i8,
+                    ids.as_ptr() as *mut *const i8,
+                )
+            }
         });
 
         self.idx = Some(unsafe { *idx.assume_init() });
@@ -730,30 +774,39 @@ impl Aligner {
         let mappings = BUF.with(|buf| {
             let km = unsafe { mm_tbuf_get_km(buf.borrow_mut().get_buf()) };
 
-            // let name = std::ffi::CString::new("Unnamed Sequence").unwrap();
-
-            // let mut result: MaybeUninit<kstring_t> = MaybeUninit::zeroed();
-
-            /*
-            let bseq = mm_bseq1_t {
-                l_seq: seq.len() as i32,
-                rid: 0,
-                name: name.as_ref().as_ptr() as *mut i8, // seqid.as_ref().as_ptr() as *mut i8,
-                seq: seq.as_ptr() as *mut i8,
-                qual: std::ptr::null_mut(),
-                comment: std::ptr::null_mut(),
-            }; */
-
             mm_reg = MaybeUninit::new(unsafe {
-                mm_map(
-                    self.idx.as_ref().unwrap() as *const mm_idx_t,
-                    seq.len() as i32,
-                    seq.as_ptr() as *const i8,
-                    &mut n_regs,
-                    buf.borrow_mut().get_buf(),
-                    &mut map_opt,
-                    std::ptr::null(),
-                )
+                //  conditionally compile using the correct pointer type (u8 or i8) for the platform
+                #[cfg(any(
+                    all(target_arch = "aarch64", target_os = "linux"),
+                    all(target_arch = "arm", target_os = "linux")
+                ))]
+                {
+                    mm_map(
+                        self.idx.as_ref().unwrap() as *const mm_idx_t,
+                        seq.len() as i32,
+                        seq.as_ptr() as *const u8,
+                        &mut n_regs,
+                        buf.borrow_mut().get_buf(),
+                        &mut map_opt,
+                        std::ptr::null(),
+                    )
+                }
+                #[cfg(any(
+                    all(target_arch = "aarch64", target_os = "macos"),
+                    all(target_arch = "x86_64", target_os = "linux"),
+                    all(target_arch = "x86_64", target_os = "macos")
+                ))]
+                {
+                    mm_map(
+                        self.idx.as_ref().unwrap() as *const mm_idx_t,
+                        seq.len() as i32,
+                        seq.as_ptr() as *const i8,
+                        &mut n_regs,
+                        buf.borrow_mut().get_buf(),
+                        &mut map_opt,
+                        std::ptr::null(),
+                    )
+                }
             });
             let mut mappings = Vec::with_capacity(n_regs as usize);
 
@@ -852,38 +905,93 @@ impl Aligner {
                             let mut m_cs_string: libc::c_int = 0i32;
 
                             let cs_str = if cs {
-                                let _cs_len = mm_gen_cs(
-                                    km,
-                                    &mut cs_string,
-                                    &mut m_cs_string,
-                                    &self.idx.unwrap() as *const mm_idx_t,
-                                    const_ptr,
-                                    seq.as_ptr() as *const i8,
-                                    true.into(),
-                                );
-                                let _cs_string = std::ffi::CStr::from_ptr(cs_string)
-                                    .to_str()
-                                    .unwrap()
-                                    .to_string();
-                                Some(_cs_string)
+                                //  conditionally compile using the correct pointer type (u8 or i8) for the platform
+                                #[cfg(any(
+                                    all(target_arch = "aarch64", target_os = "linux"),
+                                    all(target_arch = "arm", target_os = "linux")
+                                ))]
+                                {
+                                    let _cs_len = mm_gen_cs(
+                                        km,
+                                        &mut cs_string,
+                                        &mut m_cs_string,
+                                        &self.idx.unwrap() as *const mm_idx_t,
+                                        const_ptr,
+                                        seq.as_ptr() as *const u8,
+                                        true.into(),
+                                    );
+                                    let _cs_string = std::ffi::CStr::from_ptr(cs_string)
+                                        .to_str()
+                                        .unwrap()
+                                        .to_string();
+                                    Some(_cs_string)
+                                }
+                                #[cfg(any(
+                                    all(target_arch = "aarch64", target_os = "macos"),
+                                    all(target_arch = "x86_64", target_os = "linux"),
+                                    all(target_arch = "x86_64", target_os = "macos")
+                                ))]
+                                {
+                                    let _cs_len = mm_gen_cs(
+                                        km,
+                                        &mut cs_string,
+                                        &mut m_cs_string,
+                                        &self.idx.unwrap() as *const mm_idx_t,
+                                        const_ptr,
+                                        seq.as_ptr() as *const i8,
+                                        true.into(),
+                                    );
+                                    let _cs_string = std::ffi::CStr::from_ptr(cs_string)
+                                        .to_str()
+                                        .unwrap()
+                                        .to_string();
+                                    Some(_cs_string)
+                                }
                             } else {
                                 None
                             };
 
                             let md_str = if md {
-                                let _md_len = mm_gen_MD(
-                                    km,
-                                    &mut cs_string,
-                                    &mut m_cs_string,
-                                    &self.idx.unwrap() as *const mm_idx_t,
-                                    const_ptr,
-                                    seq.as_ptr() as *const i8,
-                                );
-                                let _md_string = std::ffi::CStr::from_ptr(cs_string)
-                                    .to_str()
-                                    .unwrap()
-                                    .to_string();
-                                Some(_md_string)
+                                //  conditionally compile using the correct pointer type (u8 or i8) for the platform
+                                #[cfg(any(
+                                    all(target_arch = "aarch64", target_os = "linux"),
+                                    all(target_arch = "arm", target_os = "linux")
+                                ))]
+                                {
+                                    let _md_len = mm_gen_MD(
+                                        km,
+                                        &mut cs_string,
+                                        &mut m_cs_string,
+                                        &self.idx.unwrap() as *const mm_idx_t,
+                                        const_ptr,
+                                        seq.as_ptr() as *const u8,
+                                    );
+                                    let _md_string = std::ffi::CStr::from_ptr(cs_string)
+                                        .to_str()
+                                        .unwrap()
+                                        .to_string();
+                                    Some(_md_string)
+                                }
+                                #[cfg(any(
+                                    all(target_arch = "aarch64", target_os = "macos"),
+                                    all(target_arch = "x86_64", target_os = "linux"),
+                                    all(target_arch = "x86_64", target_os = "macos")
+                                ))]
+                                {
+                                    let _md_len = mm_gen_MD(
+                                        km,
+                                        &mut cs_string,
+                                        &mut m_cs_string,
+                                        &self.idx.unwrap() as *const mm_idx_t,
+                                        const_ptr,
+                                        seq.as_ptr() as *const i8,
+                                    );
+                                    let _md_string = std::ffi::CStr::from_ptr(cs_string)
+                                        .to_str()
+                                        .unwrap()
+                                        .to_string();
+                                    Some(_md_string)
+                                }
                             } else {
                                 None
                             };
@@ -970,7 +1078,7 @@ impl Aligner {
         // Read the first 50 bytes of the file
         let mut f = std::fs::File::open(file).unwrap();
         let mut buffer = [0; 50];
-        f.read(&mut buffer).unwrap();
+        f.read_exact(&mut buffer).unwrap();
         // Close the file
         drop(f);
 
@@ -989,7 +1097,7 @@ impl Aligner {
 
         // Check the file type
         let mut buffer = [0; 4];
-        reader.read(&mut buffer).unwrap();
+        reader.read_exact(&mut buffer).unwrap();
         let file_type = detect_file_format(&buffer).unwrap();
         if file_type != FileFormat::FASTA && file_type != FileFormat::FASTQ {
             return Err("File type is not supported");

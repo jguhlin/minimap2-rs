@@ -111,75 +111,52 @@ fn configure(mut cc: &mut cc::Build) {
     target_specific(&mut cc);
 }
 
-/*
-#[cfg(all(target_arch = "aarch64", feature = "neon"))]
 fn target_specific(cc: &mut cc::Build) {
-    cc.include("minimap2/sse2neon/");
+    let target = env::var("TARGET").unwrap_or_default();
 
-    // For aarch64 targets with neon
-    // Add the following files:
-    // ksw2_extz2_neon.o ksw2_extd2_neon.o ksw2_exts2_neon.o
-    cc.file("minimap2/ksw2_extz2_neon.c");
-    cc.file("minimap2/ksw2_extd2_neon.c");
-    cc.file("minimap2/ksw2_exts2_neon.c");
-    cc.flag("-DKSW_SSE2_ONLY");
+    if target.contains("aarch64") | target.contains("arm") {
+        cc.include("minimap2/sse2neon/");
+        // For aarch64 targets with neon
+        // Add the following files:
+        // ksw2_extz2_neon.o ksw2_extd2_neon.o ksw2_exts2_neon.o
+        cc.file("minimap2/ksw2_extz2_sse.c");
+        cc.file("minimap2/ksw2_extd2_sse.c");
+        cc.file("minimap2/ksw2_exts2_sse.c");
+        cc.flag("-DKSW_SSE2_ONLY");
 
-    // CFLAGS+=-D_FILE_OFFSET_BITS=64 -fsigned-char
-    cc.flag("-D_FILE_OFFSET_BITS=64");
-    cc.flag("-fsigned-char");
-}
-*/
+        // CFLAGS+=-D_FILE_OFFSET_BITS=64 -fsigned-char -Isse2neon -D__SSE2__
+        cc.flag("-D_FILE_OFFSET_BITS=64");
+        cc.flag("-fsigned-char");
+        cc.flag("-Isse2neon");
+        cc.flag("-D__SSE2__");
+    } else if target.contains("x86_64") {
+        #[cfg(all(
+            target_feature = "sse4.1",
+            not(feature = "simde"),
+            not(feature = "sse2only")
+        ))]
+        cc.flag("-msse4.1");
 
-//Include neon for all "aarch64".
-#[cfg(all(target_arch = "aarch64"))]
-fn target_specific(cc: &mut cc::Build) {
-    cc.include("minimap2/sse2neon/");
-    // For aarch64 targets with neon
-    // Add the following files:
-    // ksw2_extz2_neon.o ksw2_extd2_neon.o ksw2_exts2_neon.o
-    cc.file("minimap2/ksw2_extz2_sse.c");
-    cc.file("minimap2/ksw2_extd2_sse.c");
-    cc.file("minimap2/ksw2_exts2_sse.c");
-    cc.flag("-DKSW_SSE2_ONLY");
+        #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2",))]
+        {
+            cc.flag("-msse2");
+        }
 
-    // CFLAGS+=-D_FILE_OFFSET_BITS=64 -fsigned-char -Isse2neon -D__SSE2__
-    cc.flag("-D_FILE_OFFSET_BITS=64");
-    cc.flag("-fsigned-char");
-    cc.flag("-Isse2neon");
-    cc.flag("-D__SSE2__");
+        #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
+        cc.flag("-DKSW_SSE2_ONLY");
 
-}
+        // #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
+        // cc.flag("-DKSW_CPU_DISPATCH");
 
-#[cfg(target_arch = "x86_64")]
-fn target_specific(cc: &mut cc::Build) {
-    #[cfg(all(
-        target_feature = "sse4.1",
-        not(feature = "simde"),
-        not(feature = "sse2only")
-    ))]
-    cc.flag("-msse4.1");
+        #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2",))]
+        cc.flag("-mno-sse4.1");
 
-    #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
-    cc.flag("-msse2");
-
-    #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
-    cc.flag("-DKSW_SSE2_ONLY");
-
-    // #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
-    // cc.flag("-DKSW_CPU_DISPATCH");
-
-    #[cfg(all(
-        not(target_feature = "sse4.1"),
-        target_feature = "sse2",
-        target_arch = "aarch64"
-    ))]
-    cc.flag("-mno-sse4.1");
-
-    // OBJS+=ksw2_extz2_sse41.o ksw2_extd2_sse41.o ksw2_exts2_sse41.o ksw2_extz2_sse2.o ksw2_extd2_sse2.o ksw2_exts2_sse2.o ksw2_dispatch.o
-    cc.file("minimap2/ksw2_extz2_sse.c");
-    cc.file("minimap2/ksw2_extd2_sse.c");
-    cc.file("minimap2/ksw2_exts2_sse.c");
-    // cc.file("minimap2/ksw2_dispatch.c");
+        // OBJS+=ksw2_extz2_sse41.o ksw2_extd2_sse41.o ksw2_exts2_sse41.o ksw2_extz2_sse2.o ksw2_extd2_sse2.o ksw2_exts2_sse2.o ksw2_dispatch.o
+        cc.file("minimap2/ksw2_extz2_sse.c");
+        cc.file("minimap2/ksw2_extd2_sse.c");
+        cc.file("minimap2/ksw2_exts2_sse.c");
+        // cc.file("minimap2/ksw2_dispatch.c");
+    }
 }
 
 #[cfg(feature = "simde")]
@@ -187,6 +164,7 @@ fn simde(cc: &mut cc::Build) {
     cc.include("minimap2/lib/simde");
     cc.flag("-DSIMDE_ENABLE_NATIVE_ALIASES");
     cc.flag("-DUSE_SIMDE");
+    cc.flag("-std=c99");
 }
 
 fn compile() {
@@ -238,9 +216,17 @@ fn sse2only(cc: &mut cc::Build) {
 
     #[cfg(all(target_feature = "sse2", not(target_feature = "sse4.1")))]
     cc.flag("-mno-sse4.1");
-
-    #[cfg(all(target_feature = "sse2", not(target_feature = "sse4.1")))]
-    cc.flag("-msse2");
+    let target = env::var("TARGET").unwrap_or_default();
+    if target.contains("x86_64") {
+        #[cfg(all(
+            not(target_feature = "sse4.1"),
+            target_feature = "sse2",
+            not(target_arch = "aarch64")
+        ))]
+        {
+            cc.flag("-msse2");
+        }
+    }
 }
 
 #[cfg(feature = "bindgen")]

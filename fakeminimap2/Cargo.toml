@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# minimap2 = { path = ".."}
-minimap2 = { git = "https://github.com/jguhlin/minimap2-rs", branch = "static", features = ["static"] }
+minimap2 = { path = ".."}
+# minimap2 = { git = "https://github.com/jguhlin/minimap2-rs", branch = "static", features = ["static"] }
 crossbeam = "0.8.2"
 needletail = "0.5.1"
 fern = { version = "0.6.2", features = ["colored", "chrono"] }
