@@ -33,19 +33,19 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-libz-sys = { version = "1.1.11", default-features = false }
+libz-sys = { version = "1.1.12", default-features = false }
 
 [build-dependencies]
 pkg-config = "0.3.27"
 
 [build-dependencies.bindgen]
 optional = true
-version = "0.66.1"
+version = "0.68.1"
 default-features = false
 features = ["which-rustfmt", "runtime"]
 
 [build-dependencies.cc]
-version = "1.0.79"
+version = "1.0.83"
 
 [features]
 default = ["libz-sys/libc"]
