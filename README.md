@@ -157,6 +157,9 @@ and/or:
 > *Bioinformatics*, **37**:4572-4574. [doi:10.1093/bioinformatics/btab705][doi2]
 
 # Changelog
+### 0.1.16 minimap2 2.26
+* Much better cross compilation support thanks to @Adoni5
+
 ### 0.1.15 minimap2 2.26 
 * Compilation on aarch64 thanks to @leiste375
 * README corrections thanks to @wdecoster
