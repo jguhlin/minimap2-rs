@@ -14,11 +14,14 @@ Currently this is synced to a recent git commit of minimap2. If you have other n
 * Can we decouple from pthread? This would allow Windows and (possibly) WASM compilation.
 
 ## Changelog
-### 0.1.15 minimap2.2.6
+### 0.1.16 minimap2.2.26
+* Much better cross-compilation support thanks for @Adoni5
+
+### 0.1.15 minimap2.2.26
 * Huge thanks to @leiste375 for aarch64 compilation!
 * Better static linking support
 
-### 0.1.14 minimap2.2.6
+### 0.1.14 minimap2.2.26
  * Fix regression by reverting to minimap2 release version
 
 ### 0.1.13 minimap2.2.26
