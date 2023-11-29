@@ -47,7 +47,7 @@ mod tests {
         let mut mm_idxopt = MaybeUninit::uninit();
         let mut mm_mapopt = MaybeUninit::uninit();
 
-        unsafe { mm_set_opt(&0, mm_idxopt.as_mut_ptr(), mm_mapopt.as_mut_ptr()) };
+        unsafe { mm_set_opt(std::ptr::null(), mm_idxopt.as_mut_ptr(), mm_mapopt.as_mut_ptr()) };
         println!("{:#?}", unsafe { mm_idxopt.assume_init() });
         println!("{:#?}", unsafe { mm_mapopt.assume_init() }); // Run tests with --nocapture to see the output
     }
