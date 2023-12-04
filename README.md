@@ -126,15 +126,14 @@ Please note minimap2 is only tested for x86_64. Other platforms may work, please
 * `htslib` - **Success**
 * `simde` - **Success**
 
+# Tools using this binding
+- [Chopper](https://github.com/wdecoster/chopper) - Long read trimming and filtering
+- [mappy-rs](https://github.com/Adoni5/mappy-rs) - Drop-in multi-threaded replacement for python's mappy
+- [HiFiHLA](https://github.com/PacificBiosciences/hifihla) - HLA star-calling tool for PacBio HiFi data
 
 # Want feedback
 * Many fields are i32 / i8 to mimic the C environment, but would it make more sense to convert to u32 / u8 / usize?
-* Let me know pain points
-
-# Tools using this binding
-[Chopper](https://github.com/wdecoster/chopper) - Long read trimming and filtering
-[mappy-rs](https://github.com/Adoni5/mappy-rs) - Drop-in multi-threaded replacement for python's mappy
-[hifihla](https://github.com/PacificBiosciences/hifihla) - HLA star-calling tool for PacBio HiFi data
+* Let me know pain points!
 
 # Next things todo
 * Print other tags so we can have an entire PAF format
