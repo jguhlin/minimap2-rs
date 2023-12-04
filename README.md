@@ -134,6 +134,7 @@ Please note minimap2 is only tested for x86_64. Other platforms may work, please
 # Tools using this binding
 [Chopper](https://github.com/wdecoster/chopper) - Long read trimming and filtering
 [mappy-rs](https://github.com/Adoni5/mappy-rs) - Drop-in multi-threaded replacement for python's mappy
+[hifihla](https://github.com/PacificBiosciences/hifihla) - HLA star-calling tool for PacBio HiFi data
 
 # Next things todo
 * Print other tags so we can have an entire PAF format

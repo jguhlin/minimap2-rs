@@ -10,8 +10,8 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 # fffx = "0.1.2"
 
-minimap2 = { version = "0.1.15", features = ["simde"] }
-minimap2-sys = { version = "0.1.15", features = ["simde"] }
+minimap2 = { version = "0.1.16", features = ["simde"] }
+minimap2-sys = { version = "0.1.16", features = ["simde"] }
 #minimap2 = { path = "../", features = ["simde"] }
 #minimap2-sys = { path = "../minimap2-sys", features = ["simde"] }
 crossbeam = "0.8.2"
