@@ -86,15 +86,15 @@ As this is a very-early stage library, error checking is not yet implemented. Wh
 
 ## Compatability
 
-* Windows: Unlikely
-* Linux: Likely
+* Linux: Yes
 * Mac: Unknown
+* Windows: Unlikely
 
-* x86_64: Likely
-* aarch64: Unknown
+* x86_64: Yes
+* aarch64: Unknown (open an issue)
 * neon: No (Open an issue)
 
-* Google Colab: No, not sure why though.
+* Google Colab: Yes
 
 # Performance
 Effort has been made to make this as performant as possible, but if you need more performance, please use minimap2 directly and import the results.
@@ -112,7 +112,8 @@ and/or:
 
 # Changelog
 ## 0.1.4 
-* Update pyo3, polars, and minimap2-rs deps
+* Update pyo3, polars, minimap2-rs, and mimalloc deps
+
 ## 0.1.1
 * Update pyo3 and polars deps
 * Add with_seq for indexing TODO
