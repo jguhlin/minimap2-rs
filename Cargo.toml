@@ -51,13 +51,13 @@ opt-level = 3
 
 [features]
 default = ["map-file"]
-#mm2-fast = ["minimap2-sys/mm2-fast"]
-#sse2only = ["minimap2-sys/sse2only"]
+mm2-fast = ["minimap2-sys/mm2-fast"]
+sse2only = ["minimap2-sys/sse2only"]
 htslib = ['rust-htslib']
-#simde = ["minimap2-sys/simde"]
+simde = ["minimap2-sys/simde"]
 map-file = ["fffx", "simdutf8"]
-#zlib-ng = ["minimap2-sys/zlib-ng"]
-#static = ["minimap2-sys/static"]
+zlib-ng = ["minimap2-sys/zlib-ng"]
+static = ["minimap2-sys/static"]
 
 [package.metadata.docs.rs]
 features = ["map-file", "htslib"]
