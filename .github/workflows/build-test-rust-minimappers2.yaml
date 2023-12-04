@@ -1,4 +1,4 @@
-name: Rust
+name: minimappers2
 
 on:
   pull_request:
@@ -34,7 +34,7 @@ jobs:
         env:
           RUSTFLAGS: -C target-feature=+fxsr,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+fma
         with:
-          rust-toolchain: nightly-2023-01-19
-          maturin-version: '0.14.10'
+          rust-toolchain: nightly-2023-10-15
+          maturin-version: '1.4.0'
           command: build
           args: -m minimappers2/Cargo.toml

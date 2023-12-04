@@ -1,4 +1,4 @@
-name: Rust
+name: minimap2-rs
 
 on:
   pull_request:

@@ -1,4 +1,4 @@
-name: Rust
+name: fakeminimap2
 
 on:
   pull_request:
