@@ -40,7 +40,7 @@ pkg-config = "0.3.27"
 
 [build-dependencies.bindgen]
 optional = true
-version = "0.68.1"
+version = "0.69.1"
 default-features = false
 features = ["which-rustfmt", "runtime"]
 
