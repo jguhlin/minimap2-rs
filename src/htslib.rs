@@ -232,26 +232,26 @@ pub fn mapping_to_record(
     let qname = query_name.unwrap_or(b"query");
     // FIXFIX: there's probably a better way of setting a default value
     // for the quality string
-    let qual = match qual {
-        Some(q) => Vec::from(q),
-        None => {
-            let q = vec![255; seq.len()];
-            q
-        }
-    };
+    let qual = qual.map_or_else(|| vec![255u8; seq.len()], Vec::from);
 
-    let cigar: Option<CigarString> = mapping
-        .and_then(|m| m.alignment.clone()) // FIXFIX: we probably don't need a clone here
-        .and_then(|a| a.cigar)
-        .map(|c| cigar_to_cigarstr(&c));
+    let cigar: Option<CigarString> = mapping.and_then(|m| {
+        m.alignment
+            .as_ref()
+            .and_then(|aln| aln.cigar.as_ref())
+            .map(cigar_to_cigarstr)
+    });
 
     rec.set(qname, cigar.as_ref(), seq, &qual[..]);
     match mapping {
         Some(m) => {
-            println!("Strand {m:?}");
             if m.strand == Strand::Reverse {
-                println!("here");
                 rec.set_reverse();
+            }
+            if !m.is_primary {
+                rec.set_secondary();
+            }
+            if m.is_supplementary {
+                rec.set_supplementary();
             }
             // TODO: set secondary/supplementary flags
             rec.set_pos(m.target_start as i64);
