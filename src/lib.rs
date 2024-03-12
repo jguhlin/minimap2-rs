@@ -1216,7 +1216,6 @@ pub fn detect_compression_format(buffer: &[u8]) -> Result<CompressionType, &'sta
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::mem::MaybeUninit;
 
     #[test]
     fn compression_format_detections() {
@@ -1285,10 +1284,8 @@ mod tests {
     #[test]
     fn mapopt() {
         let _x: mm_mapopt_t = Default::default();
-        drop(_x);
         println!("One done...");
         let _x: MapOpt = Default::default();
-        drop(_x);
         println!("Second...");
     }
 
