@@ -46,7 +46,6 @@
 
 use std::cell::RefCell;
 
-use std::io::Read;
 use std::mem::MaybeUninit;
 use std::num::NonZeroI32;
 use std::path::Path;
@@ -60,7 +59,7 @@ use minimap2_sys::*;
 use simdutf8::basic::from_utf8;
 
 #[cfg(feature = "map-file")]
-use needletail::{parse_fastx_file, Sequence, FastxReader};
+use needletail::parse_fastx_file;
 
 #[cfg(feature = "htslib")]
 pub mod htslib;
@@ -70,7 +69,6 @@ pub type MapOpt = mm_mapopt_t;
 
 /// Alias for mm_idxopt_t
 pub type IdxOpt = mm_idxopt_t;
-
 
 // TODO: Probably a better way to handle this...
 /// C string constants for passing to minimap2
@@ -92,16 +90,11 @@ static MAP10K: &str = "map10k\0";
 static CDNA: &str = "cdna\0";
 
 /// Strand enum
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Default)]
 pub enum Strand {
+    #[default]
     Forward,
     Reverse,
-}
-
-impl Default for Strand {
-    fn default() -> Self {
-        Strand::Forward
-    }
 }
 
 impl std::fmt::Display for Strand {
@@ -314,7 +307,7 @@ impl Default for Aligner {
 }
 
 impl Aligner {
-    /// Create a new server builder that can configure a [`Server`].
+    /// Create a new aligner with default options
     pub fn builder() -> Self {
         Aligner {
             mapopt: MapOpt {
@@ -454,8 +447,8 @@ impl Aligner {
         };
 
         Self {
-            idxopt: idxopt,
-            mapopt: mapopt,
+            idxopt,
+            mapopt,
             ..Default::default()
         }
     }
@@ -527,10 +520,10 @@ impl Aligner {
     where
         P: AsRef<Path>,
     {
-        return match self.set_index(path, output) {
+        match self.set_index(path, output) {
             Ok(_) => Ok(self),
             Err(e) => Err(e),
-        };
+        }
     }
 
     /// Set the index (in-place, without builder pattern)
@@ -633,10 +626,10 @@ impl Aligner {
             self.idx.is_none(),
             "Index already set. Can not set sequence as index."
         );
-        assert!(seq.len() > 0, "Sequence is empty");
-        assert!(id.len() > 0, "ID is empty");
+        assert!(!seq.is_empty(), "Sequence is empty");
+        assert!(!id.is_empty(), "ID is empty");
 
-        self.with_seqs_and_ids(&vec![seq.to_vec()], &vec![id.to_vec()])
+        self.with_seqs_and_ids(&[seq.to_vec()], &[id.to_vec()])
     }
 
     /// TODO: Does not work for more than 1 seq currently!
@@ -644,12 +637,12 @@ impl Aligner {
     /// Following the mappy implementation, this also sets mapopt.mid_occ to 1000.
     /// Can not be combined with `with_index` or `set_index`.
     /// Sets the sequence IDs to "Unnamed Sequence n" where n is the sequence number.
-    pub fn with_seqs(self, seqs: &Vec<Vec<u8>>) -> Result<Self, &'static str> {
+    pub fn with_seqs(self, seqs: &[Vec<u8>]) -> Result<Self, &'static str> {
         assert!(
             self.idx.is_none(),
             "Index already set. Can not set sequence as index."
         );
-        assert!(seqs.len() > 0, "Must have at least one sequence");
+        assert!(!seqs.is_empty(), "Must have at least one sequence");
 
         let mut ids: Vec<Vec<u8>> = Vec::new();
         for i in 0..seqs.len() {
@@ -667,14 +660,14 @@ impl Aligner {
     // https://github.com/lh3/minimap2/blob/c2f07ff2ac8bdc5c6768e63191e614ea9012bd5d/index.c#L408
     pub fn with_seqs_and_ids(
         mut self,
-        seqs: &Vec<Vec<u8>>,
-        ids: &Vec<Vec<u8>>,
+        seqs: &[Vec<u8>],
+        ids: &[Vec<u8>],
     ) -> Result<Self, &'static str> {
         assert!(
             seqs.len() == ids.len(),
             "Number of sequences and IDs must be equal"
         );
-        assert!(seqs.len() > 0, "Must have at least one sequence and ID");
+        assert!(seqs.is_empty(), "Must have at least one sequence and ID");
 
         let seqs: Vec<std::ffi::CString> = seqs
             .iter()
@@ -736,7 +729,7 @@ impl Aligner {
     /// cs: Whether to output CIGAR string
     /// MD: Whether to output MD tag
     /// max_frag_len: Maximum fragment length
-    /// extra_flags: Extra flags to pass to minimap2 as Vec<u64>
+    /// extra_flags: Extra flags to pass to minimap2 as `Vec<u64>`
     ///
     pub fn map(
         &self,
@@ -752,7 +745,7 @@ impl Aligner {
         }
 
         // Make sure sequence is not empty
-        if seq.len() == 0 {
+        if seq.is_empty() {
             return Err("Sequence is empty");
         }
 
@@ -760,7 +753,7 @@ impl Aligner {
 
         // Number of results
         let mut n_regs: i32 = 0;
-        let mut map_opt = self.mapopt.clone();
+        let mut map_opt = self.mapopt;
 
         // if max_frag_len is not None: map_opt.max_frag_len = max_frag_len
         if let Some(max_frag_len) = max_frag_len {
@@ -790,7 +783,7 @@ impl Aligner {
                         seq.as_ptr() as *const u8,
                         &mut n_regs,
                         buf.borrow_mut().get_buf(),
-                        &mut map_opt,
+                        &map_opt,
                         std::ptr::null(),
                     )
                 }
@@ -806,7 +799,7 @@ impl Aligner {
                         seq.as_ptr() as *const i8,
                         &mut n_regs,
                         buf.borrow_mut().get_buf(),
-                        &mut map_opt,
+                        &map_opt,
                         std::ptr::null(),
                     )
                 }
@@ -838,7 +831,7 @@ impl Aligner {
                                 .as_slice(n_cigar as usize)
                                 .to_vec()
                                 .iter()
-                                .map(|c| ((c >> 4) as u32, (c & 0xf) as u8)) // unpack the length and op code
+                                .map(|c| ((c >> 4), (c & 0xf) as u8)) // unpack the length and op code
                                 .collect::<Vec<(u32, u8)>>();
 
                             // Fix for adding in soft clipping cigar strings
@@ -1080,7 +1073,7 @@ impl Aligner {
             return Err("File is empty");
         }
 
-        let mut reader = parse_fastx_file(&file).expect("Unable to read FASTA/X file");
+        let mut reader = parse_fastx_file(file).expect("Unable to read FASTA/X file");
 
         // The output vec
         let mut mappings = Vec::new();
@@ -1089,19 +1082,21 @@ impl Aligner {
         while let Some(record) = reader.next() {
             let record = match record {
                 Ok(record) => record,
-                Err(_) => return Err("Error reading record in FASTA/X files. Please confirm integrity."),
+                Err(_) => {
+                    return Err("Error reading record in FASTA/X files. Please confirm integrity.")
+                }
             };
 
-            let mut seq_mappings = self
-                .map(&record.seq(), cs, md, None, None)
-                .unwrap();
+            let mut seq_mappings = self.map(&record.seq(), cs, md, None, None).unwrap();
 
             for mapping in seq_mappings.iter_mut() {
                 let id = record.id();
-                if id.len() > 0 {
+                if !id.is_empty() {
                     mapping.query_name = Some(from_utf8(id).unwrap().to_string());
                 } else {
-                    mapping.query_name = Some(format!("Unnamed Seq with Length: {}", record.seq().len()).to_string());
+                    mapping.query_name = Some(
+                        format!("Unnamed Seq with Length: {}", record.seq().len()).to_string(),
+                    );
                 }
             }
 
