@@ -162,7 +162,7 @@ and/or:
 * Only use rust-htslib/curl when curl feature is enabled. #53 @PB-DB
 * Update to minimap2 v2.27 @jguhlin
 * Switch to needletail for reading fast files (features map-file) @jguhlin
-
+* Convert functions to take slices of vectors instead of refs to vecs `&[Vec<u8>]` instead of `&Vec<Vec<u8>>` @jguhlin
 
 ### 0.1.16 minimap2 2.26
 * Much better cross compilation support thanks to @Adoni5

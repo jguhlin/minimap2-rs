@@ -353,7 +353,7 @@ impl Aligner {
         self.preset(Preset::SpliceHq)
     }
 
-        /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().asm();
@@ -413,7 +413,7 @@ impl Aligner {
     pub fn map_hifi(self) -> Self {
         self.preset(Preset::MapHifi)
     }
-    
+
     /// Ergonomic function for Aligner. Sets the minimap2 preset to MapOnt.
     /// ```
     /// # use minimap2::*;
@@ -917,11 +917,11 @@ impl Aligner {
 
                             // Append soft clip identifiers to start and end
                             if clip_len0 > 0 {
-                                cigar_str = format!("{}{}{}", clip_len0, clip_char, cigar_str);
+                                cigar_str = format!("{}{}{}", clip_len0, cigar_str, clip_char);
                             }
 
                             if clip_len1 > 0 {
-                                cigar_str = format!("{}{}{}", cigar_str, clip_char, clip_len1);
+                                cigar_str = format!("{}{}{}", cigar_str, clip_len1, clip_char);
                             }
 
                             (Some(cigar), Some(cigar_str))
