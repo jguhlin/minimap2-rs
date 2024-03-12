@@ -207,6 +207,7 @@ pub struct Mapping {
     pub block_len: i32,
     pub mapq: u32,
     pub is_primary: bool,
+    pub is_supplementary: bool,
     pub alignment: Option<Alignment>,
 }
 
@@ -568,7 +569,7 @@ impl Aligner {
             mm_idx_reader_open(path_str.as_ptr(), &self.idxopt, output.as_ptr())
         });
 
-        let mut idx: MaybeUninit<*mut mm_idx_t> = MaybeUninit::uninit();
+        let idx;
 
         let idx_reader = unsafe { idx_reader.assume_init() };
 
@@ -820,6 +821,7 @@ impl Aligner {
                         (*(self.idx.unwrap()).seq.offset(reg.rid as isize)).name;
 
                     let is_primary = reg.parent == reg.id;
+                    let is_supplementary = reg.sam_pri() == 0;
                     let alignment = if !reg.p.is_null() {
                         let p = &*reg.p;
 
@@ -1034,6 +1036,7 @@ impl Aligner {
                         block_len: reg.blen,
                         mapq: reg.mapq(),
                         is_primary,
+                        is_supplementary,
                         alignment,
                     });
                     libc::free(reg.p as *mut c_void);
