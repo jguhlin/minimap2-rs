@@ -109,18 +109,21 @@ impl std::fmt::Display for Strand {
 /// Preset's for minimap2 config
 #[derive(Debug, Clone)]
 pub enum Preset {
-    MapOnt,
-    AvaOnt,
-    Map10k,
-    AvaPb,
-    MapHifi,
+    LrHq,
+    Splice,
+    SpliceHq,
     Asm,
     Asm5,
     Asm10,
     Asm20,
-    Short,
     Sr,
-    Splice,
+    MapPb,
+    MapHifi,
+    MapOnt,
+    AvaPb,
+    AvaOnt,
+    Short,
+    Map10k,
     Cdna,
 }
 
@@ -128,18 +131,21 @@ pub enum Preset {
 impl From<Preset> for *const i8 {
     fn from(preset: Preset) -> Self {
         match preset {
-            Preset::MapOnt => MAP_ONT.as_bytes().as_ptr() as *const i8,
-            Preset::AvaOnt => AVA_ONT.as_bytes().as_ptr() as *const i8,
-            Preset::Map10k => MAP10K.as_bytes().as_ptr() as *const i8,
-            Preset::AvaPb => AVA_PB.as_bytes().as_ptr() as *const i8,
-            Preset::MapHifi => MAP_HIFI.as_bytes().as_ptr() as *const i8,
+            Preset::LrHq => LRHQ.as_bytes().as_ptr() as *const i8,
+            Preset::Splice => SPLICE.as_bytes().as_ptr() as *const i8,
+            Preset::SpliceHq => SPLICEHQ.as_bytes().as_ptr() as *const i8,
             Preset::Asm => ASM.as_bytes().as_ptr() as *const i8,
             Preset::Asm5 => ASM5.as_bytes().as_ptr() as *const i8,
             Preset::Asm10 => ASM10.as_bytes().as_ptr() as *const i8,
             Preset::Asm20 => ASM20.as_bytes().as_ptr() as *const i8,
-            Preset::Short => SHORT.as_bytes().as_ptr() as *const i8,
             Preset::Sr => SR.as_bytes().as_ptr() as *const i8,
-            Preset::Splice => SPLICE.as_bytes().as_ptr() as *const i8,
+            Preset::MapPb => MAP_PB.as_bytes().as_ptr() as *const i8,
+            Preset::MapHifi => MAP_HIFI.as_bytes().as_ptr() as *const i8,
+            Preset::MapOnt => MAP_ONT.as_bytes().as_ptr() as *const i8,
+            Preset::AvaPb => AVA_PB.as_bytes().as_ptr() as *const i8,
+            Preset::AvaOnt => AVA_ONT.as_bytes().as_ptr() as *const i8,
+            Preset::Short => SHORT.as_bytes().as_ptr() as *const i8,
+            Preset::Map10k => MAP10K.as_bytes().as_ptr() as *const i8,
             Preset::Cdna => CDNA.as_bytes().as_ptr() as *const i8,
         }
     }
@@ -149,18 +155,21 @@ impl From<Preset> for *const i8 {
 impl From<Preset> for *const u8 {
     fn from(preset: Preset) -> Self {
         match preset {
-            Preset::MapOnt => MAP_ONT.as_bytes().as_ptr(),
-            Preset::AvaOnt => AVA_ONT.as_bytes().as_ptr(),
-            Preset::Map10k => MAP10K.as_bytes().as_ptr(),
-            Preset::AvaPb => AVA_PB.as_bytes().as_ptr(),
-            Preset::MapHifi => MAP_HIFI.as_bytes().as_ptr(),
+            Preset::LrHq => LRHQ.as_bytes().as_ptr(),
+            Preset::Splice => SPLICE.as_bytes().as_ptr(),
+            Preset::SpliceHq => SPLICEHQ.as_bytes().as_ptr(),
             Preset::Asm => ASM.as_bytes().as_ptr(),
             Preset::Asm5 => ASM5.as_bytes().as_ptr(),
             Preset::Asm10 => ASM10.as_bytes().as_ptr(),
             Preset::Asm20 => ASM20.as_bytes().as_ptr(),
-            Preset::Short => SHORT.as_bytes().as_ptr(),
             Preset::Sr => SR.as_bytes().as_ptr(),
-            Preset::Splice => SPLICE.as_bytes().as_ptr(),
+            Preset::MapPb => MAP_PB.as_bytes().as_ptr(),
+            Preset::MapHifi => MAP_HIFI.as_bytes().as_ptr(),
+            Preset::MapOnt => MAP_ONT.as_bytes().as_ptr(),
+            Preset::AvaPb => AVA_PB.as_bytes().as_ptr(),
+            Preset::AvaOnt => AVA_ONT.as_bytes().as_ptr(),
+            Preset::Short => SHORT.as_bytes().as_ptr(),
+            Preset::Map10k => MAP10K.as_bytes().as_ptr(),
             Preset::Cdna => CDNA.as_bytes().as_ptr(),
         }
     }
@@ -321,52 +330,30 @@ impl Aligner {
 }
 
 impl Aligner {
-    /// Ergonomic function for Aligner. Sets the minimap2 preset to MapOnt.
-    /// ```
-    /// # use minimap2::*;
-    /// Aligner::builder().map_ont();
-    /// ```
-    pub fn map_ont(self) -> Self {
-        self.preset(Preset::MapOnt)
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to lr:hq.
+    pub fn lrhq(self) -> Self {
+        self.preset(Preset::LrHq)
     }
 
-    /// Ergonomic function for Aligner. Sets the minimap2 preset to AvaOnt.
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to splice
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().ava_ont();
+    /// Aligner::builder().splice();
     /// ```
-    pub fn ava_ont(self) -> Self {
-        self.preset(Preset::AvaOnt)
+    pub fn splice(self) -> Self {
+        self.preset(Preset::Splice)
     }
 
-    /// Ergonomic function for Aligner. Sets the minimap2 preset to Map10k
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to splice:hq
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().map10k();
+    /// Aligner::builder().splice_hq();
     /// ```
-    pub fn map10k(self) -> Self {
-        self.preset(Preset::Map10k)
+    pub fn splice_hq(self) -> Self {
+        self.preset(Preset::SpliceHq)
     }
 
-    /// Ergonomic function for Aligner. Sets the minimap2 preset to AvaPb
-    /// ```
-    /// # use minimap2::*;
-    /// Aligner::builder().ava_pb();
-    /// ```
-    pub fn ava_pb(self) -> Self {
-        self.preset(Preset::AvaPb)
-    }
-
-    /// Ergonomic function for Aligner. Sets the minimap2 preset to MapHifi
-    /// ```
-    /// # use minimap2::*;
-    /// Aligner::builder().map_hifi();
-    /// ```
-    pub fn map_hifi(self) -> Self {
-        self.preset(Preset::MapHifi)
-    }
-
-    /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm
+        /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().asm();
@@ -400,15 +387,6 @@ impl Aligner {
         self.preset(Preset::Asm20)
     }
 
-    /// Ergonomic function for Aligner. Sets the minimap2 preset to Short
-    /// ```
-    /// # use minimap2::*;
-    /// Aligner::builder().short();
-    /// ```
-    pub fn short(self) -> Self {
-        self.preset(Preset::Short)
-    }
-
     /// Ergonomic function for Aligner. Sets the minimap2 preset to sr
     /// ```
     /// # use minimap2::*;
@@ -418,13 +396,67 @@ impl Aligner {
         self.preset(Preset::Sr)
     }
 
-    /// Ergonomic function for Aligner. Sets the minimap2 preset to splice
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to MapPb
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().splice();
+    /// Aligner::builder().map_pb();
     /// ```
-    pub fn splice(self) -> Self {
-        self.preset(Preset::Splice)
+    pub fn map_pb(self) -> Self {
+        self.preset(Preset::MapPb)
+    }
+
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to MapHifi
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().map_hifi();
+    /// ```
+    pub fn map_hifi(self) -> Self {
+        self.preset(Preset::MapHifi)
+    }
+    
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to MapOnt.
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().map_ont();
+    /// ```
+    pub fn map_ont(self) -> Self {
+        self.preset(Preset::MapOnt)
+    }
+
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to AvaPb
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().ava_pb();
+    /// ```
+    pub fn ava_pb(self) -> Self {
+        self.preset(Preset::AvaPb)
+    }
+
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to AvaOnt.
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().ava_ont();
+    /// ```
+    pub fn ava_ont(self) -> Self {
+        self.preset(Preset::AvaOnt)
+    }
+
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to Short
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().short();
+    /// ```
+    pub fn short(self) -> Self {
+        self.preset(Preset::Short)
+    }
+
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to Map10k
+    /// ```
+    /// # use minimap2::*;
+    /// Aligner::builder().map10k();
+    /// ```
+    pub fn map10k(self) -> Self {
+        self.preset(Preset::Map10k)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to cdna
@@ -667,7 +699,7 @@ impl Aligner {
             seqs.len() == ids.len(),
             "Number of sequences and IDs must be equal"
         );
-        assert!(seqs.is_empty(), "Must have at least one sequence and ID");
+        assert!(!seqs.is_empty(), "Must have at least one sequence and ID");
 
         let seqs: Vec<std::ffi::CString> = seqs
             .iter()
