@@ -57,9 +57,10 @@ use libc::c_void;
 use minimap2_sys::*;
 
 #[cfg(feature = "map-file")]
-use flate2::read::GzDecoder;
-#[cfg(feature = "map-file")]
 use simdutf8::basic::from_utf8;
+
+#[cfg(feature = "map-file")]
+use needletail::{parse_fastx_file, Sequence, FastxReader};
 
 #[cfg(feature = "htslib")]
 pub mod htslib;
@@ -70,8 +71,6 @@ pub type MapOpt = mm_mapopt_t;
 /// Alias for mm_idxopt_t
 pub type IdxOpt = mm_idxopt_t;
 
-#[cfg(feature = "map-file")]
-use needletail::{parse_fastx_file, Sequence, FastxReader};
 
 // TODO: Probably a better way to handle this...
 /// C string constants for passing to minimap2
@@ -745,7 +744,7 @@ impl Aligner {
         cs: bool,
         md: bool, // TODO
         max_frag_len: Option<usize>,
-        extra_flags: Option<Vec<u64>>,
+        extra_flags: Option<&[u64]>,
     ) -> Result<Vec<Mapping>, &'static str> {
         // Make sure index is set
         if !self.has_index() {
@@ -771,7 +770,7 @@ impl Aligner {
         // if extra_flags is not None: map_opt.flag |= extra_flags
         if let Some(extra_flags) = extra_flags {
             for flag in extra_flags {
-                map_opt.flag |= flag as i64;
+                map_opt.flag |= *flag as i64;
             }
         }
 
@@ -1143,103 +1142,9 @@ pub enum FileFormat {
     FASTQ,
 }
 
-#[allow(dead_code)]
-#[cfg(feature = "map-file")]
-pub fn detect_file_format(buffer: &[u8]) -> Result<FileFormat, &'static str> {
-    let buffer = from_utf8(&buffer).expect("Unable to parse file as UTF-8");
-    if buffer.starts_with(">") {
-        Ok(FileFormat::FASTA)
-    } else if buffer.starts_with("@") {
-        Ok(FileFormat::FASTQ)
-    } else {
-        Err("Unknown file format")
-    }
-}
-
-#[derive(PartialEq, Eq, Debug)]
-pub enum CompressionType {
-    GZIP,
-    BZIP2,
-    XZ,
-    RAR,
-    ZSTD,
-    LZ4,
-    LZMA,
-    NONE,
-}
-
-/// Return the compression type of a file
-#[allow(dead_code)]
-pub fn detect_compression_format(buffer: &[u8]) -> Result<CompressionType, &'static str> {
-    Ok(match buffer {
-        [0x1F, 0x8B, ..] => CompressionType::GZIP,
-        [0x42, 0x5A, ..] => CompressionType::BZIP2,
-        [0xFD, b'7', b'z', b'X', b'Z', 0x00, ..] => CompressionType::XZ,
-        [0x28, 0xB5, 0x2F, 0xFD, ..] => CompressionType::LZMA,
-        [0x5D, 0x00, ..] => CompressionType::LZMA,
-        [0x1F, 0x9D, ..] => CompressionType::LZMA,
-        [0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C, ..] => CompressionType::ZSTD,
-        [0x04, 0x22, 0x4D, 0x18, ..] => CompressionType::LZ4,
-        [0x08, 0x22, 0x4D, 0x18, ..] => CompressionType::LZ4,
-        [0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, ..] => CompressionType::RAR,
-        _ => CompressionType::NONE,
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn compression_format_detections() {
-        let buf = [0x1F, 0x8B, 0x08, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF];
-        assert_eq!(
-            detect_compression_format(&buf).unwrap(),
-            CompressionType::GZIP
-        );
-
-        let buf = [0x42, 0x5A, 0x68, 0x39, 0x31, 0x41, 0x59, 0x26, 0x53, 0x59];
-        assert_eq!(
-            detect_compression_format(&buf).unwrap(),
-            CompressionType::BZIP2
-        );
-
-        let buf = [0x28, 0xB5, 0x2F, 0xFD, 0x37, 0x00, 0x00, 0x00, 0x00, 0x00];
-        assert_eq!(
-            detect_compression_format(&buf).unwrap(),
-            CompressionType::LZMA
-        );
-
-        let buf = [0x04, 0x22, 0x4D, 0x18, 0x40, 0x40, 0x00, 0x00, 0x00, 0x00];
-        assert_eq!(
-            detect_compression_format(&buf).unwrap(),
-            CompressionType::LZ4
-        );
-
-        let buf = [0x08, 0x22, 0x4D, 0x18, 0x40, 0x40, 0x00, 0x00, 0x00, 0x00];
-        assert_eq!(
-            detect_compression_format(&buf).unwrap(),
-            CompressionType::LZ4
-        );
-
-        let buf = [0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x00, 0x00, 0x00, 0x00];
-        assert_eq!(
-            detect_compression_format(&buf).unwrap(),
-            CompressionType::RAR
-        );
-
-        let buf = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-        assert_eq!(
-            detect_compression_format(&buf).unwrap(),
-            CompressionType::NONE
-        );
-
-        let buf = [0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C, 0x00, 0x00, 0x00, 0x00];
-        assert_eq!(
-            detect_compression_format(&buf).unwrap(),
-            CompressionType::ZSTD
-        );
-    }
 
     #[test]
     fn does_it_work() {
