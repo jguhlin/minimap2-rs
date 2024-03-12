@@ -161,6 +161,8 @@ and/or:
 * Mark bam::Record objects as supplementary. #52  @PB-DB
 * Only use rust-htslib/curl when curl feature is enabled. #53 @PB-DB
 * Update to minimap2 v2.27 @jguhlin
+* Switch to needletail for reading fast files (features map-file) @jguhlin
+
 
 ### 0.1.16 minimap2 2.26
 * Much better cross compilation support thanks to @Adoni5

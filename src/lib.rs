@@ -71,22 +71,25 @@ pub type MapOpt = mm_mapopt_t;
 pub type IdxOpt = mm_idxopt_t;
 
 #[cfg(feature = "map-file")]
-use fffx::{Fasta, Fastq, Sequence};
+use needletail::{parse_fastx_file, Sequence, FastxReader};
 
 // TODO: Probably a better way to handle this...
 /// C string constants for passing to minimap2
-static MAP_ONT: &str = "map-ont\0";
-static AVA_ONT: &str = "ava-ont\0";
-static MAP10K: &str = "map10k\0";
-static AVA_PB: &str = "ava-pb\0";
-static MAP_HIFI: &str = "map-hifi\0";
+static LRHQ: &str = "lr:hq\0";
+static SPLICE: &str = "splice\0";
+static SPLICEHQ: &str = "splice:hq\0";
 static ASM: &str = "asm\0";
 static ASM5: &str = "asm5\0";
 static ASM10: &str = "asm10\0";
 static ASM20: &str = "asm20\0";
-static SHORT: &str = "short\0";
 static SR: &str = "sr\0";
-static SPLICE: &str = "splice\0";
+static MAP_PB: &str = "map-pb\0";
+static MAP_HIFI: &str = "map-hifi\0";
+static MAP_ONT: &str = "map-ont\0";
+static AVA_PB: &str = "ava-pb\0";
+static AVA_ONT: &str = "ava-ont\0";
+static SHORT: &str = "short\0"; // These aren't listed in the command anymore, but are still available
+static MAP10K: &str = "map10k\0";
 static CDNA: &str = "cdna\0";
 
 /// Strand enum
@@ -840,7 +843,7 @@ impl Aligner {
                                 .collect::<Vec<(u32, u8)>>();
 
                             // Fix for adding in soft clipping cigar strings
-                            // TAken from minimap2 write_sam_cigar function
+                            // Taken from minimap2 write_sam_cigar function
                             // clip_len[0] = r->rev? qlen - r->qe : r->qs;
                             // clip_len[1] = r->rev? r->qs : qlen - r->qe;
 
@@ -1078,62 +1081,29 @@ impl Aligner {
             return Err("File is empty");
         }
 
-        // Read the first 50 bytes of the file
-        let mut f = std::fs::File::open(file).unwrap();
-        let mut buffer = [0; 50];
-        f.read_exact(&mut buffer).unwrap();
-        // Close the file
-        drop(f);
-
-        // Check if the file is gzipped
-        let compression_type = detect_compression_format(&buffer).unwrap();
-        if compression_type != CompressionType::NONE && compression_type != CompressionType::GZIP {
-            return Err("Compression type is not supported");
-        }
-
-        // If gzipped, open it with a reader...
-        let mut reader: Box<dyn Read> = if compression_type == CompressionType::GZIP {
-            Box::new(GzDecoder::new(std::fs::File::open(file).unwrap()))
-        } else {
-            Box::new(std::fs::File::open(file).unwrap())
-        };
-
-        // Check the file type
-        let mut buffer = [0; 4];
-        reader.read_exact(&mut buffer).unwrap();
-        let file_type = detect_file_format(&buffer).unwrap();
-        if file_type != FileFormat::FASTA && file_type != FileFormat::FASTQ {
-            return Err("File type is not supported");
-        }
-
-        // If gzipped, open it with a reader...
-        let reader: Box<dyn Read> = if compression_type == CompressionType::GZIP {
-            Box::new(GzDecoder::new(std::fs::File::open(file).unwrap()))
-        } else {
-            Box::new(std::fs::File::open(file).unwrap())
-        };
-
-        // Put into bufreader
-        let mut reader = std::io::BufReader::new(reader);
-
-        let reader: Box<dyn Iterator<Item = Result<Sequence, &'static str>>> =
-            if file_type == FileFormat::FASTA {
-                Box::new(Fasta::from_buffer(&mut reader))
-            } else {
-                Box::new(Fastq::from_buffer(&mut reader))
-            };
+        let mut reader = parse_fastx_file(&file).expect("Unable to read FASTA/X file");
 
         // The output vec
         let mut mappings = Vec::new();
 
         // Iterate over the sequences
-        for seq in reader {
-            let seq = seq.unwrap();
+        while let Some(record) = reader.next() {
+            let record = match record {
+                Ok(record) => record,
+                Err(_) => return Err("Error reading record in FASTA/X files. Please confirm integrity."),
+            };
+
             let mut seq_mappings = self
-                .map(&seq.sequence.unwrap(), cs, md, None, None)
+                .map(&record.seq(), cs, md, None, None)
                 .unwrap();
+
             for mapping in seq_mappings.iter_mut() {
-                mapping.query_name = seq.id.clone();
+                let id = record.id();
+                if id.len() > 0 {
+                    mapping.query_name = Some(from_utf8(id).unwrap().to_string());
+                } else {
+                    mapping.query_name = Some(format!("Unnamed Seq with Length: {}", record.seq().len()).to_string());
+                }
             }
 
             mappings.extend(seq_mappings);
