@@ -1144,6 +1144,12 @@ impl Aligner {
     }
 }
 
+mod send {
+    use crate::Aligner;
+    unsafe impl Sync for Aligner {}
+    unsafe impl Send for Aligner {}
+}
+
 /* TODO: This stopped working when we switched to not storing raw pointers but the structs themselves
 // Since Rust is now handling the structs, I think memory gets freed that way, maybe this is no longer
 // necessary?
@@ -1347,7 +1353,7 @@ mod tests {
         );
         assert_eq!(
             align.cigar_str,
-            Some(String::from("14M2D4M3I37M1D85M1D48MS9"))
+            Some(String::from("14M2D4M3I37M1D85M1D48M9S"))
         );
         assert_eq!(
             align.md,
@@ -1541,6 +1547,52 @@ mod tests {
         } else {
             panic!("Invalid output error not thrown");
         }
+    }
+
+    #[test]
+    fn test_send() {
+        let seq = "CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCGAAATTCTTTAACGGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
+        let query = "GGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTT";
+        let aligner = Aligner::builder().short();
+        let aligner = std::sync::Arc::new(aligner.with_seq(seq.as_bytes()).unwrap());
+        let alignments = aligner
+            .map(query.as_bytes(), false, false, None, None)
+            .unwrap();
+        assert_eq!(alignments.len(), 2);
+
+        let (send, recv) = std::sync::mpsc::channel::<Vec<Mapping>>();
+        let receiver = std::thread::spawn(move || -> Vec<Vec<Mapping>> {
+            let mut ret = Vec::new();
+            while let Ok(batch) = recv.recv() {
+                ret.push(batch);
+            }
+            ret
+        });
+        let new_send = send.clone();
+        let new_aligner = aligner.clone();
+        let sender = std::thread::spawn(move || {
+            new_send
+                .send(
+                    new_aligner
+                        .map(query.as_bytes(), false, false, None, None)
+                        .expect("Failed to map"),
+                )
+                .expect("Failed to send")
+        });
+        let new_sender = std::thread::spawn(move || {
+            send.send(
+                aligner
+                    .map(query.as_bytes(), false, false, None, None)
+                    .expect("Failed to map"),
+            )
+            .expect("Failed to send")
+        });
+        drop(sender);
+        drop(new_sender);
+        let received = receiver.join().unwrap();
+        assert_eq!(received[0], alignments);
+        assert_eq!(received[1], alignments);
+        assert_eq!(received.len(), 2);
     }
 
     #[test]
