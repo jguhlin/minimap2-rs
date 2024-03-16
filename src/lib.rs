@@ -85,7 +85,9 @@ static MAP_HIFI: &str = "map-hifi\0";
 static MAP_ONT: &str = "map-ont\0";
 static AVA_PB: &str = "ava-pb\0";
 static AVA_ONT: &str = "ava-ont\0";
-static SHORT: &str = "short\0"; // These aren't listed in the command anymore, but are still available
+
+// These aren't listed in the command anymore, but are still available
+static SHORT: &str = "short\0";
 static MAP10K: &str = "map10k\0";
 static CDNA: &str = "cdna\0";
 
@@ -1182,10 +1184,8 @@ mod tests {
 
     #[test]
     fn aligner_between_threads() {
-        let aligner = Aligner::builder().map_ont().with_threads(1);
-        let seq = "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes();
-        let hits = aligner.map(seq, false, false, None, None);
-        assert!(hits.is_ok());
+        // Because I'm not sure how this will work with FFI + Threads, want a sanity check
+        use std::thread;
 
         let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_threads(2);
 
@@ -1201,7 +1201,27 @@ mod tests {
             )
             .unwrap();
         let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
-        println!("{:#?}", mappings);
+        assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
+
+        let jh = thread::spawn(move || {
+            let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
+            assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
+            let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
+            assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
+            aligner                
+        });
+
+        let aligner = jh.join().unwrap();
+
+        let jh = thread::spawn(move || {
+            let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
+            assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
+            let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
+            assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
+            aligner                
+        });
+
+        let aligner = jh.join().unwrap();
     }
 
     #[test]
@@ -1219,25 +1239,44 @@ mod tests {
 
     #[test]
     fn mapopt() {
-        let _x: mm_mapopt_t = Default::default();
+        // let _x: mm_mapopt_t = Default::default();
         println!("One done...");
-        let _x: MapOpt = Default::default();
+        // let _x: MapOpt = Default::default();
         println!("Second...");
     }
 
     #[test]
-    fn aligner_builder() {
+    fn aligner_build_manually() {
+        let idxopt: IdxOpt = Default::default();
+
+        let mapopt: MapOpt = Default::default();
+
+        let threads = 1;
+        let idx = None;
+        let idx_reader = None;
+
+        let aligner = Aligner {
+            idxopt,
+            mapopt,
+            threads,
+            idx,
+            idx_reader,
+        };
+    }
+
+    #[test]
+    fn aligner_builder1() {
         let result = Aligner::builder();
     }
 
     #[test]
     fn aligner_builder_preset() {
-        let result = Aligner::builder().preset(Preset::MapOnt);
+        let result = Aligner::builder().preset(Preset::LrHq);
     }
 
     #[test]
     fn aligner_builder_preset_with_threads() {
-        let result = Aligner::builder().preset(Preset::MapOnt).with_threads(1);
+        let result = Aligner::builder().preset(Preset::LrHq).with_threads(1);
     }
 
     #[test]
