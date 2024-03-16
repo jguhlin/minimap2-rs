@@ -99,6 +99,17 @@ let mut aligner = Aligner::builder()
     .with_threads(8);
 ```
 
+### Experimental Rayon support
+This _appears_ to work.
+
+```rust
+use rayon::prelude::*;
+
+let results = sequences.par_iter().map(|seq| {
+    aligner.map(seq.as_bytes(), false, false, None, None).unwrap()
+}).collect::<Vec<_>>();
+```
+
 ## Features
 The following crate features are available:
 * `mm2-fast` - Replace minimap2 with [mm2-fast](https://github.com/bwa-mem2/mm2-fast). This is likely not portable.
@@ -165,6 +176,7 @@ and/or:
 * Convert functions to take slices of vectors instead of refs to vecs `&[Vec<u8>]` instead of `&Vec<Vec<u8>>` @jguhlin
 * _breaking_ Curl is no longer a default option for htslib, please re-enable it as needed with cargo.toml features
 * _breaking_ Now using needletail for map-files, enabled by default. However, compression algorithms are disabled. Please enable with cargo.toml features
+* Experimental rayon support
 
 ### 0.1.16 minimap2 2.26
 * Much better cross compilation support thanks to @Adoni5

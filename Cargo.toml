@@ -37,11 +37,11 @@ needletail = { version = "0.5.1", optional = true, default-features = false}
 
 # Dep for development
 # minimap2-sys = { path = "./minimap2-sys" }
-minimap2-sys = "0.1.17"
+minimap2-sys = "0.1.18"
 rust-htslib = { version = "0.46.0", default-features = false, optional = true }
 
 [dev-dependencies]
-# rayon = "1.9.0"
+rayon = "1.9.0"
 
 # The end-user should decide this...
 # [profile.release]
@@ -54,7 +54,6 @@ rust-htslib = { version = "0.46.0", default-features = false, optional = true }
 
 [features]
 default = ["map-file"]
-mm2-fast = ["minimap2-sys/mm2-fast"]
 sse2only = ["minimap2-sys/sse2only"]
 htslib = ['rust-htslib']
 simde = ["minimap2-sys/simde"]
