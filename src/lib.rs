@@ -1180,7 +1180,7 @@ pub enum FileFormat {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rayon::prelude::*;
+    use std::pin::Pin;
 
     #[test]
     fn aligner_between_threads() {
@@ -1234,22 +1234,28 @@ mod tests {
 
     #[test]
     fn idxopt() {
-        let _x: IdxOpt = Default::default();
+        let x: IdxOpt = Default::default();
     }
 
     #[test]
     fn mapopt() {
-        // let _x: mm_mapopt_t = Default::default();
+        let x: Pin<Box<mm_mapopt_t>> = Box::pin(Default::default());
         println!("One done...");
-        // let _x: MapOpt = Default::default();
-        println!("Second...");
+        drop(x);
+        println!("First dropped");
+        let x: MapOpt = Default::default();
+        println!("Second done...");
+        drop(x);
+        println!("Second dropped");
     }
 
     #[test]
     fn aligner_build_manually() {
-        let idxopt: IdxOpt = Default::default();
+        // let idxopt: IdxOpt = Default::default();
 
         let mapopt: MapOpt = Default::default();
+
+        /*
 
         let threads = 1;
         let idx = None;
@@ -1261,11 +1267,11 @@ mod tests {
             threads,
             idx,
             idx_reader,
-        };
+        }; */
     }
 
     #[test]
-    fn aligner_builder1() {
+    fn aligner_builder() {
         let result = Aligner::builder();
     }
 

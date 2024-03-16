@@ -163,6 +163,8 @@ and/or:
 * Update to minimap2 v2.27 @jguhlin
 * Switch to needletail for reading fast files (features map-file) @jguhlin
 * Convert functions to take slices of vectors instead of refs to vecs `&[Vec<u8>]` instead of `&Vec<Vec<u8>>` @jguhlin
+* _breaking_ Curl is no longer a default option for htslib, please re-enable it as needed with cargo.toml features
+* _breaking_ Now using needletail for map-files, enabled by default. However, compression algorithms are disabled. Please enable with cargo.toml features
 
 ### 0.1.16 minimap2 2.26
 * Much better cross compilation support thanks to @Adoni5

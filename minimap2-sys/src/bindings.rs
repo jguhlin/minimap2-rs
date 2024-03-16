@@ -7400,6 +7400,7 @@ pub struct mm_mapopt_t {
     pub cap_kalloc: i64,
     pub split_prefix: *const ::std::os::raw::c_char,
 }
+
 #[test]
 fn bindgen_test_layout_mm_mapopt_t() {
     const UNINIT: ::std::mem::MaybeUninit<mm_mapopt_t> = ::std::mem::MaybeUninit::uninit();

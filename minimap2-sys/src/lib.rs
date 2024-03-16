@@ -8,8 +8,6 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 #[cfg(all(not(feature = "bindgen")))]
 include!("bindings.rs");
 
-use libz_sys::*;
-
 unsafe impl Send for mm_idx_t {}
 unsafe impl Send for mm_idx_reader_t {}
 unsafe impl Send for mm_mapopt_t {}
@@ -60,6 +58,11 @@ mod tests {
 
     #[test]
     fn mapopt() {
-        let _x: mm_mapopt_t = Default::default();
+        let x: mm_mapopt_t = Default::default();
+    }
+
+    #[test]
+    fn idxopt() {
+        let x: mm_idxopt_t = Default::default();
     }
 }
