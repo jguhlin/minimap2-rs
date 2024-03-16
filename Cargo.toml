@@ -49,8 +49,8 @@ rust-htslib = { version = "0.46.0", default-features = false, optional = true }
 # lto = "fat"
 # codegen-units  = 1
 
-[profile.dev.package."*"]
-opt-level = 3
+# [profile.dev.package."*"]
+# opt-level = 3
 
 [features]
 default = ["map-file"]

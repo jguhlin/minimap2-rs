@@ -286,7 +286,7 @@ impl Default for ThreadLocalBuffer {
 /// Aligner::builder();
 /// ```
 
-#[derive(Clone)]
+// #[derive(Clone)]
 pub struct Aligner {
     /// Index options passed to minimap2 (mm_idxopt_t)
     pub idxopt: IdxOpt,
@@ -787,7 +787,7 @@ impl Aligner {
 
         // Number of results
         let mut n_regs: i32 = 0;
-        let mut map_opt = self.mapopt;
+        let mut map_opt = self.mapopt.clone();
 
         // if max_frag_len is not None: map_opt.max_frag_len = max_frag_len
         if let Some(max_frag_len) = max_frag_len {
@@ -1239,23 +1239,15 @@ mod tests {
 
     #[test]
     fn mapopt() {
-        let x: Pin<Box<mm_mapopt_t>> = Box::pin(Default::default());
-        println!("One done...");
-        drop(x);
-        println!("First dropped");
-        let x: MapOpt = Default::default();
-        println!("Second done...");
-        drop(x);
-        println!("Second dropped");
+        let x: mm_mapopt_t = Default::default();
+        let y: MapOpt = Default::default();
     }
 
     #[test]
     fn aligner_build_manually() {
-        // let idxopt: IdxOpt = Default::default();
+        let idxopt: IdxOpt = Default::default();
 
         let mapopt: MapOpt = Default::default();
-
-        /*
 
         let threads = 1;
         let idx = None;
@@ -1267,7 +1259,7 @@ mod tests {
             threads,
             idx,
             idx_reader,
-        }; */
+        };
     }
 
     #[test]

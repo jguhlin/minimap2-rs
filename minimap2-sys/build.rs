@@ -233,8 +233,8 @@ fn gen_bindings() {
     let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
     let mut bindgen = bindgen::Builder::default()
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
-        .rustfmt_bindings(true);
+    .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+    .rustfmt_bindings(true);
 
     #[cfg(not(feature = "mm2-fast"))]
     let mut bindgen = bindgen.header("mm2-fast.h");
