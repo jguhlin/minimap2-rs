@@ -177,6 +177,7 @@ and/or:
 * _breaking_ Curl is no longer a default option for htslib, please re-enable it as needed with cargo.toml features
 * _breaking_ Now using needletail for map-files, enabled by default. However, compression algorithms are disabled. Please enable with cargo.toml features
 * Experimental rayon support
+* aligner.with_cigar_clipping() to add soft clipping to the CIGAR vec (with_cigar() still adds to only the string, following the minimap2 outputs for PAF)
 
 ### 0.1.16 minimap2 2.26
 * Much better cross compilation support thanks to @Adoni5

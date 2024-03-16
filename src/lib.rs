@@ -302,6 +302,9 @@ pub struct Aligner {
 
     /// Index reader created by minimap2
     pub idx_reader: Option<mm_idx_reader_t>,
+
+    /// Whether to add soft clipping to CIGAR result
+    pub cigar_clipping: bool,
 }
 
 /// Create a default aligner
@@ -313,6 +316,7 @@ impl Default for Aligner {
             threads: 1,
             idx: None,
             idx_reader: None,
+            cigar_clipping: false,
         }
     }
 }
@@ -498,6 +502,11 @@ impl Aligner {
         assert!((self.mapopt.flag & MM_F_CIGAR as i64) == 0);
 
         self.mapopt.flag |= MM_F_CIGAR as i64;
+        self
+    }
+
+    pub fn with_cigar_clipping(mut self) -> Self {
+        self.cigar_clipping = true;       
         self
     }
 
@@ -860,7 +869,7 @@ impl Aligner {
 
                         // Create a vector of the cigar blocks
                         let (cigar, cigar_str) = if n_cigar > 0 {
-                            let cigar = p
+                            let mut cigar = p
                                 .cigar
                                 .as_slice(n_cigar as usize)
                                 .to_vec()
@@ -917,13 +926,19 @@ impl Aligner {
                             // TODO: Support hard clipping
                             let clip_char = 'S';
 
-                            // Append soft clip identifiers to start and end
+                            // Pre and append soft clip identifiers to start and end
                             if clip_len0 > 0 {
                                 cigar_str = format!("{}{}{}", clip_len0, cigar_str, clip_char);
+                                if self.cigar_clipping {
+                                    cigar.insert(0, (clip_len0 as u32, 4_u8));
+                                }
                             }
 
                             if clip_len1 > 0 {
                                 cigar_str = format!("{}{}{}", cigar_str, clip_len1, clip_char);
+                                if self.cigar_clipping {
+                                    cigar.push((clip_len1 as u32, 4_u8));
+                                }
                             }
 
                             (Some(cigar), Some(cigar_str))
@@ -1180,7 +1195,6 @@ pub enum FileFormat {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::pin::Pin;
 
     #[test]
     fn aligner_between_threads() {
@@ -1270,14 +1284,13 @@ mod tests {
         // Because I'm not sure how this will work with FFI + Threads, want a sanity check
         use rayon::prelude::*;
 
-        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_threads(2);
+        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_threads(2).with_cigar();
 
         aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
 
         let sequences = vec![
             "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA",
             "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA",
-            "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA","ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA",
             "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA",
             "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA",
             "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA",
@@ -1288,6 +1301,8 @@ mod tests {
             "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA",
             "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA",
             "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA",
+            "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA",
+            "GTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGG",
             "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAG",
         ];
 
@@ -1332,6 +1347,7 @@ mod tests {
             threads,
             idx,
             idx_reader,
+            cigar_clipping: false,
         };
     }
 
@@ -1445,7 +1461,7 @@ mod tests {
 
     #[test]
     fn test_mappy_output() {
-        let aligner = Aligner::builder()
+        let mut aligner = Aligner::builder()
             .preset(Preset::MapOnt)
             .with_threads(1)
             .with_index("test_data/MT-human.fa", None)
@@ -1497,6 +1513,70 @@ mod tests {
             ))
         );
         assert_eq!(align.cs, Some(String::from(":14-cc:1*ct:2+atc:9*ag:12*tc:1*ac:7*tc:4-t:1*ag:48*ag:2*ag:21*tc*tc:8-t:2*ag:5*tc:2*ag:4*ct*ac*ct:2*tc*ct:2*ag:4*ag:17")));
+
+        aligner = aligner.with_cigar_clipping();
+        let mut mappings = aligner.map(
+            b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGTTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG",
+                    true, true, None, None).unwrap();
+                assert_eq!(mappings.len(), 1);
+        
+                let observed = mappings.pop().unwrap();
+        
+                assert_eq!(observed.target_name, Some(String::from("MT_human")));
+                assert_eq!(observed.target_start, 576);
+                assert_eq!(observed.target_end, 768);
+                assert_eq!(observed.query_start, 0);
+                assert_eq!(observed.query_end, 191);
+                assert_eq!(observed.mapq, 29);
+                assert_eq!(observed.match_len, 168);
+                assert_eq!(observed.block_len, 195);
+                assert_eq!(observed.strand, Strand::Forward);
+                assert_eq!(observed.is_primary, true);
+        
+                let align = observed.alignment.as_ref().unwrap();
+                assert_eq!(align.nm, 27);
+                assert_eq!(
+                    align.cigar,
+                    Some(vec![
+                        (14, 0),
+                        (2, 2),
+                        (4, 0),
+                        (3, 1),
+                        (37, 0),
+                        (1, 2),
+                        (85, 0),
+                        (1, 2),
+                        (48, 0),
+                        (9, 4)
+                    ])
+                );
+                assert_eq!(
+                    align.cigar_str,
+                    Some(String::from("14M2D4M3I37M1D85M1D48M9S"))
+                );
+
+                let mut mappings = aligner.map(
+                    b"TTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG",
+                            true, true, None, None).unwrap();
+                        assert_eq!(mappings.len(), 1);
+                
+                        let observed = mappings.pop().unwrap();
+                
+                        assert_eq!(
+                            align.cigar,
+                            Some(vec![
+                                (14, 0),
+                                (2, 2),
+                                (4, 0),
+                                (3, 1),
+                                (37, 0),
+                                (1, 2),
+                                (85, 0),
+                                (1, 2),
+                                (48, 0),
+                                (9, 4)
+                            ])
+                        );
     }
 
     #[test]
