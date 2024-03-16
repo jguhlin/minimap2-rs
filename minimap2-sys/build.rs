@@ -1,63 +1,7 @@
 use std::env;
 use std::path::PathBuf;
 
-// Configure for mm2-fast
-#[cfg(feature = "mm2-fast")]
-fn configure(mut cc: &mut cc::Build) {
-    println!("cargo:rerun-if-changed=mm2-fast/*.c");
-
-    // mm2-fast is compiled with c++
-    cc.cpp(true);
-    cc.include("mm2-fast");
-    cc.include("mm2-fast/ext/TAL/src/chaining/");
-    cc.include("mm2-fast/ext/TAL/src/");
-    cc.include("ext/TAL/src/chaining/");
-    cc.target("native");
-    cc.flag("-march=native");
-    cc.flag("-DPARALLEL_CHAINING");
-    cc.flag("-DALIGN_AVX");
-    cc.flag("-DAPPLY_AVX2");
-    cc.opt_level(3);
-
-    #[cfg(feature = "simde")]
-    simde(&mut cc);
-
-    let files: Vec<_> = std::fs::read_dir("mm2-fast")
-        .unwrap()
-        .map(|f| f.unwrap().path())
-        .collect();
-
-    assert!(files.len() != 0, "No files found in mm2-fast directory -- Make sure to clone recursively. git submodule init --recursive");
-
-    cc.file("mm2-fast/map.c");
-
-    cc.file("mm2_fast_glue.c");
-
-    for file in files {
-        // Skip "main.c" and "example.c"
-        // For mm2fast also skip map.c...
-        if file.file_name().unwrap() == "example.c"
-            || file.file_name().unwrap() == "main.c"
-            || file.file_name().unwrap() == "map.c"
-        {
-            continue;
-        }
-
-        // Ignore all "neon"
-        if file.file_name().unwrap().to_str().unwrap().contains("neon") {
-            continue;
-        }
-
-        if let Some(x) = file.extension() {
-            if x == "c" {
-                cc.file(file);
-            }
-        }
-    }
-}
-
 // Configure for minimap2
-#[cfg(not(feature = "mm2-fast"))] // mm2-fast not defined
 fn configure(mut cc: &mut cc::Build) {
     println!("cargo:rerun-if-changed=minimap2/*.c");
 
@@ -236,12 +180,8 @@ fn gen_bindings() {
     .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
     .rustfmt_bindings(true);
 
-    #[cfg(not(feature = "mm2-fast"))]
-    let mut bindgen = bindgen.header("mm2-fast.h");
-
-    #[cfg(feature = "mm2-fast")]
     let mut bindgen = bindgen.header("minimap2.h");
-
+   
     bindgen
         .generate_cstr(true)
         .generate()
