@@ -23,7 +23,7 @@
 //! use minimap2::{Aligner, Preset};
 //! let mut aligner = Aligner::builder()
 //! .map_ont()
-//! .with_threads(8)
+//! .with_index_threads(8)
 //! .with_cigar()
 //! .with_index("ReferenceFile.fasta", None)
 //! .expect("Unable to build index");
@@ -529,11 +529,11 @@ impl Aligner {
     /// Sets the number of threads minimap2 will use for building the index
     /// ```
     /// # use minimap2::*;
-    /// Aligner::builder().with_threads(10);
+    /// Aligner::builder().with_index_threads(10);
     /// ```
     ///
     /// Set the number of threads (prefer to use the struct config)
-    pub fn with_threads(mut self, threads: usize) -> Self {
+    pub fn with_index_threads(mut self, threads: usize) -> Self {
         self.threads = threads;
         self
     }
@@ -1201,7 +1201,7 @@ mod tests {
         // Because I'm not sure how this will work with FFI + Threads, want a sanity check
         use std::thread;
 
-        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_threads(2);
+        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_index_threads(2);
 
         aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
 
@@ -1244,7 +1244,7 @@ mod tests {
         use std::thread;
         use std::sync::Arc;
 
-        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_threads(2);
+        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_index_threads(2);
 
         aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
         let aligner = Arc::new(aligner);
@@ -1284,7 +1284,7 @@ mod tests {
         // Because I'm not sure how this will work with FFI + Threads, want a sanity check
         use rayon::prelude::*;
 
-        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_threads(2).with_cigar();
+        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_index_threads(2).with_cigar();
 
         aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
 
@@ -1363,14 +1363,14 @@ mod tests {
 
     #[test]
     fn aligner_builder_preset_with_threads() {
-        let result = Aligner::builder().preset(Preset::LrHq).with_threads(1);
+        let result = Aligner::builder().preset(Preset::LrHq).with_index_threads(1);
     }
 
     #[test]
     fn create_index_file_missing() {
         let result = Aligner::builder()
             .preset(Preset::MapOnt)
-            .with_threads(1)
+            .with_index_threads(1)
             .with_index(
                 "test_data/test.fa_FILE_NOT_FOUND",
                 Some("test_FILE_NOT_FOUND.mmi"),
@@ -1380,7 +1380,7 @@ mod tests {
 
     #[test]
     fn create_index() {
-        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_threads(1);
+        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_index_threads(1);
 
         println!("{}", aligner.idxopt.w);
 
@@ -1398,7 +1398,7 @@ mod tests {
 
     #[test]
     fn test_mapping() {
-        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_threads(2);
+        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_index_threads(2);
 
         aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
 
@@ -1440,7 +1440,7 @@ mod tests {
 
     #[test]
     fn test_aligner_config_and_mapping() {
-        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_threads(2);
+        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_index_threads(2);
         aligner = aligner
             .with_index("test_data/test_data.fasta", Some("test.mmi"))
             .unwrap()
@@ -1463,7 +1463,7 @@ mod tests {
     fn test_mappy_output() {
         let mut aligner = Aligner::builder()
             .preset(Preset::MapOnt)
-            .with_threads(1)
+            .with_index_threads(1)
             .with_index("test_data/MT-human.fa", None)
             .unwrap()
             .with_cigar();
@@ -1583,7 +1583,7 @@ mod tests {
     fn test_mappy_output_no_md() {
         let aligner = Aligner::builder()
             .preset(Preset::MapOnt)
-            .with_threads(1)
+            .with_index_threads(1)
             .with_index("test_data/MT-human.fa", None)
             .unwrap()
             .with_cigar();

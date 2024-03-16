@@ -12,14 +12,11 @@ minimap2-sys is the library of the raw FFI bindings to minimap2. minimap2 is the
 # How to use
 ## Requirements
 ```toml
-minimap2 = "0.1.14+minimap2.2.26"
+minimap2 = "0.1.17+minimap2.2.27"
 ```
 Also see [Features](#features)
 
 Tested with rustc 1.64.0 and nightly. So probably a good idea to upgrade before running. But let me know if you run into pain points with older versions and will try to fix!
-```bash
-rustup update
-```
 
 ## Usage
 Create an Aligner 
@@ -96,7 +93,7 @@ Multithreading is supported, for implementation example see [fakeminimap2](https
 ```rust
 let mut aligner = Aligner::builder()
     .map_ont()
-    .with_threads(8);
+    .with_index_threads(8);
 ```
 
 ### Experimental Rayon support
@@ -178,6 +175,7 @@ and/or:
 * _breaking_ Now using needletail for map-files, enabled by default. However, compression algorithms are disabled. Please enable with cargo.toml features
 * Experimental rayon support
 * aligner.with_cigar_clipping() to add soft clipping to the CIGAR vec (with_cigar() still adds to only the string, following the minimap2 outputs for PAF)
+* _breaking_ .with_threads(_) is now .with_index_threads(_) to make it more clear
 
 ### 0.1.16 minimap2 2.26
 * Much better cross compilation support thanks to @Adoni5
