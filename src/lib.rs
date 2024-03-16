@@ -286,7 +286,7 @@ impl Default for ThreadLocalBuffer {
 /// Aligner::builder();
 /// ```
 
-// #[derive(Clone)]
+#[derive(Clone)]
 pub struct Aligner {
     /// Index options passed to minimap2 (mm_idxopt_t)
     pub idxopt: IdxOpt,
@@ -534,6 +534,12 @@ impl Aligner {
     ///
     /// Set the number of threads (prefer to use the struct config)
     pub fn with_index_threads(mut self, threads: usize) -> Self {
+        self.threads = threads;
+        self
+    }
+
+    #[deprecated(since="0.1.17", note="Please use `with_index_threads` instead")]
+    pub fn with_threads(mut self, threads: usize) -> Self {
         self.threads = threads;
         self
     }

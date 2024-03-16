@@ -7,12 +7,13 @@ edition = "2021"
 
 [dependencies]
 minimap2 = "0.1.16+minimap2.2.26"
-crossbeam = "0.8.2"
+# minimap2 = { path = "../" }
+crossbeam = "0.8.4"
 needletail = "0.5.1"
 fern = { version = "0.6.2", features = ["colored", "chrono"] }
 humantime = "2.1.0"
-log = "0.4.20"
-colored = { version = "2.0.4", features = ["no-color"] }
+log = "0.4.21"
+colored = { version = "2.1.0", features = ["no-color"] }
 
 [profile.release]
 opt-level = 3
