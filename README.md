@@ -5,7 +5,6 @@ A rust FFI library for [minimap2](https://github.com/lh3/minimap2/). In developm
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/jguhlin/minimap2-rs/tree/main.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/jguhlin/minimap2-rs/tree/main)
 [![codecov](https://codecov.io/gh/jguhlin/minimap2-rs/branch/main/graph/badge.svg?token=huw27ZC6Qy)](https://codecov.io/gh/jguhlin/minimap2-rs)
 
-
 # Structure
 minimap2-sys is the library of the raw FFI bindings to minimap2. minimap2 is the more rusty version.
 
@@ -116,6 +115,12 @@ The following crate features are available:
 * `sse2only` - Compiles for SSE2 support only (Default is to try to compile for SSE4.1, SSE2 only is default on aarch64)
 
 Map-file is a *default* feature and enabled unless otherwise specified.
+
+## Missing Features
+* setting mismatch penalty for base transitions [minimap 2.27 release notes](https://github.com/lh3/minimap2/releases/tag/v2.27)
+* Generate ds tags to indicate uncertainty in indels
+
+Potentially more, but I'm using this to keep track. I'd expect those would get implemented over time, but if you have urgent need open a pull request or an issue! Thanks
 
 ## Building for MUSL
 Follow these [instructions](https://github.com/rust-cross/rust-musl-cross#prebuilt-images).
