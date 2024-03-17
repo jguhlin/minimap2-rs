@@ -157,7 +157,7 @@ impl Aligner {
     }
 
     /// Set the number of threads for minimap2 to use to build index and perform mapping
-    fn threads(&mut self, threads: usize) {
+    fn index_threads(&mut self, threads: usize) {
         self.aligner.threads = threads;
     }
 
@@ -174,6 +174,39 @@ impl Aligner {
     /// Enable CIGAR strings
     fn cigar(&mut self) {
         self.aligner.mapopt.flag |= MM_F_CIGAR as i64;
+    }
+
+    fn lrhq(&mut self) {
+        self.preset(Preset::LrHq);
+    }
+
+    /// Configure Aligner for Splice
+    fn splice(&mut self) {
+        self.preset(Preset::Splice);
+    }
+
+    /// Configure Aligner for Splice
+    fn splicehq(&mut self) {
+        self.preset(Preset::SpliceHq);
+    }
+    /// Configure aligner for Asm
+    fn asm(&mut self) {
+        self.preset(Preset::Asm);
+    }
+
+    /// Configure Aligner for Asm5
+    fn asm5(&mut self) {
+        self.preset(Preset::Asm5);
+    }
+
+    /// Configure Aligner for Asm10
+    fn asm10(&mut self) {
+        self.preset(Preset::Asm10);
+    }
+
+    /// Configure Aligner for Asm20
+    fn asm20(&mut self) {
+        self.preset(Preset::Asm20);
     }
 
     // Convenience Functions, at the bottom, because it pollutes the namespace
@@ -202,26 +235,6 @@ impl Aligner {
         self.preset(Preset::AvaPb);
     }
 
-    /// Configure aligner for Asm
-    fn asm(&mut self) {
-        self.preset(Preset::Asm);
-    }
-
-    /// Configure Aligner for Asm5
-    fn asm5(&mut self) {
-        self.preset(Preset::Asm5);
-    }
-
-    /// Configure Aligner for Asm10
-    fn asm10(&mut self) {
-        self.preset(Preset::Asm10);
-    }
-
-    /// Configure Aligner for Asm20
-    fn asm20(&mut self) {
-        self.preset(Preset::Asm20);
-    }
-
     /// Configure Aligner for Short
     fn short(&mut self) {
         self.preset(Preset::Short);
@@ -232,10 +245,8 @@ impl Aligner {
         self.preset(Preset::Sr);
     }
 
-    /// Configure Aligner for Splice
-    fn splice(&mut self) {
-        self.preset(Preset::Splice);
-    }
+
+
 
     /// Configure Aligner for Cdna
     fn cdna(&mut self) {

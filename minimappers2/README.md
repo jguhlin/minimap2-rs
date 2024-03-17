@@ -111,6 +111,10 @@ and/or:
 > *Bioinformatics*, **37**:4572-4574. [doi:10.1093/bioinformatics/btab705][doi2]
 
 # Changelog
+## 0.1.5 
+* Updated minimap2-rs, polars, pyo3 deps
+* Add new presets
+
 ## 0.1.4 
 * Update pyo3, polars, minimap2-rs, and mimalloc deps
 
