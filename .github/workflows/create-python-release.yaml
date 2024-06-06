@@ -26,7 +26,7 @@ jobs:
           MATURIN_PASSWORD: ${{ secrets.PYPI_PASS }}
           RUSTFLAGS: -C target-feature=+fxsr,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+fma
         with:
-          rust-toolchain: '1.75.0'
+          rust-toolchain: nightly-2024-02-04
           maturin-version: '1.6.0'
           command: publish
           args: -m minimappers2/Cargo.toml --skip-existing -o wheels -u jguhlin
