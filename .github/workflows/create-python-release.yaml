@@ -15,19 +15,19 @@ jobs:
   manylinux-x64_64:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.7'
 
       - name: Publish wheel
-        uses: messense/maturin-action@v1
+        uses: PyO3/maturin-action@v1
         env:
           MATURIN_PASSWORD: ${{ secrets.PYPI_PASS }}
           RUSTFLAGS: -C target-feature=+fxsr,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+fma
         with:
-          rust-toolchain: nightly-2023-08-22
-          maturin-version: '1.2.3'
+          rust-toolchain: '1.75.0'
+          maturin-version: '1.6.0'
           command: publish
           args: -m minimappers2/Cargo.toml --skip-existing -o wheels -u jguhlin
 
