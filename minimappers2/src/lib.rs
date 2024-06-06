@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use crossbeam::queue::ArrayQueue;
 use mimalloc::MiMalloc;
 use minimap2::*;
-use minimap2_sys::{mm_set_opt, MM_F_CIGAR};
+
 use polars::{df, prelude::*};
 use pyo3::prelude::*;
 use pyo3_polars::{error::PyPolarsErr, PyDataFrame};
@@ -173,11 +173,17 @@ impl Aligner {
 
     /// Enable CIGAR strings
     fn cigar(&mut self) {
-        self.aligner.mapopt.flag |= MM_F_CIGAR as i64;
+        // todo inefficient
+        let aligner = self.aligner.clone();
+        self.aligner = aligner.with_cigar();
     }
 
     fn lrhq(&mut self) {
         self.preset(Preset::LrHq);
+    }
+
+    fn lrhqae(&mut self) {
+        self.preset(Preset::LrHqae);
     }
 
     /// Configure Aligner for Splice
@@ -245,9 +251,6 @@ impl Aligner {
         self.preset(Preset::Sr);
     }
 
-
-
-
     /// Configure Aligner for Cdna
     fn cdna(&mut self) {
         self.preset(Preset::Cdna);
@@ -257,16 +260,9 @@ impl Aligner {
 impl Aligner {
     /// Create an aligner using a preset.
     fn preset(&mut self, preset: Preset) {
-        let mut idxopt = IdxOpt::default();
-        let mut mapopt = MapOpt::default();
-
-        unsafe {
-            // Set preset
-            mm_set_opt(preset.into(), &mut idxopt, &mut mapopt)
-        };
-
-        self.aligner.idxopt = idxopt;
-        self.aligner.mapopt = mapopt;
+        // Set preset
+        let aligner = self.aligner.clone();
+        self.aligner = aligner.preset(preset);
     }
 }
 
@@ -277,6 +273,22 @@ impl Drop for Aligner {
 
   }
 } */
+
+/// Return an LrHq aligner
+#[pyfunction]
+fn lrhq() -> PyResult<Aligner> {
+    let mut aligner = Aligner::new();
+    aligner.lrhq();
+    Ok(aligner)
+}
+
+/// Return an LrHqae aligner
+#[pyfunction]
+fn lrhqae() -> PyResult<Aligner> {
+    let mut aligner = Aligner::new();
+    aligner.lrhqae();
+    Ok(aligner)
+}
 
 /// Return a MapOnt aligner
 #[pyfunction]
@@ -387,6 +399,8 @@ fn cdna() -> PyResult<Aligner> {
 fn minimappers2(py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<Sequence>()?;
     m.add_class::<Aligner>()?;
+    m.add_function(wrap_pyfunction!(lrhq, m)?)?;
+    m.add_function(wrap_pyfunction!(lrhqae, m)?)?;
     m.add_function(wrap_pyfunction!(map_ont, m)?)?;
     m.add_function(wrap_pyfunction!(map_hifi, m)?)?;
     m.add_function(wrap_pyfunction!(ava_ont, m)?)?;
