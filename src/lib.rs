@@ -72,6 +72,7 @@ pub type IdxOpt = mm_idxopt_t;
 
 // TODO: Probably a better way to handle this...
 /// C string constants for passing to minimap2
+static LRHQAE: &str = "lr:hqae\0";
 static LRHQ: &str = "lr:hq\0";
 static SPLICE: &str = "splice\0";
 static SPLICEHQ: &str = "splice:hq\0";
@@ -111,6 +112,7 @@ impl std::fmt::Display for Strand {
 /// Preset's for minimap2 config
 #[derive(Debug, Clone)]
 pub enum Preset {
+    LrHqae,
     LrHq,
     Splice,
     SpliceHq,
@@ -133,6 +135,7 @@ pub enum Preset {
 impl From<Preset> for *const i8 {
     fn from(preset: Preset) -> Self {
         match preset {
+            Preset::LrHqae => LRHQAE.as_bytes().as_ptr() as *const i8,
             Preset::LrHq => LRHQ.as_bytes().as_ptr() as *const i8,
             Preset::Splice => SPLICE.as_bytes().as_ptr() as *const i8,
             Preset::SpliceHq => SPLICEHQ.as_bytes().as_ptr() as *const i8,
@@ -157,6 +160,7 @@ impl From<Preset> for *const i8 {
 impl From<Preset> for *const u8 {
     fn from(preset: Preset) -> Self {
         match preset {
+            Preset::LrHqae => LRHQAE.as_bytes().as_ptr(),
             Preset::LrHq => LRHQ.as_bytes().as_ptr(),
             Preset::Splice => SPLICE.as_bytes().as_ptr(),
             Preset::SpliceHq => SPLICEHQ.as_bytes().as_ptr(),

@@ -1,6 +1,6 @@
 [package]
 name = "minimap2"
-version = "0.1.17+minimap2.2.27"
+version = "0.1.18+minimap2.2.28"
 edition = "2021"
 authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
 license = "MIT OR Apache-2.0"
@@ -31,17 +31,17 @@ exclude = [
 ]
 
 [dependencies]
-libc = "0.2.153"
-simdutf8 = {version = "0.1.4", optional = true}
-needletail = { version = "0.5.1", optional = true, default-features = false}
+libc = "0.2"
+simdutf8 = {version = "0.1", optional = true}
+needletail = { version = "0.5", optional = true, default-features = false}
 
 # Dep for development
 # minimap2-sys = { path = "./minimap2-sys" }
-minimap2-sys = "0.1.18"
-rust-htslib = { version = "0.46.0", default-features = false, optional = true }
+minimap2-sys = "0.1.19"
+rust-htslib = { version = "0.47", default-features = false, optional = true }
 
 [dev-dependencies]
-rayon = "1.9.0"
+rayon = "1.10"
 
 # The end-user should decide this...
 # [profile.release]

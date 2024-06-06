@@ -11,11 +11,18 @@ minimap2-sys is the library of the raw FFI bindings to minimap2. minimap2 is the
 # How to use
 ## Requirements
 ```toml
-minimap2 = "0.1.17+minimap2.2.27"
+minimap2 = "0.1.18+minimap2.2.28"
 ```
 Also see [Features](#features)
 
 Tested with rustc 1.64.0 and nightly. So probably a good idea to upgrade before running. But let me know if you run into pain points with older versions and will try to fix!
+
+## Minimap2 Version Table
+| minimap2-rs | minimap2 |
+|-------------|----------|
+| 0.1.18      | 2.28     |
+| 0.1.17      | 2.27     |
+| 0.1.16      | 2.26     |
 
 ## Usage
 Create an Aligner 
@@ -170,6 +177,10 @@ and/or:
 > *Bioinformatics*, **37**:4572-4574. [doi:10.1093/bioinformatics/btab705][doi2]
 
 # Changelog
+### 0.1.18 minimap2 2.28
++ Update to minimap2 v2.28 @jguhlin
++ Support for lrhqae preset @jguhlin
+
 ### 0.1.17 minimap2 2.27
 * Mark bam::Record objects as supplementary. #52  @PB-DB
 * Only use rust-htslib/curl when curl feature is enabled. #53 @PB-DB
