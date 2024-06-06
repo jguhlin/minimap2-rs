@@ -600,7 +600,7 @@ mod tests {
         assert_eq!(o.inner().core.l_qname, e.inner().core.l_qname);
         assert_eq!(o.inner().core.n_cigar, e.inner().core.n_cigar);
         assert_eq!(o.inner().core.l_qseq, e.inner().core.l_qseq);
-        assert_eq!(o.inner().core.isize, e.inner().core.isize);
+        assert_eq!(o.inner().core.isize_, e.inner().core.isize_);
     }
 
     #[test]
