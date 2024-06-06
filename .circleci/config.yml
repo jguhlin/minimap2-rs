@@ -19,7 +19,8 @@ jobs:
       - image: cimg/rust:1.77.2
     steps:
       - checkout
-      - run: sudo apt install clang
+      - run: sudo apt update
+      - run: sudo apt install clang libclang-dev zlib1g-dev -y
       - run: git submodule sync --recursive
       - run: git submodule update --init --recursive
       - restore_cache:
