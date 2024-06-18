@@ -48,6 +48,7 @@ use std::cell::RefCell;
 
 use std::mem::MaybeUninit;
 use std::num::NonZeroI32;
+use std::ops::DerefMut;
 use std::path::Path;
 
 use std::os::unix::ffi::OsStrExt;
@@ -298,7 +299,7 @@ pub struct Aligner {
     pub threads: usize,
 
     /// Index created by minimap2
-    pub idx: Option<mm_idx_t>,
+    pub idx: Option<*mut mm_idx_t>,
 
     /// Index reader created by minimap2
     pub idx_reader: Option<mm_idx_reader_t>,
@@ -632,7 +633,7 @@ impl Aligner {
             mm_idx_index_name(idx.assume_init());
         }
 
-        self.idx = Some(unsafe { *idx.assume_init() });
+        self.idx = Some(unsafe { idx.assume_init() });
 
         Ok(())
     }
@@ -762,7 +763,7 @@ impl Aligner {
             }
         });
 
-        self.idx = Some(unsafe { *idx.assume_init() });
+        self.idx = Some(unsafe { idx.assume_init() });
         self.mapopt.mid_occ = 1000;
 
         Ok(self)
@@ -843,7 +844,7 @@ impl Aligner {
                 ))]
                 {
                     mm_map(
-                        self.idx.as_ref().unwrap() as *const mm_idx_t,
+                        self.idx.unwrap() as *const mm_idx_t,
                         seq.len() as i32,
                         seq.as_ptr() as *const i8,
                         &mut n_regs,
@@ -862,7 +863,7 @@ impl Aligner {
                     let reg: mm_reg1_t = *reg_ptr;
 
                     let contig: *mut ::std::os::raw::c_char =
-                        (*(self.idx.unwrap()).seq.offset(reg.rid as isize)).name;
+                        (*((*(self.idx.unwrap())).seq.offset(reg.rid as isize))).name;
 
                     let is_primary = reg.parent == reg.id;
                     let is_supplementary = reg.sam_pri() == 0;
@@ -988,7 +989,7 @@ impl Aligner {
                                         km,
                                         &mut cs_string,
                                         &mut m_cs_string,
-                                        &self.idx.unwrap() as *const mm_idx_t,
+                                        self.idx.unwrap() as *const mm_idx_t,
                                         const_ptr,
                                         seq.as_ptr() as *const i8,
                                         true.into(),
@@ -1034,7 +1035,7 @@ impl Aligner {
                                         km,
                                         &mut cs_string,
                                         &mut m_cs_string,
-                                        &self.idx.unwrap() as *const mm_idx_t,
+                                        self.idx.unwrap() as *const mm_idx_t,
                                         const_ptr,
                                         seq.as_ptr() as *const i8,
                                     );
@@ -1070,7 +1071,8 @@ impl Aligner {
                                 .unwrap()
                                 .to_string(),
                         ),
-                        target_len: (*(self.idx.unwrap()).seq.offset(reg.rid as isize)).len as i32,
+                        target_len: (*((*(self.idx.unwrap())).seq.offset(reg.rid as isize))).len
+                            as i32,
                         target_start: reg.rs,
                         target_end: reg.re,
                         query_name: None,
@@ -1174,23 +1176,18 @@ mod send {
 }
 
 /* TODO: This stopped working when we switched to not storing raw pointers but the structs themselves
-// Since Rust is now handling the structs, I think memory gets freed that way, maybe this is no longer
-// necessary?
-// TODO: Test for memory leaks
+/ Since Rust is now handling the structs, I think memory gets freed that way, maybe this is no longer
+/ necessary?
+/ TODO: Test for memory leaks
 */
-// impl Drop for Aligner {
-//     fn drop(&mut self) {
-//         println!("Get dropped");
-//         if self.idx.is_some() {
-//             println!("Doing the drop");
-//             let mut idx: mm_idx_t = self.idx.take().unwrap();
-//             let ptr: *mut mm_idx_t = &mut idx;
-//             unsafe { mm_idx_destroy(ptr) };
-//             std::mem::forget(idx);
-//             println!("Done the drop");
-//         }
-//     }
-// }
+impl Drop for Aligner {
+    fn drop(&mut self) {
+        if self.idx.is_some() {
+            let idx = self.idx.take().unwrap();
+            unsafe { mm_idx_destroy(idx) };
+        }
+    }
+}
 
 #[derive(PartialEq, Eq)]
 pub enum FileFormat {
