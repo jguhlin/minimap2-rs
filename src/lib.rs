@@ -48,7 +48,6 @@ use std::cell::RefCell;
 
 use std::mem::MaybeUninit;
 use std::num::NonZeroI32;
-use std::ops::DerefMut;
 use std::path::Path;
 
 use std::os::unix::ffi::OsStrExt;
