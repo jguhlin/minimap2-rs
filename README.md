@@ -20,6 +20,7 @@ Tested with rustc 1.64.0 and nightly. So probably a good idea to upgrade before 
 ## Minimap2 Version Table
 | minimap2-rs | minimap2 |
 |-------------|----------|
+| 0.1.19      | 2.28     |
 | 0.1.18      | 2.28     |
 | 0.1.17      | 2.27     |
 | 0.1.16      | 2.26     |
@@ -177,6 +178,9 @@ and/or:
 > *Bioinformatics*, **37**:4572-4574. [doi:10.1093/bioinformatics/btab705][doi2]
 
 # Changelog
+### 0.1.19 minimap2 2.28
++ Fix memory leak by @charlesgregory
+
 ### 0.1.18 minimap2 2.28
 + Update to minimap2 v2.28 @jguhlin
 + Support for lrhqae preset @jguhlin
