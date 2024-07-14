@@ -510,7 +510,7 @@ impl Aligner {
     }
 
     pub fn with_cigar_clipping(mut self) -> Self {
-        self.cigar_clipping = true;       
+        self.cigar_clipping = true;
         self
     }
 
@@ -542,7 +542,7 @@ impl Aligner {
         self
     }
 
-    #[deprecated(since="0.1.17", note="Please use `with_index_threads` instead")]
+    #[deprecated(since = "0.1.17", note = "Please use `with_index_threads` instead")]
     pub fn with_threads(mut self, threads: usize) -> Self {
         self.threads = threads;
         self
@@ -1207,7 +1207,9 @@ mod tests {
         // Because I'm not sure how this will work with FFI + Threads, want a sanity check
         use std::thread;
 
-        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_index_threads(2);
+        let mut aligner = Aligner::builder()
+            .preset(Preset::MapOnt)
+            .with_index_threads(2);
 
         aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
 
@@ -1247,10 +1249,12 @@ mod tests {
     #[test]
     fn shared_aligner() {
         // Because I'm not sure how this will work with FFI + Threads, want a sanity check
-        use std::thread;
         use std::sync::Arc;
+        use std::thread;
 
-        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_index_threads(2);
+        let mut aligner = Aligner::builder()
+            .preset(Preset::MapOnt)
+            .with_index_threads(2);
 
         aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
         let aligner = Arc::new(aligner);
@@ -1282,7 +1286,6 @@ mod tests {
             let mappings = aligner_handle.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
             assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
         });
-
     }
 
     #[test]
@@ -1290,7 +1293,10 @@ mod tests {
         // Because I'm not sure how this will work with FFI + Threads, want a sanity check
         use rayon::prelude::*;
 
-        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_index_threads(2).with_cigar();
+        let mut aligner = Aligner::builder()
+            .preset(Preset::MapOnt)
+            .with_index_threads(2)
+            .with_cigar();
 
         aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
 
@@ -1312,10 +1318,14 @@ mod tests {
             "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAG",
         ];
 
-        let results = sequences.par_iter().map(|seq| {
-            aligner.map(seq.as_bytes(), false, false, None, None).unwrap()
-        })
-        .collect::<Vec<_>>();
+        let results = sequences
+            .par_iter()
+            .map(|seq| {
+                aligner
+                    .map(seq.as_bytes(), false, false, None, None)
+                    .unwrap()
+            })
+            .collect::<Vec<_>>();
     }
 
     #[test]
@@ -1369,7 +1379,9 @@ mod tests {
 
     #[test]
     fn aligner_builder_preset_with_threads() {
-        let result = Aligner::builder().preset(Preset::LrHq).with_index_threads(1);
+        let result = Aligner::builder()
+            .preset(Preset::LrHq)
+            .with_index_threads(1);
     }
 
     #[test]
@@ -1386,7 +1398,9 @@ mod tests {
 
     #[test]
     fn create_index() {
-        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_index_threads(1);
+        let mut aligner = Aligner::builder()
+            .preset(Preset::MapOnt)
+            .with_index_threads(1);
 
         println!("{}", aligner.idxopt.w);
 
@@ -1404,7 +1418,9 @@ mod tests {
 
     #[test]
     fn test_mapping() {
-        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_index_threads(2);
+        let mut aligner = Aligner::builder()
+            .preset(Preset::MapOnt)
+            .with_index_threads(2);
 
         aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
 
@@ -1446,7 +1462,9 @@ mod tests {
 
     #[test]
     fn test_aligner_config_and_mapping() {
-        let mut aligner = Aligner::builder().preset(Preset::MapOnt).with_index_threads(2);
+        let mut aligner = Aligner::builder()
+            .preset(Preset::MapOnt)
+            .with_index_threads(2);
         aligner = aligner
             .with_index("test_data/test_data.fasta", Some("test.mmi"))
             .unwrap()
@@ -1524,65 +1542,65 @@ mod tests {
         let mut mappings = aligner.map(
             b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGTTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG",
                     true, true, None, None).unwrap();
-                assert_eq!(mappings.len(), 1);
-        
-                let observed = mappings.pop().unwrap();
-        
-                assert_eq!(observed.target_name, Some(String::from("MT_human")));
-                assert_eq!(observed.target_start, 576);
-                assert_eq!(observed.target_end, 768);
-                assert_eq!(observed.query_start, 0);
-                assert_eq!(observed.query_end, 191);
-                assert_eq!(observed.mapq, 29);
-                assert_eq!(observed.match_len, 168);
-                assert_eq!(observed.block_len, 195);
-                assert_eq!(observed.strand, Strand::Forward);
-                assert_eq!(observed.is_primary, true);
-        
-                let align = observed.alignment.as_ref().unwrap();
-                assert_eq!(align.nm, 27);
-                assert_eq!(
-                    align.cigar,
-                    Some(vec![
-                        (14, 0),
-                        (2, 2),
-                        (4, 0),
-                        (3, 1),
-                        (37, 0),
-                        (1, 2),
-                        (85, 0),
-                        (1, 2),
-                        (48, 0),
-                        (9, 4)
-                    ])
-                );
-                assert_eq!(
-                    align.cigar_str,
-                    Some(String::from("14M2D4M3I37M1D85M1D48M9S"))
-                );
+        assert_eq!(mappings.len(), 1);
 
-                let mut mappings = aligner.map(
+        let observed = mappings.pop().unwrap();
+
+        assert_eq!(observed.target_name, Some(String::from("MT_human")));
+        assert_eq!(observed.target_start, 576);
+        assert_eq!(observed.target_end, 768);
+        assert_eq!(observed.query_start, 0);
+        assert_eq!(observed.query_end, 191);
+        assert_eq!(observed.mapq, 29);
+        assert_eq!(observed.match_len, 168);
+        assert_eq!(observed.block_len, 195);
+        assert_eq!(observed.strand, Strand::Forward);
+        assert_eq!(observed.is_primary, true);
+
+        let align = observed.alignment.as_ref().unwrap();
+        assert_eq!(align.nm, 27);
+        assert_eq!(
+            align.cigar,
+            Some(vec![
+                (14, 0),
+                (2, 2),
+                (4, 0),
+                (3, 1),
+                (37, 0),
+                (1, 2),
+                (85, 0),
+                (1, 2),
+                (48, 0),
+                (9, 4)
+            ])
+        );
+        assert_eq!(
+            align.cigar_str,
+            Some(String::from("14M2D4M3I37M1D85M1D48M9S"))
+        );
+
+        let mut mappings = aligner.map(
                     b"TTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG",
                             true, true, None, None).unwrap();
-                        assert_eq!(mappings.len(), 1);
-                
-                        let observed = mappings.pop().unwrap();
-                
-                        assert_eq!(
-                            align.cigar,
-                            Some(vec![
-                                (14, 0),
-                                (2, 2),
-                                (4, 0),
-                                (3, 1),
-                                (37, 0),
-                                (1, 2),
-                                (85, 0),
-                                (1, 2),
-                                (48, 0),
-                                (9, 4)
-                            ])
-                        );
+        assert_eq!(mappings.len(), 1);
+
+        let observed = mappings.pop().unwrap();
+
+        assert_eq!(
+            align.cigar,
+            Some(vec![
+                (14, 0),
+                (2, 2),
+                (4, 0),
+                (3, 1),
+                (37, 0),
+                (1, 2),
+                (85, 0),
+                (1, 2),
+                (48, 0),
+                (9, 4)
+            ])
+        );
     }
 
     #[test]

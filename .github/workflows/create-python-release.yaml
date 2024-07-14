@@ -23,7 +23,7 @@ jobs:
       - name: Publish wheel
         uses: PyO3/maturin-action@v1
         env:
-          MATURIN_PASSWORD: ${{ secrets.PYPI_PASS }}
+          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
           RUSTFLAGS: -C target-feature=+fxsr,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+fma
         with:
           rust-toolchain: nightly-2024-02-04
