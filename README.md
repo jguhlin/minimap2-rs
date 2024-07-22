@@ -11,7 +11,7 @@ minimap2-sys is the library of the raw FFI bindings to minimap2. minimap2 is the
 # How to use
 ## Requirements
 ```toml
-minimap2 = "0.1.18+minimap2.2.28"
+minimap2 = "0.1.20+minimap2.2.28"
 ```
 Also see [Features](#features)
 
@@ -20,6 +20,7 @@ Tested with rustc 1.64.0 and nightly. So probably a good idea to upgrade before 
 ## Minimap2 Version Table
 | minimap2-rs | minimap2 |
 |-------------|----------|
+| 0.1.20      | 2.28     |
 | 0.1.19      | 2.28     |
 | 0.1.18      | 2.28     |
 | 0.1.17      | 2.27     |
@@ -178,6 +179,9 @@ and/or:
 > *Bioinformatics*, **37**:4572-4574. [doi:10.1093/bioinformatics/btab705][doi2]
 
 # Changelog
+### 0.1.20 minimap2 2.28
++ Fix htslib errors. No update to -sys crate needed.
+
 ### 0.1.19 minimap2 2.28
 + Fix memory leak by @charlesgregory
 

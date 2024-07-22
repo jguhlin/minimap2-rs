@@ -164,7 +164,7 @@ impl Aligner {
 
             let mm_reg = MaybeUninit::new(unsafe {
                 mm_ffi::mm_map(
-                    self.idx.as_ref().unwrap() as *const mm_ffi::mm_idx_t,
+                    self.idx.unwrap() as *const mm_ffi::mm_idx_t,
                     query.inner.l_seq,
                     query.inner.seq as *const i8,
                     &mut n_regs,
@@ -191,7 +191,7 @@ impl Aligner {
                     // TODO: use mm_write_sam3 t do the writing so that we can pass the map_opt flags
                     mm_ffi::mm_write_sam(
                         result.as_mut_ptr(),
-                        self.idx.as_ref().unwrap() as *const mm_ffi::mm_idx_t,
+                        self.idx.unwrap() as *const mm_ffi::mm_idx_t,
                         &query.inner as *const mm_ffi::mm_bseq1_t,
                         const_ptr,
                         n_regs,
@@ -220,6 +220,7 @@ impl Aligner {
         Ok(mappings)
     }
 }
+
 
 pub fn mapping_to_record(
     mapping: Option<&Mapping>,
@@ -343,7 +344,8 @@ impl MMIndex {
 impl From<&Aligner> for MMIndex {
     fn from(aligner: &Aligner) -> Self {
         MMIndex {
-            inner: aligner.idx.unwrap(),
+            // inner: aligner.idx.unwrap(),
+            inner: unsafe { **aligner.idx.as_ref().unwrap() },
         }
     }
 }
