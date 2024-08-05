@@ -152,6 +152,7 @@ Please note minimap2 is only tested for x86_64. Other platforms may work, please
 - [Chopper](https://github.com/wdecoster/chopper) - Long read trimming and filtering
 - [mappy-rs](https://github.com/Adoni5/mappy-rs) - Drop-in multi-threaded replacement for python's mappy
 - [HiFiHLA](https://github.com/PacificBiosciences/hifihla) - HLA star-calling tool for PacBio HiFi data
+- [STRdust](https://github.com/wdecoster/STRdust) - Tandem repeat genotyper for long reads
 
 # Want feedback
 * Many fields are i32 / i8 to mimic the C environment, but would it make more sense to convert to u32 / u8 / usize?
