@@ -732,38 +732,15 @@ impl Aligner {
             .collect();
 
         let idx = MaybeUninit::new(unsafe {
-            //  conditionally compile using the correct pointer type (u8 or i8) for the platform
-            #[cfg(any(
-                all(target_arch = "aarch64", target_os = "linux"),
-                all(target_arch = "arm", target_os = "linux")
-            ))]
-            {
-                mm_idx_str(
-                    self.idxopt.w as i32,
-                    self.idxopt.k as i32,
-                    (self.idxopt.flag & 1) as i32,
-                    self.idxopt.bucket_bits as i32,
-                    seqs.len() as i32,
-                    seqs.as_ptr() as *mut *const u8,
-                    ids.as_ptr() as *mut *const u8,
-                )
-            }
-            #[cfg(any(
-                all(target_arch = "aarch64", target_os = "macos"),
-                all(target_arch = "x86_64", target_os = "linux"),
-                all(target_arch = "x86_64", target_os = "macos")
-            ))]
-            {
-                mm_idx_str(
-                    self.idxopt.w as i32,
-                    self.idxopt.k as i32,
-                    (self.idxopt.flag & 1) as i32,
-                    self.idxopt.bucket_bits as i32,
-                    seqs.len() as i32,
-                    seqs.as_ptr() as *mut *const i8,
-                    ids.as_ptr() as *mut *const i8,
-                )
-            }
+            mm_idx_str(
+                self.idxopt.w as i32,
+                self.idxopt.k as i32,
+                (self.idxopt.flag & 1) as i32,
+                self.idxopt.bucket_bits as i32,
+                seqs.len() as i32,
+                seqs.as_ptr() as *mut *const libc::c_char,
+                ids.as_ptr() as *mut *const libc::c_char,
+            )
         });
 
         self.idx = Some(unsafe { idx.assume_init() });
@@ -824,38 +801,15 @@ impl Aligner {
             let km = unsafe { mm_tbuf_get_km(buf.borrow_mut().get_buf()) };
 
             mm_reg = MaybeUninit::new(unsafe {
-                //  conditionally compile using the correct pointer type (u8 or i8) for the platform
-                #[cfg(any(
-                    all(target_arch = "aarch64", target_os = "linux"),
-                    all(target_arch = "arm", target_os = "linux")
-                ))]
-                {
-                    mm_map(
-                        self.idx.as_ref().unwrap() as *const mm_idx_t,
-                        seq.len() as i32,
-                        seq.as_ptr() as *const u8,
-                        &mut n_regs,
-                        buf.borrow_mut().get_buf(),
-                        &map_opt,
-                        std::ptr::null(),
-                    )
-                }
-                #[cfg(any(
-                    all(target_arch = "aarch64", target_os = "macos"),
-                    all(target_arch = "x86_64", target_os = "linux"),
-                    all(target_arch = "x86_64", target_os = "macos")
-                ))]
-                {
-                    mm_map(
-                        self.idx.unwrap() as *const mm_idx_t,
-                        seq.len() as i32,
-                        seq.as_ptr() as *const i8,
-                        &mut n_regs,
-                        buf.borrow_mut().get_buf(),
-                        &map_opt,
-                        std::ptr::null(),
-                    )
-                }
+                mm_map(
+                    self.idx.as_ref().unwrap() as *const _ as *const mm_idx_t,
+                    seq.len() as i32,
+                    seq.as_ptr() as *const libc::c_char,
+                    &mut n_regs,
+                    buf.borrow_mut().get_buf(),
+                    &map_opt,
+                    std::ptr::null(),
+                )
             });
             let mut mappings = Vec::with_capacity(n_regs as usize);
 
@@ -961,93 +915,38 @@ impl Aligner {
                             let mut m_cs_string: libc::c_int = 0i32;
 
                             let cs_str = if cs {
-                                //  conditionally compile using the correct pointer type (u8 or i8) for the platform
-                                #[cfg(any(
-                                    all(target_arch = "aarch64", target_os = "linux"),
-                                    all(target_arch = "arm", target_os = "linux")
-                                ))]
-                                {
-                                    let _cs_len = mm_gen_cs(
-                                        km,
-                                        &mut cs_string,
-                                        &mut m_cs_string,
-                                        &self.idx.unwrap() as *const mm_idx_t,
-                                        const_ptr,
-                                        seq.as_ptr() as *const u8,
-                                        true.into(),
-                                    );
-                                    let _cs_string = std::ffi::CStr::from_ptr(cs_string)
-                                        .to_str()
-                                        .unwrap()
-                                        .to_string();
-                                    Some(_cs_string)
-                                }
-                                #[cfg(any(
-                                    all(target_arch = "aarch64", target_os = "macos"),
-                                    all(target_arch = "x86_64", target_os = "linux"),
-                                    all(target_arch = "x86_64", target_os = "macos")
-                                ))]
-                                {
-                                    let _cs_len = mm_gen_cs(
-                                        km,
-                                        &mut cs_string,
-                                        &mut m_cs_string,
-                                        self.idx.unwrap() as *const mm_idx_t,
-                                        const_ptr,
-                                        seq.as_ptr() as *const i8,
-                                        true.into(),
-                                    );
-                                    let _cs_string = std::ffi::CStr::from_ptr(cs_string)
-                                        .to_str()
-                                        .unwrap()
-                                        .to_string();
-                                    Some(_cs_string)
-                                }
+                                let _cs_len = mm_gen_cs(
+                                    km,
+                                    &mut cs_string,
+                                    &mut m_cs_string,
+                                    &self.idx.unwrap() as *const _ as *const mm_idx_t,
+                                    const_ptr,
+                                    seq.as_ptr() as *const libc::c_char,
+                                    true.into(),
+                                );
+                                let _cs_string = std::ffi::CStr::from_ptr(cs_string)
+                                    .to_str()
+                                    .unwrap()
+                                    .to_string();
+                                Some(_cs_string)
                             } else {
                                 None
                             };
 
                             let md_str = if md {
-                                //  conditionally compile using the correct pointer type (u8 or i8) for the platform
-                                #[cfg(any(
-                                    all(target_arch = "aarch64", target_os = "linux"),
-                                    all(target_arch = "arm", target_os = "linux")
-                                ))]
-                                {
-                                    let _md_len = mm_gen_MD(
-                                        km,
-                                        &mut cs_string,
-                                        &mut m_cs_string,
-                                        &self.idx.unwrap() as *const mm_idx_t,
-                                        const_ptr,
-                                        seq.as_ptr() as *const u8,
-                                    );
-                                    let _md_string = std::ffi::CStr::from_ptr(cs_string)
-                                        .to_str()
-                                        .unwrap()
-                                        .to_string();
-                                    Some(_md_string)
-                                }
-                                #[cfg(any(
-                                    all(target_arch = "aarch64", target_os = "macos"),
-                                    all(target_arch = "x86_64", target_os = "linux"),
-                                    all(target_arch = "x86_64", target_os = "macos")
-                                ))]
-                                {
-                                    let _md_len = mm_gen_MD(
-                                        km,
-                                        &mut cs_string,
-                                        &mut m_cs_string,
-                                        self.idx.unwrap() as *const mm_idx_t,
-                                        const_ptr,
-                                        seq.as_ptr() as *const i8,
-                                    );
-                                    let _md_string = std::ffi::CStr::from_ptr(cs_string)
-                                        .to_str()
-                                        .unwrap()
-                                        .to_string();
-                                    Some(_md_string)
-                                }
+                                let _md_len = mm_gen_MD(
+                                    km,
+                                    &mut cs_string,
+                                    &mut m_cs_string,
+                                    &self.idx.unwrap() as *const _ as *const mm_idx_t,
+                                    const_ptr,
+                                    seq.as_ptr() as *const libc::c_char,
+                                );
+                                let _md_string = std::ffi::CStr::from_ptr(cs_string)
+                                    .to_str()
+                                    .unwrap()
+                                    .to_string();
+                                Some(_md_string)
                             } else {
                                 None
                             };
