@@ -4,7 +4,7 @@ use std::path::PathBuf;
 // Configure for minimap2
 fn configure(mut cc: &mut cc::Build) {
     println!("cargo:rerun-if-changed=minimap2/*.c");
-
+ 
     cc.include("minimap2");
     cc.opt_level(2);
 
@@ -14,9 +14,7 @@ fn configure(mut cc: &mut cc::Build) {
     #[cfg(feature = "simde")]
     simde(&mut cc);
 
-    // Include ksw2.h kalloc.h
     cc.include("minimap2/");
-    // cc.include("minimap2/");
 
     let files: Vec<_> = std::fs::read_dir("minimap2")
         .unwrap()
@@ -30,23 +28,45 @@ fn configure(mut cc: &mut cc::Build) {
         if file.file_name().unwrap() == "main.c" || file.file_name().unwrap() == "example.c" {
             continue;
         }
-
+    
         // Ignore all "neon"
         if file.file_name().unwrap().to_str().unwrap().contains("neon") {
             continue;
         }
-
+    
         // Ignore all "ksw"
         if file.file_name().unwrap().to_str().unwrap().contains("ksw") {
             continue;
         }
-
+    
         if let Some(x) = file.extension() {
             if x == "c" {
+                println!("Compiling: {:?}", file);
                 cc.file(file);
             }
         }
     }
+
+    /*
+    [minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/align.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/map.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/sketch.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/format.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/options.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/lchain.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/bseq.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/esterr.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/sdust.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/seed.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/kalloc.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/misc.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/pe.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/hit.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/kthread.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/index.c"
+[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/splitidx.c"
+ */
+
 
     cc.file("minimap2/ksw2_ll_sse.c");
 
@@ -55,7 +75,9 @@ fn configure(mut cc: &mut cc::Build) {
 }
 
 fn target_specific(cc: &mut cc::Build) {
-    let target = env::var("TARGET").unwrap_or_default();
+
+    // let host = env::var("HOST").unwrap();
+    let target = env::var("TARGET").unwrap();
 
     if target.contains("aarch64") | target.contains("arm") {
         cc.include("minimap2/sse2neon/");
@@ -79,6 +101,19 @@ fn target_specific(cc: &mut cc::Build) {
             not(feature = "sse2only")
         ))]
         cc.flag("-msse4.1");
+
+        if target.contains("aarch64") {
+            cc.include("minimap2/sse2neon/");
+            // Include appropriate NEON files
+            cc.file("minimap2/ksw2_extz2_neon.c");
+            cc.file("minimap2/ksw2_extd2_neon.c");
+            cc.file("minimap2/ksw2_exts2_neon.c");
+        
+            cc.flag("-D_FILE_OFFSET_BITS=64");
+            cc.flag("-fsigned-char");
+            cc.flag("-Isse2neon");
+            cc.flag("-D__SSE2__");
+        }
 
         #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2",))]
         {
@@ -144,7 +179,10 @@ fn compile() {
     #[cfg(feature = "static")]
     cc.static_flag(true);
 
-    if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
+    let target = env::var("TARGET").unwrap();
+    if target.contains("android") || target.contains("haiku") {
+        println!("cargo:rustc-link-lib=z");
+    } else if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
         cc.include(include);
     }
 
@@ -155,6 +193,12 @@ fn compile() {
     }
 
     cc.compile("libminimap");
+
+    let dst = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+    let lib = dst.join("lib");
+    println!("cargo:root={}", dst.to_str().unwrap());
+    println!("cargo:rustc-link-search=native={}", lib.to_str().unwrap());
+    println!("cargo:include={}/include", dst.to_str().unwrap());
 }
 
 #[cfg(feature = "sse2only")]

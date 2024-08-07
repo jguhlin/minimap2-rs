@@ -227,6 +227,7 @@ thread_local! {
 }
 
 /// ThreadLocalBuffer for minimap2 memory management
+#[derive(Debug)]
 struct ThreadLocalBuffer {
     buf: *mut mm_tbuf_t,
     max_uses: usize,
@@ -760,7 +761,6 @@ impl Aligner {
     /// MD: Whether to output MD tag
     /// max_frag_len: Maximum fragment length
     /// extra_flags: Extra flags to pass to minimap2 as `Vec<u64>`
-    ///
     pub fn map(
         &self,
         seq: &[u8],
@@ -802,9 +802,9 @@ impl Aligner {
 
             mm_reg = MaybeUninit::new(unsafe {
                 mm_map(
-                    self.idx.as_ref().unwrap() as *const _ as *const mm_idx_t,
+                    self.idx.unwrap() as *const mm_idx_t,
                     seq.len() as i32,
-                    seq.as_ptr() as *const libc::c_char,
+                    seq.as_ptr() as *const ::std::os::raw::c_char,
                     &mut n_regs,
                     buf.borrow_mut().get_buf(),
                     &map_opt,
@@ -919,7 +919,7 @@ impl Aligner {
                                     km,
                                     &mut cs_string,
                                     &mut m_cs_string,
-                                    &self.idx.unwrap() as *const _ as *const mm_idx_t,
+                                    self.idx.unwrap() as *const mm_idx_t,
                                     const_ptr,
                                     seq.as_ptr() as *const libc::c_char,
                                     true.into(),
@@ -938,7 +938,7 @@ impl Aligner {
                                     km,
                                     &mut cs_string,
                                     &mut m_cs_string,
-                                    &self.idx.unwrap() as *const _ as *const mm_idx_t,
+                                    self.idx.unwrap() as *const mm_idx_t,
                                     const_ptr,
                                     seq.as_ptr() as *const libc::c_char,
                                 );
@@ -1546,9 +1546,11 @@ mod tests {
         let query = "GGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTT";
         let aligner = Aligner::builder().short();
         let aligner = aligner.with_seq(seq.as_bytes()).unwrap();
+
         let alignments = aligner
             .map(query.as_bytes(), false, false, None, None)
             .unwrap();
+
         assert_eq!(alignments.len(), 2);
 
         println!("----- Trying with_seqs 1");
@@ -1587,6 +1589,8 @@ mod tests {
             .unwrap();
         assert_eq!(alignments.len(), 2);
 
+        println!("----- Trying with_seq and id");
+
         let seq = "CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCGAAATTCTTTAACGGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
         let query = "CAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
 
@@ -1598,9 +1602,11 @@ mod tests {
         let aligner = aligner
             .with_seq_and_id(seq.as_bytes(), &id.as_bytes().to_vec())
             .unwrap();
+        println!("mapping...");
         let alignments = aligner
             .map(query.as_bytes(), true, true, None, None)
             .unwrap();
+        println!("Mapped");
         assert_eq!(alignments.len(), 1);
         println!(
             "{:#?}",
@@ -1655,35 +1661,38 @@ mod tests {
         let _aligner = Aligner::builder().splice();
         let _aligner = Aligner::builder().cdna();
 
-        let aligner = Aligner::builder();
-        assert_eq!(
-            aligner.map_file("test_data/MT-human.fa", false, false),
-            Err("No index")
-        );
-        let aligner = aligner.with_index("test_data/MT-human.fa", None).unwrap();
-        assert_eq!(
-            aligner.map_file("test_data/file-does-not-exist", false, false),
-            Err("File does not exist")
-        );
-
-        if let Err("File is empty") = Aligner::builder().with_index("test_data/empty.fa", None) {
-            println!("File is empty - Success");
-        } else {
-            panic!("File is empty error not thrown");
-        }
-
-        if let Err("Invalid Path") = Aligner::builder().with_index("\0invalid_\0path\0", None) {
-            println!("Invalid Path - Success");
-        } else {
-            panic!("Invalid Path error not thrown");
-        }
-
-        if let Err("Invalid Output") =
-            Aligner::builder().with_index("test_data/MT-human.fa", Some("test\0test"))
+        #[cfg(feature = "map-file")]
         {
-            println!("Invalid output - Success");
-        } else {
-            panic!("Invalid output error not thrown");
+            let aligner = Aligner::builder();
+            assert_eq!(
+                aligner.map_file("test_data/MT-human.fa", false, false),
+                Err("No index")
+            );
+            let aligner = aligner.with_index("test_data/MT-human.fa", None).unwrap();
+            assert_eq!(
+                aligner.map_file("test_data/file-does-not-exist", false, false),
+                Err("File does not exist")
+            );
+
+            if let Err("File is empty") = Aligner::builder().with_index("test_data/empty.fa", None) {
+                println!("File is empty - Success");
+            } else {
+                panic!("File is empty error not thrown");
+            }
+
+            if let Err("Invalid Path") = Aligner::builder().with_index("\0invalid_\0path\0", None) {
+                println!("Invalid Path - Success");
+            } else {
+                panic!("Invalid Path error not thrown");
+            }
+
+            if let Err("Invalid Output") =
+                Aligner::builder().with_index("test_data/MT-human.fa", Some("test\0test"))
+            {
+                println!("Invalid output - Success");
+            } else {
+                panic!("Invalid output error not thrown");
+            }
         }
     }
 
