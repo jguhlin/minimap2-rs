@@ -122,7 +122,9 @@ fn compile() {
 
     println!("cargo:rustc-link-lib=m");
 
-    println!("cargo:rustc-link-lib=pthread");
+    if !env::var("TARGET").unwrap().contains("android") {
+        println!("cargo:rustc-link-lib=pthread");
+    }
 
     let mut cc = cc::Build::new();
 
@@ -134,7 +136,10 @@ fn compile() {
 
     cc.flag("-DHAVE_KALLOC");
     cc.flag("-lm");
-    cc.flag("-lpthread");
+
+    if !env::var("TARGET").unwrap().contains("android") {
+        cc.flag("-lpthread");
+    }
 
     #[cfg(feature = "static")]
     cc.static_flag(true);
@@ -193,7 +198,7 @@ fn gen_bindings() {
 #[cfg(not(feature = "bindgen"))]
 fn gen_bindings() {}
 
-fn main() {
+fn main() {   
     compile();
     gen_bindings();
 }
