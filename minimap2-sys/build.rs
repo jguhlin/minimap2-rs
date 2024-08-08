@@ -170,7 +170,7 @@ fn compile() {
     configure(&mut cc);
 
     cc.flag("-DHAVE_KALLOC");
-    cc.flag("-lm");
+    // cc.flag("-lm");
 
     if !env::var("TARGET").unwrap().contains("android") {
         cc.flag("-lpthread");
