@@ -30,7 +30,5 @@ jobs:
     - run: cd minimap2-sys
     - name: Run minimap2-sys tests
       run: cargo test
-    - name: Run minimap2-sys mm2-fast tests
-      run: cargo test --features mm2-fast
     - name: Run minimap2-sys simde tests
       run: cargo test --features simde

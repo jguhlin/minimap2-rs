@@ -47,27 +47,6 @@ fn configure(mut cc: &mut cc::Build) {
         }
     }
 
-    /*
-    [minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/align.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/map.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/sketch.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/format.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/options.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/lchain.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/bseq.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/esterr.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/sdust.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/seed.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/kalloc.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/misc.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/pe.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/hit.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/kthread.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/index.c"
-[minimap2-sys 0.1.19+minimap2.2.28] Compiling: "minimap2/splitidx.c"
- */
-
-
     cc.file("minimap2/ksw2_ll_sse.c");
 
     #[cfg(not(feature = "noopt"))]
@@ -170,7 +149,6 @@ fn compile() {
     configure(&mut cc);
 
     cc.flag("-DHAVE_KALLOC");
-    // cc.flag("-lm");
 
     if !env::var("TARGET").unwrap().contains("android") {
         cc.flag("-lpthread");
@@ -180,13 +158,32 @@ fn compile() {
     cc.static_flag(true);
 
     let target = env::var("TARGET").unwrap();
+    /*
     if target.contains("android") || target.contains("haiku") {
         println!("cargo:rustc-link-lib=z");
-    } else if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
+        println!("cargo:rustc-link-search=native=/usr/lib/aarch64-linux-android/30/");
+    } 
+    */
+
+    if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
         cc.include(include);
     }
+    
+    if let Some(lib) = std::env::var_os("DEP_Z_ROOT") {
+        let lib = lib.to_str().unwrap();
+        println!("cargo:rustc-link-search={}", lib);
+        // Append /lib to the path
+        let lib = format!("{}/lib", lib);
+        println!("cargo:rustc-link-search={}", lib);
+        println!("cargo:rustc-link-lib=static=z");
+    }
 
-    if let Ok(lib) = pkg_config::find_library("zlib") {
+    // Debugging, print out the entire environment
+    for (key, value) in std::env::vars() {
+        println!("{}: {}", key, value);
+    }
+
+    if let Ok(lib) = pkg_config::probe_library("z") {
         for path in &lib.include_paths {
             cc.include(path);
         }

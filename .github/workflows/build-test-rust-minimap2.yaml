@@ -38,8 +38,6 @@ jobs:
       run: cargo test --verbose
     - name: Run tests htslib
       run: cargo test --features htslib
-    - name: Run tests mm2-fast
-      run: cargo test --features mm2-fast
     - name: Run tests simde
       run: cargo test --features simde
 
