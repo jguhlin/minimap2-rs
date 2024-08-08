@@ -125,6 +125,9 @@ fn simde(cc: &mut cc::Build) {
 }
 
 fn compile() {
+
+    let mut cc = cc::Build::new();
+
     let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
     let _host = env::var("HOST").unwrap();
@@ -135,10 +138,18 @@ fn compile() {
     println!("cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR");
 
     println!("cargo:rustc-link-lib=m");
+    println!("cargo:rustc-link-lib=z");
 
     if !env::var("TARGET").unwrap().contains("android") {
         println!("cargo:rustc-link-lib=pthread");
     }
+
+    if !env::var("TARGET").unwrap().contains("android") {
+        cc.flag("-lpthread");
+    }
+
+    cc.flag("-lm");
+    cc.flag("-lz");
 
     let mut cc = cc::Build::new();
 
@@ -150,32 +161,19 @@ fn compile() {
 
     cc.flag("-DHAVE_KALLOC");
 
-    if !env::var("TARGET").unwrap().contains("android") {
-        cc.flag("-lpthread");
-    }
-
     #[cfg(feature = "static")]
     cc.static_flag(true);
 
-    let target = env::var("TARGET").unwrap();
-    /*
-    if target.contains("android") || target.contains("haiku") {
-        println!("cargo:rustc-link-lib=z");
-        println!("cargo:rustc-link-search=native=/usr/lib/aarch64-linux-android/30/");
-    } 
-    */
+    println!("cargo:rustc-cfg=link_libz");
 
     if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
         cc.include(include);
-    }
-    
-    if let Some(lib) = std::env::var_os("DEP_Z_ROOT") {
-        let lib = lib.to_str().unwrap();
-        println!("cargo:rustc-link-search={}", lib);
-        // Append /lib to the path
-        let lib = format!("{}/lib", lib);
-        println!("cargo:rustc-link-search={}", lib);
-        println!("cargo:rustc-link-lib=static=z");
+        if let Some(lib) = std::env::var_os("DEP_Z_ROOT") {
+            let lib = lib.to_str().unwrap();
+            println!("cargo:rustc-link-search=native={}", lib);
+            println!("cargo:rustc-link-lib=static=z");
+            
+        }
     }
 
     // Debugging, print out the entire environment
@@ -183,19 +181,13 @@ fn compile() {
         println!("{}: {}", key, value);
     }
 
-    if let Ok(lib) = pkg_config::probe_library("z") {
+    if let Ok(lib) = pkg_config::find_library("zlib") {
         for path in &lib.include_paths {
             cc.include(path);
         }
     }
 
     cc.compile("libminimap");
-
-    let dst = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-    let lib = dst.join("lib");
-    println!("cargo:root={}", dst.to_str().unwrap());
-    println!("cargo:rustc-link-search=native={}", lib.to_str().unwrap());
-    println!("cargo:include={}/include", dst.to_str().unwrap());
 }
 
 #[cfg(feature = "sse2only")]
