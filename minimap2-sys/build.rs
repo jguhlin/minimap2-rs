@@ -134,13 +134,27 @@ fn compile() {
 
     cc.flag("-DHAVE_KALLOC");
     cc.flag("-lm");
+    cc.flag("-lz");
     cc.flag("-lpthread");
 
     #[cfg(feature = "static")]
     cc.static_flag(true);
 
     if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
+        println!("-------------FOUND ZLIB INCLUDE: {:?}", include);
         cc.include(include);
+        // Use env DEP_Z_ROOT to find the library
+        if let Some(lib) = std::env::var_os("DEP_Z_ROOT") {
+            let lib = lib.to_str().unwrap();
+            println!("cargo:rustc-link-search=native={}", lib);
+            println!("cargo:rustc-link-lib=static=z");
+            
+        }
+    }
+
+    // Debugging, print out the entire environment
+    for (key, value) in std::env::vars() {
+        println!("{}: {}", key, value);
     }
 
     if let Ok(lib) = pkg_config::find_library("zlib") {
