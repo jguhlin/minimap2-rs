@@ -1488,22 +1488,21 @@ mod tests {
     fn test_alignment_score() {
         let mut aligner = Aligner::builder()
             .preset(Preset::Splice)
-            .with_index_threads(1)
-            .with_cigar_clipping();
+            .with_index_threads(1);
 
         aligner.check_opts().expect("Opts are invalid");
 
         aligner = aligner
             .with_index("test_data/genome.fa", None)
-            .unwrap()
-            .with_cigar();
+            .unwrap();
 
         let output = aligner.map(
             b"GAAATACGGGTCTCTGGTTTGACATAAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGCCCAGACTTAAATCGCACATACTGCGTCGTGCAATGCCGGGCGCTAACGGCTCAATATCACGCTGCGTCACTATGGCTACCCCAAAGCGGGGGGGGCATCGACGGGCTGTTTGATTTGAGCTCCATTACCCTACAATTAGAACACTGGCAACATTTGGGCGTTGAGCGGTCTTCCGTGTCGCTCGATCCGCTGGAACTTGGCAACCACACTCTAAACTACATGTGGTATGGCTCATAAGATCATGCGGATCGTGGCACTGCTTTCGGCCACGTTAGAGCCGCTGTGCTCGAAGATTGGGACCTACCAAC",
             false, false, None, None).unwrap();
 
+        println!("{:#?}", aligner.mapopt);
+        println!("{:#?}", aligner.idxopt);
         println!("{:#?}", output);
-        panic!();
     }
 
     #[test]
