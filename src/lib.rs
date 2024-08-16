@@ -198,6 +198,7 @@ pub struct Alignment {
     pub cigar_str: Option<String>,
     pub md: Option<String>,
     pub cs: Option<String>,
+    pub alignment_score: Option<u32>,
 }
 
 /// Mapping result
@@ -870,6 +871,8 @@ impl Aligner {
 
                     let is_primary = reg.parent == reg.id;
                     let is_supplementary = reg.sam_pri() == 0;
+                    
+                    // todo holy heck this code is ugly
                     let alignment = if !reg.p.is_null() {
                         let p = &*reg.p;
 
@@ -1063,6 +1066,7 @@ impl Aligner {
                             cigar_str,
                             md: md_str,
                             cs: cs_str,
+                            alignment_score: Some(p.dp_score as u32),
                         })
                     } else {
                         None
