@@ -491,7 +491,7 @@ impl Aligner {
         let mut mapopt = MapOpt::default();
 
         unsafe {
-            // Set preset
+            mm_set_opt(&0, &mut idxopt, &mut mapopt);
             mm_set_opt(preset.into(), &mut idxopt, &mut mapopt)
         };
 
@@ -554,6 +554,20 @@ impl Aligner {
         self.threads = threads;
         self
     }
+
+    // Check options
+    pub fn check_opts(&self) -> Result<(), &'static str> {
+        let result = unsafe {
+            mm_check_opt(&self.idxopt, &self.mapopt)
+        };
+
+        if result == 0 {
+            Ok(())
+        } else {
+            Err("Invalid options")
+        }
+    }
+
 
     /// Set index parameters for minimap2 using builder pattern
     /// Creates the index as well with the given number of threads (set at struct creation).
@@ -1221,7 +1235,7 @@ mod tests {
             .preset(Preset::MapOnt)
             .with_index_threads(2);
 
-        aligner = aligner.with_index(, None).unwrap();
+        aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
 
         aligner
             .map(
@@ -1474,7 +1488,11 @@ mod tests {
     fn test_alignment_score() {
         let mut aligner = Aligner::builder()
             .preset(Preset::Splice)
-            .with_index_threads(1);
+            .with_index_threads(1)
+            .with_cigar_clipping();
+
+        aligner.check_opts().expect("Opts are invalid");
+
         aligner = aligner
             .with_index("test_data/genome.fa", None)
             .unwrap()
@@ -1494,7 +1512,7 @@ mod tests {
             .preset(Preset::MapOnt)
             .with_index_threads(2);
         aligner = aligner
-            .with_index("test_data/test_data.fasta", None)
+            .with_index("test_data/test_data.fasta", Some("test.mmi"))
             .unwrap()
             .with_cigar();
 
