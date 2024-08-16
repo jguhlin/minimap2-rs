@@ -329,14 +329,20 @@ impl Default for Aligner {
 impl Aligner {
     /// Create a new aligner with default options
     pub fn builder() -> Self {
-        Aligner {
+        let mut aligner = Aligner {
             mapopt: MapOpt {
-                seed: 42,
+                seed: 11,
                 best_n: 1,
                 ..Default::default()
             },
             ..Default::default()
+        };
+
+        unsafe {
+            minimap2_sys::mm_set_opt(&0, &mut aligner.idxopt, &mut aligner.mapopt);
         }
+
+        aligner
     }
 }
 
@@ -1215,7 +1221,7 @@ mod tests {
             .preset(Preset::MapOnt)
             .with_index_threads(2);
 
-        aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
+        aligner = aligner.with_index(, None).unwrap();
 
         aligner
             .map(
@@ -1465,12 +1471,30 @@ mod tests {
     }
 
     #[test]
+    fn test_alignment_score() {
+        let mut aligner = Aligner::builder()
+            .preset(Preset::Splice)
+            .with_index_threads(1);
+        aligner = aligner
+            .with_index("test_data/genome.fa", None)
+            .unwrap()
+            .with_cigar();
+
+        let output = aligner.map(
+            b"GAAATACGGGTCTCTGGTTTGACATAAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGCCCAGACTTAAATCGCACATACTGCGTCGTGCAATGCCGGGCGCTAACGGCTCAATATCACGCTGCGTCACTATGGCTACCCCAAAGCGGGGGGGGCATCGACGGGCTGTTTGATTTGAGCTCCATTACCCTACAATTAGAACACTGGCAACATTTGGGCGTTGAGCGGTCTTCCGTGTCGCTCGATCCGCTGGAACTTGGCAACCACACTCTAAACTACATGTGGTATGGCTCATAAGATCATGCGGATCGTGGCACTGCTTTCGGCCACGTTAGAGCCGCTGTGCTCGAAGATTGGGACCTACCAAC",
+            false, false, None, None).unwrap();
+
+        println!("{:#?}", output);
+        panic!();
+    }
+
+    #[test]
     fn test_aligner_config_and_mapping() {
         let mut aligner = Aligner::builder()
             .preset(Preset::MapOnt)
             .with_index_threads(2);
         aligner = aligner
-            .with_index("test_data/test_data.fasta", Some("test.mmi"))
+            .with_index("test_data/test_data.fasta", None)
             .unwrap()
             .with_cigar();
 
