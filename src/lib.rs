@@ -887,7 +887,7 @@ impl Aligner {
                         (*((*(self.idx.unwrap())).seq.offset(reg.rid as isize))).name;
 
                     let is_primary = reg.parent == reg.id;
-                    let is_supplementary = (reg.parent == reg.id && !reg.sam_pri());
+                    let is_supplementary = (reg.parent == reg.id) && (reg.sam_pri() == 0);
 
                     // todo holy heck this code is ugly
                     let alignment = if !reg.p.is_null() {
