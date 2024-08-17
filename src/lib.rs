@@ -938,7 +938,7 @@ impl Aligner {
 
                             // Pre and append soft clip identifiers to start and end
                             if clip_len0 > 0 {
-                                cigar_str = format!("{}{}{}", clip_len0, cigar_str, clip_char);
+                                cigar_str = format!("{}{}{}", clip_len0, clip_char, cigar_str);
                                 if self.cigar_clipping {
                                     cigar.insert(0, (clip_len0 as u32, 4_u8));
                                 }
