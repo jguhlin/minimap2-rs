@@ -557,9 +557,7 @@ impl Aligner {
 
     // Check options
     pub fn check_opts(&self) -> Result<(), &'static str> {
-        let result = unsafe {
-            mm_check_opt(&self.idxopt, &self.mapopt)
-        };
+        let result = unsafe { mm_check_opt(&self.idxopt, &self.mapopt) };
 
         if result == 0 {
             Ok(())
@@ -567,7 +565,6 @@ impl Aligner {
             Err("Invalid options")
         }
     }
-
 
     /// Set index parameters for minimap2 using builder pattern
     /// Creates the index as well with the given number of threads (set at struct creation).
@@ -890,8 +887,8 @@ impl Aligner {
                         (*((*(self.idx.unwrap())).seq.offset(reg.rid as isize))).name;
 
                     let is_primary = reg.parent == reg.id;
-                    let is_supplementary = reg.sam_pri() == 0;
-                    
+                    let is_supplementary = (reg.parent == reg.id && !reg.sam_pri());
+
                     // todo holy heck this code is ugly
                     let alignment = if !reg.p.is_null() {
                         let p = &*reg.p;
@@ -1492,9 +1489,7 @@ mod tests {
 
         aligner.check_opts().expect("Opts are invalid");
 
-        aligner = aligner
-            .with_index("test_data/genome.fa", None)
-            .unwrap();
+        aligner = aligner.with_index("test_data/genome.fa", None).unwrap();
 
         let output = aligner.map(
             b"GAAATACGGGTCTCTGGTTTGACATAAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGCCCAGACTTAAATCGCACATACTGCGTCGTGCAATGCCGGGCGCTAACGGCTCAATATCACGCTGCGTCACTATGGCTACCCCAAAGCGGGGGGGGCATCGACGGGCTGTTTGATTTGAGCTCCATTACCCTACAATTAGAACACTGGCAACATTTGGGCGTTGAGCGGTCTTCCGTGTCGCTCGATCCGCTGGAACTTGGCAACCACACTCTAAACTACATGTGGTATGGCTCATAAGATCATGCGGATCGTGGCACTGCTTTCGGCCACGTTAGAGCCGCTGTGCTCGAAGATTGGGACCTACCAAC",
