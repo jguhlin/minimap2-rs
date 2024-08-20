@@ -4,7 +4,7 @@ use std::path::PathBuf;
 // Configure for minimap2
 fn configure(mut cc: &mut cc::Build) {
     println!("cargo:rerun-if-changed=minimap2/*.c");
-
+ 
     cc.include("minimap2");
     cc.opt_level(2);
 
@@ -14,9 +14,7 @@ fn configure(mut cc: &mut cc::Build) {
     #[cfg(feature = "simde")]
     simde(&mut cc);
 
-    // Include ksw2.h kalloc.h
     cc.include("minimap2/");
-    // cc.include("minimap2/");
 
     let files: Vec<_> = std::fs::read_dir("minimap2")
         .unwrap()
@@ -30,19 +28,20 @@ fn configure(mut cc: &mut cc::Build) {
         if file.file_name().unwrap() == "main.c" || file.file_name().unwrap() == "example.c" {
             continue;
         }
-
+    
         // Ignore all "neon"
         if file.file_name().unwrap().to_str().unwrap().contains("neon") {
             continue;
         }
-
+    
         // Ignore all "ksw"
         if file.file_name().unwrap().to_str().unwrap().contains("ksw") {
             continue;
         }
-
+    
         if let Some(x) = file.extension() {
             if x == "c" {
+                println!("Compiling: {:?}", file);
                 cc.file(file);
             }
         }
@@ -55,7 +54,9 @@ fn configure(mut cc: &mut cc::Build) {
 }
 
 fn target_specific(cc: &mut cc::Build) {
-    let target = env::var("TARGET").unwrap_or_default();
+
+    // let host = env::var("HOST").unwrap();
+    let target = env::var("TARGET").unwrap();
 
     if target.contains("aarch64") | target.contains("arm") {
         cc.include("minimap2/sse2neon/");
@@ -79,6 +80,19 @@ fn target_specific(cc: &mut cc::Build) {
             not(feature = "sse2only")
         ))]
         cc.flag("-msse4.1");
+
+        if target.contains("aarch64") {
+            cc.include("minimap2/sse2neon/");
+            // Include appropriate NEON files
+            cc.file("minimap2/ksw2_extz2_neon.c");
+            cc.file("minimap2/ksw2_extd2_neon.c");
+            cc.file("minimap2/ksw2_exts2_neon.c");
+        
+            cc.flag("-D_FILE_OFFSET_BITS=64");
+            cc.flag("-fsigned-char");
+            cc.flag("-Isse2neon");
+            cc.flag("-D__SSE2__");
+        }
 
         #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2",))]
         {
@@ -111,6 +125,9 @@ fn simde(cc: &mut cc::Build) {
 }
 
 fn compile() {
+
+    let mut cc = cc::Build::new();
+
     let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
     let _host = env::var("HOST").unwrap();
@@ -121,8 +138,18 @@ fn compile() {
     println!("cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR");
 
     println!("cargo:rustc-link-lib=m");
+    println!("cargo:rustc-link-lib=z");
 
-    println!("cargo:rustc-link-lib=pthread");
+    if !env::var("TARGET").unwrap().contains("android") {
+        println!("cargo:rustc-link-lib=pthread");
+    }
+
+    if !env::var("TARGET").unwrap().contains("android") {
+        cc.flag("-lpthread");
+    }
+
+    cc.flag("-lm");
+    cc.flag("-lz");
 
     let mut cc = cc::Build::new();
 
@@ -133,12 +160,10 @@ fn compile() {
     configure(&mut cc);
 
     cc.flag("-DHAVE_KALLOC");
-    cc.flag("-lm");
-    cc.flag("-lz");
-    cc.flag("-lpthread");
-
     #[cfg(feature = "static")]
     cc.static_flag(true);
+
+    println!("cargo:rustc-cfg=link_libz");
 
     if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
         println!("-------------FOUND ZLIB INCLUDE: {:?}", include);
@@ -207,7 +232,7 @@ fn gen_bindings() {
 #[cfg(not(feature = "bindgen"))]
 fn gen_bindings() {}
 
-fn main() {
+fn main() {   
     compile();
     gen_bindings();
 }

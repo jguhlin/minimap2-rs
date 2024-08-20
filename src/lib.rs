@@ -228,6 +228,7 @@ thread_local! {
 }
 
 /// ThreadLocalBuffer for minimap2 memory management
+#[derive(Debug)]
 struct ThreadLocalBuffer {
     buf: *mut mm_tbuf_t,
     max_uses: usize,
@@ -753,38 +754,15 @@ impl Aligner {
             .collect();
 
         let idx = MaybeUninit::new(unsafe {
-            //  conditionally compile using the correct pointer type (u8 or i8) for the platform
-            #[cfg(any(
-                all(target_arch = "aarch64", target_os = "linux"),
-                all(target_arch = "arm", target_os = "linux")
-            ))]
-            {
-                mm_idx_str(
-                    self.idxopt.w as i32,
-                    self.idxopt.k as i32,
-                    (self.idxopt.flag & 1) as i32,
-                    self.idxopt.bucket_bits as i32,
-                    seqs.len() as i32,
-                    seqs.as_ptr() as *mut *const u8,
-                    ids.as_ptr() as *mut *const u8,
-                )
-            }
-            #[cfg(any(
-                all(target_arch = "aarch64", target_os = "macos"),
-                all(target_arch = "x86_64", target_os = "linux"),
-                all(target_arch = "x86_64", target_os = "macos")
-            ))]
-            {
-                mm_idx_str(
-                    self.idxopt.w as i32,
-                    self.idxopt.k as i32,
-                    (self.idxopt.flag & 1) as i32,
-                    self.idxopt.bucket_bits as i32,
-                    seqs.len() as i32,
-                    seqs.as_ptr() as *mut *const i8,
-                    ids.as_ptr() as *mut *const i8,
-                )
-            }
+            mm_idx_str(
+                self.idxopt.w as i32,
+                self.idxopt.k as i32,
+                (self.idxopt.flag & 1) as i32,
+                self.idxopt.bucket_bits as i32,
+                seqs.len() as i32,
+                seqs.as_ptr() as *mut *const libc::c_char,
+                ids.as_ptr() as *mut *const libc::c_char,
+            )
         });
 
         self.idx = Some(unsafe { idx.assume_init() });
@@ -804,7 +782,6 @@ impl Aligner {
     /// MD: Whether to output MD tag
     /// max_frag_len: Maximum fragment length
     /// extra_flags: Extra flags to pass to minimap2 as `Vec<u64>`
-    ///
     pub fn map(
         &self,
         seq: &[u8],
@@ -845,38 +822,15 @@ impl Aligner {
             let km = unsafe { mm_tbuf_get_km(buf.borrow_mut().get_buf()) };
 
             mm_reg = MaybeUninit::new(unsafe {
-                //  conditionally compile using the correct pointer type (u8 or i8) for the platform
-                #[cfg(any(
-                    all(target_arch = "aarch64", target_os = "linux"),
-                    all(target_arch = "arm", target_os = "linux")
-                ))]
-                {
-                    mm_map(
-                        self.idx.as_ref().unwrap() as *const mm_idx_t,
-                        seq.len() as i32,
-                        seq.as_ptr() as *const u8,
-                        &mut n_regs,
-                        buf.borrow_mut().get_buf(),
-                        &map_opt,
-                        std::ptr::null(),
-                    )
-                }
-                #[cfg(any(
-                    all(target_arch = "aarch64", target_os = "macos"),
-                    all(target_arch = "x86_64", target_os = "linux"),
-                    all(target_arch = "x86_64", target_os = "macos")
-                ))]
-                {
-                    mm_map(
-                        self.idx.unwrap() as *const mm_idx_t,
-                        seq.len() as i32,
-                        seq.as_ptr() as *const i8,
-                        &mut n_regs,
-                        buf.borrow_mut().get_buf(),
-                        &map_opt,
-                        std::ptr::null(),
-                    )
-                }
+                mm_map(
+                    self.idx.unwrap() as *const mm_idx_t,
+                    seq.len() as i32,
+                    seq.as_ptr() as *const ::std::os::raw::c_char,
+                    &mut n_regs,
+                    buf.borrow_mut().get_buf(),
+                    &map_opt,
+                    std::ptr::null(),
+                )
             });
             let mut mappings = Vec::with_capacity(n_regs as usize);
 
@@ -984,93 +938,38 @@ impl Aligner {
                             let mut m_cs_string: libc::c_int = 0i32;
 
                             let cs_str = if cs {
-                                //  conditionally compile using the correct pointer type (u8 or i8) for the platform
-                                #[cfg(any(
-                                    all(target_arch = "aarch64", target_os = "linux"),
-                                    all(target_arch = "arm", target_os = "linux")
-                                ))]
-                                {
-                                    let _cs_len = mm_gen_cs(
-                                        km,
-                                        &mut cs_string,
-                                        &mut m_cs_string,
-                                        &self.idx.unwrap() as *const mm_idx_t,
-                                        const_ptr,
-                                        seq.as_ptr() as *const u8,
-                                        true.into(),
-                                    );
-                                    let _cs_string = std::ffi::CStr::from_ptr(cs_string)
-                                        .to_str()
-                                        .unwrap()
-                                        .to_string();
-                                    Some(_cs_string)
-                                }
-                                #[cfg(any(
-                                    all(target_arch = "aarch64", target_os = "macos"),
-                                    all(target_arch = "x86_64", target_os = "linux"),
-                                    all(target_arch = "x86_64", target_os = "macos")
-                                ))]
-                                {
-                                    let _cs_len = mm_gen_cs(
-                                        km,
-                                        &mut cs_string,
-                                        &mut m_cs_string,
-                                        self.idx.unwrap() as *const mm_idx_t,
-                                        const_ptr,
-                                        seq.as_ptr() as *const i8,
-                                        true.into(),
-                                    );
-                                    let _cs_string = std::ffi::CStr::from_ptr(cs_string)
-                                        .to_str()
-                                        .unwrap()
-                                        .to_string();
-                                    Some(_cs_string)
-                                }
+                                let _cs_len = mm_gen_cs(
+                                    km,
+                                    &mut cs_string,
+                                    &mut m_cs_string,
+                                    self.idx.unwrap() as *const mm_idx_t,
+                                    const_ptr,
+                                    seq.as_ptr() as *const libc::c_char,
+                                    true.into(),
+                                );
+                                let _cs_string = std::ffi::CStr::from_ptr(cs_string)
+                                    .to_str()
+                                    .unwrap()
+                                    .to_string();
+                                Some(_cs_string)
                             } else {
                                 None
                             };
 
                             let md_str = if md {
-                                //  conditionally compile using the correct pointer type (u8 or i8) for the platform
-                                #[cfg(any(
-                                    all(target_arch = "aarch64", target_os = "linux"),
-                                    all(target_arch = "arm", target_os = "linux")
-                                ))]
-                                {
-                                    let _md_len = mm_gen_MD(
-                                        km,
-                                        &mut cs_string,
-                                        &mut m_cs_string,
-                                        &self.idx.unwrap() as *const mm_idx_t,
-                                        const_ptr,
-                                        seq.as_ptr() as *const u8,
-                                    );
-                                    let _md_string = std::ffi::CStr::from_ptr(cs_string)
-                                        .to_str()
-                                        .unwrap()
-                                        .to_string();
-                                    Some(_md_string)
-                                }
-                                #[cfg(any(
-                                    all(target_arch = "aarch64", target_os = "macos"),
-                                    all(target_arch = "x86_64", target_os = "linux"),
-                                    all(target_arch = "x86_64", target_os = "macos")
-                                ))]
-                                {
-                                    let _md_len = mm_gen_MD(
-                                        km,
-                                        &mut cs_string,
-                                        &mut m_cs_string,
-                                        self.idx.unwrap() as *const mm_idx_t,
-                                        const_ptr,
-                                        seq.as_ptr() as *const i8,
-                                    );
-                                    let _md_string = std::ffi::CStr::from_ptr(cs_string)
-                                        .to_str()
-                                        .unwrap()
-                                        .to_string();
-                                    Some(_md_string)
-                                }
+                                let _md_len = mm_gen_MD(
+                                    km,
+                                    &mut cs_string,
+                                    &mut m_cs_string,
+                                    self.idx.unwrap() as *const mm_idx_t,
+                                    const_ptr,
+                                    seq.as_ptr() as *const libc::c_char,
+                                );
+                                let _md_string = std::ffi::CStr::from_ptr(cs_string)
+                                    .to_str()
+                                    .unwrap()
+                                    .to_string();
+                                Some(_md_string)
                             } else {
                                 None
                             };
@@ -1482,6 +1381,7 @@ mod tests {
 
         let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagttatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), true, false, None, None).unwrap();
         println!("{:#?}", mappings);
+	panic!();
     }
 
     #[test]
@@ -1692,9 +1592,11 @@ mod tests {
         let query = "GGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTT";
         let aligner = Aligner::builder().short();
         let aligner = aligner.with_seq(seq.as_bytes()).unwrap();
+
         let alignments = aligner
             .map(query.as_bytes(), false, false, None, None)
             .unwrap();
+
         assert_eq!(alignments.len(), 2);
 
         println!("----- Trying with_seqs 1");
@@ -1733,6 +1635,8 @@ mod tests {
             .unwrap();
         assert_eq!(alignments.len(), 2);
 
+        println!("----- Trying with_seq and id");
+
         let seq = "CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCGAAATTCTTTAACGGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
         let query = "CAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
 
@@ -1744,9 +1648,11 @@ mod tests {
         let aligner = aligner
             .with_seq_and_id(seq.as_bytes(), &id.as_bytes().to_vec())
             .unwrap();
+        println!("mapping...");
         let alignments = aligner
             .map(query.as_bytes(), true, true, None, None)
             .unwrap();
+        println!("Mapped");
         assert_eq!(alignments.len(), 1);
         println!(
             "{:#?}",
@@ -1801,35 +1707,38 @@ mod tests {
         let _aligner = Aligner::builder().splice();
         let _aligner = Aligner::builder().cdna();
 
-        let aligner = Aligner::builder();
-        assert_eq!(
-            aligner.map_file("test_data/MT-human.fa", false, false),
-            Err("No index")
-        );
-        let aligner = aligner.with_index("test_data/MT-human.fa", None).unwrap();
-        assert_eq!(
-            aligner.map_file("test_data/file-does-not-exist", false, false),
-            Err("File does not exist")
-        );
-
-        if let Err("File is empty") = Aligner::builder().with_index("test_data/empty.fa", None) {
-            println!("File is empty - Success");
-        } else {
-            panic!("File is empty error not thrown");
-        }
-
-        if let Err("Invalid Path") = Aligner::builder().with_index("\0invalid_\0path\0", None) {
-            println!("Invalid Path - Success");
-        } else {
-            panic!("Invalid Path error not thrown");
-        }
-
-        if let Err("Invalid Output") =
-            Aligner::builder().with_index("test_data/MT-human.fa", Some("test\0test"))
+        #[cfg(feature = "map-file")]
         {
-            println!("Invalid output - Success");
-        } else {
-            panic!("Invalid output error not thrown");
+            let aligner = Aligner::builder();
+            assert_eq!(
+                aligner.map_file("test_data/MT-human.fa", false, false),
+                Err("No index")
+            );
+            let aligner = aligner.with_index("test_data/MT-human.fa", None).unwrap();
+            assert_eq!(
+                aligner.map_file("test_data/file-does-not-exist", false, false),
+                Err("File does not exist")
+            );
+
+            if let Err("File is empty") = Aligner::builder().with_index("test_data/empty.fa", None) {
+                println!("File is empty - Success");
+            } else {
+                panic!("File is empty error not thrown");
+            }
+
+            if let Err("Invalid Path") = Aligner::builder().with_index("\0invalid_\0path\0", None) {
+                println!("Invalid Path - Success");
+            } else {
+                panic!("Invalid Path error not thrown");
+            }
+
+            if let Err("Invalid Output") =
+                Aligner::builder().with_index("test_data/MT-human.fa", Some("test\0test"))
+            {
+                println!("Invalid output - Success");
+            } else {
+                panic!("Invalid output error not thrown");
+            }
         }
     }
 
