@@ -198,6 +198,7 @@ pub struct Alignment {
     pub cigar_str: Option<String>,
     pub md: Option<String>,
     pub cs: Option<String>,
+    pub alignment_score: Option<u32>,
 }
 
 /// Mapping result
@@ -328,14 +329,20 @@ impl Default for Aligner {
 impl Aligner {
     /// Create a new aligner with default options
     pub fn builder() -> Self {
-        Aligner {
+        let mut aligner = Aligner {
             mapopt: MapOpt {
-                seed: 42,
+                seed: 11,
                 best_n: 1,
                 ..Default::default()
             },
             ..Default::default()
+        };
+
+        unsafe {
+            minimap2_sys::mm_set_opt(&0, &mut aligner.idxopt, &mut aligner.mapopt);
         }
+
+        aligner
     }
 }
 
@@ -484,7 +491,7 @@ impl Aligner {
         let mut mapopt = MapOpt::default();
 
         unsafe {
-            // Set preset
+            mm_set_opt(&0, &mut idxopt, &mut mapopt);
             mm_set_opt(preset.into(), &mut idxopt, &mut mapopt)
         };
 
@@ -547,6 +554,20 @@ impl Aligner {
         self.threads = threads;
         self
     }
+
+    // Check options
+    pub fn check_opts(&self) -> Result<(), &'static str> {
+        let result = unsafe {
+            mm_check_opt(&self.idxopt, &self.mapopt)
+        };
+
+        if result == 0 {
+            Ok(())
+        } else {
+            Err("Invalid options")
+        }
+    }
+
 
     /// Set index parameters for minimap2 using builder pattern
     /// Creates the index as well with the given number of threads (set at struct creation).
@@ -870,6 +891,8 @@ impl Aligner {
 
                     let is_primary = reg.parent == reg.id;
                     let is_supplementary = reg.sam_pri() == 0;
+                    
+                    // todo holy heck this code is ugly
                     let alignment = if !reg.p.is_null() {
                         let p = &*reg.p;
 
@@ -1063,6 +1086,7 @@ impl Aligner {
                             cigar_str,
                             md: md_str,
                             cs: cs_str,
+                            alignment_score: Some(p.dp_score as u32),
                         })
                     } else {
                         None
@@ -1458,6 +1482,27 @@ mod tests {
 
         let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagttatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), true, false, None, None).unwrap();
         println!("{:#?}", mappings);
+    }
+
+    #[test]
+    fn test_alignment_score() {
+        let mut aligner = Aligner::builder()
+            .preset(Preset::Splice)
+            .with_index_threads(1);
+
+        aligner.check_opts().expect("Opts are invalid");
+
+        aligner = aligner
+            .with_index("test_data/genome.fa", None)
+            .unwrap();
+
+        let output = aligner.map(
+            b"GAAATACGGGTCTCTGGTTTGACATAAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGCCCAGACTTAAATCGCACATACTGCGTCGTGCAATGCCGGGCGCTAACGGCTCAATATCACGCTGCGTCACTATGGCTACCCCAAAGCGGGGGGGGCATCGACGGGCTGTTTGATTTGAGCTCCATTACCCTACAATTAGAACACTGGCAACATTTGGGCGTTGAGCGGTCTTCCGTGTCGCTCGATCCGCTGGAACTTGGCAACCACACTCTAAACTACATGTGGTATGGCTCATAAGATCATGCGGATCGTGGCACTGCTTTCGGCCACGTTAGAGCCGCTGTGCTCGAAGATTGGGACCTACCAAC",
+            false, false, None, None).unwrap();
+
+        println!("{:#?}", aligner.mapopt);
+        println!("{:#?}", aligner.idxopt);
+        println!("{:#?}", output);
     }
 
     #[test]
