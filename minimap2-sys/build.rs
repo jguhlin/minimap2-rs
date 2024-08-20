@@ -160,14 +160,15 @@ fn compile() {
     configure(&mut cc);
 
     cc.flag("-DHAVE_KALLOC");
-
     #[cfg(feature = "static")]
     cc.static_flag(true);
 
     println!("cargo:rustc-cfg=link_libz");
 
     if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
+        println!("-------------FOUND ZLIB INCLUDE: {:?}", include);
         cc.include(include);
+        // Use env DEP_Z_ROOT to find the library
         if let Some(lib) = std::env::var_os("DEP_Z_ROOT") {
             let lib = lib.to_str().unwrap();
             println!("cargo:rustc-link-search=native={}", lib);
