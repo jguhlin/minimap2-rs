@@ -810,7 +810,6 @@ impl Aligner {
         max_frag_len: Option<usize>,
         extra_flags: Option<&[u64]>,
     ) -> Result<Vec<Mapping>, &'static str> {
-        println!("MAPPING THE READ!!!!");
         // Make sure index is set
         if !self.has_index() {
             return Err("No index");
@@ -888,6 +887,10 @@ impl Aligner {
                         (*((*(self.idx.unwrap())).seq.offset(reg.rid as isize))).name;
 
                     println!("\n\n{} :: sam_pri = {}", i, reg.sam_pri());
+                    println!(
+                        "\n\n{} :: reg.parent = {}, reg.id = {}",
+                        i, reg.parent, reg.id
+                    );
                     let is_primary = reg.parent == reg.id && ((reg.sam_pri() & 0b10000000) > 0);
                     let is_supplementary =
                         (reg.parent == reg.id) && ((reg.sam_pri() & 0b10000000) == 0);
