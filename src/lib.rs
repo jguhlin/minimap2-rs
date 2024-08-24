@@ -880,9 +880,8 @@ impl Aligner {
                         "\n\n{} :: reg.parent = {}, reg.id = {}",
                         i, reg.parent, reg.id
                     );
-                    let is_primary = reg.parent == reg.id && ((reg.sam_pri() & 0b10000000) > 0);
-                    let is_supplementary =
-                        (reg.parent == reg.id) && ((reg.sam_pri() & 0b10000000) == 0);
+                    let is_primary = reg.parent == reg.id && (reg.sam_pri() > 0);
+                    let is_supplementary = (reg.parent == reg.id) && (reg.sam_pri() == 0);
 
                     // todo holy heck this code is ugly
                     let alignment = if !reg.p.is_null() {
@@ -1225,9 +1224,8 @@ impl Aligner {
                         "\n\n{} :: reg.parent = {}, reg.id = {}",
                         i, reg.parent, reg.id
                     );
-                    let is_primary = reg.parent == reg.id && ((reg.sam_pri() & 0b10000000) > 0);
-                    let is_supplementary =
-                        (reg.parent == reg.id) && ((reg.sam_pri() & 0b10000000) == 0);
+                    let is_primary = reg.parent == reg.id && (reg.sam_pri() > 0);
+                    let is_supplementary = (reg.parent == reg.id) && (reg.sam_pri() == 0);
 
                     // todo holy heck this code is ugly
                     let alignment = if !reg.p.is_null() {
