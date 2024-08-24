@@ -804,7 +804,7 @@ impl Aligner {
     ///
     pub fn map_with_name(
         &self,
-        name: &[u8]
+        name: &[u8],
         seq: &[u8],
         cs: bool,
         md: bool, // TODO
@@ -872,7 +872,7 @@ impl Aligner {
                         &mut n_regs,
                         buf.borrow_mut().get_buf(),
                         &map_opt,
-                        name.as_ptr() as *const i8 //std::ptr::null(),
+                        name.as_ptr() as *const i8, //std::ptr::null(),
                     )
                 }
             });
