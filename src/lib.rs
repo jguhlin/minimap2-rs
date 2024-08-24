@@ -790,6 +790,22 @@ impl Aligner {
         Ok(self)
     }
 
+    // https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L164
+    // TODO: I doubt extra_flags is working properly...
+    // TODO: Python allows for paired-end mapping with seq2: Option<&[u8]>, but more work to implement
+    /// Aligns a given sequence (as bytes) to the index associated with this aligner, unlike the
+    /// `map` function, this version also takes the query name, which is used to break ties in
+    /// chain score.  This can resolve some small but persistent differences between the output of
+    /// `map` and the corresponding output of the `minimap2` program when run from the command
+    /// line (particularly with respect to supplementary alignments)..
+    ///
+    /// Parameters:
+    /// seq: Sequence to align
+    /// cs: Whether to output CIGAR string
+    /// MD: Whether to output MD tag
+    /// max_frag_len: Maximum fragment length
+    /// extra_flags: Extra flags to pass to minimap2 as `Vec<u64>`
+    ///
     pub fn map_with_name(
         &self,
         name: &[u8],
@@ -813,7 +829,7 @@ impl Aligner {
 
         // Number of results
         let mut n_regs: i32 = 0;
-        let mut map_opt = self.mapopt.clone();
+        let mut map_opt = self.mapopt;
 
         // if max_frag_len is not None: map_opt.max_frag_len = max_frag_len
         if let Some(max_frag_len) = max_frag_len {
