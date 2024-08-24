@@ -810,6 +810,7 @@ impl Aligner {
         max_frag_len: Option<usize>,
         extra_flags: Option<&[u64]>,
     ) -> Result<Vec<Mapping>, &'static str> {
+        println!("MAPPING THE READ!!!!");
         // Make sure index is set
         if !self.has_index() {
             return Err("No index");
