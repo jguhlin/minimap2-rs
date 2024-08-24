@@ -802,8 +802,9 @@ impl Aligner {
     /// max_frag_len: Maximum fragment length
     /// extra_flags: Extra flags to pass to minimap2 as `Vec<u64>`
     ///
-    pub fn map(
+    pub fn map_with_name(
         &self,
+        name: &[u8]
         seq: &[u8],
         cs: bool,
         md: bool, // TODO
@@ -871,7 +872,7 @@ impl Aligner {
                         &mut n_regs,
                         buf.borrow_mut().get_buf(),
                         &map_opt,
-                        std::ptr::null(),
+                        name.as_ptr() as *const i8 //std::ptr::null(),
                     )
                 }
             });
