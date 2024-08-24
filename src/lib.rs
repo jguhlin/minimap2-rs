@@ -875,11 +875,6 @@ impl Aligner {
                     let contig: *mut ::std::os::raw::c_char =
                         (*((*(self.idx.unwrap())).seq.offset(reg.rid as isize))).name;
 
-                    println!("\n\n{} :: sam_pri = {}", i, reg.sam_pri());
-                    println!(
-                        "\n\n{} :: reg.parent = {}, reg.id = {}",
-                        i, reg.parent, reg.id
-                    );
                     let is_primary = reg.parent == reg.id && (reg.sam_pri() > 0);
                     let is_supplementary = (reg.parent == reg.id) && (reg.sam_pri() == 0);
 
@@ -1219,11 +1214,6 @@ impl Aligner {
                     let contig: *mut ::std::os::raw::c_char =
                         (*((*(self.idx.unwrap())).seq.offset(reg.rid as isize))).name;
 
-                    println!("\n\n{} :: sam_pri = {}", i, reg.sam_pri());
-                    println!(
-                        "\n\n{} :: reg.parent = {}, reg.id = {}",
-                        i, reg.parent, reg.id
-                    );
                     let is_primary = reg.parent == reg.id && (reg.sam_pri() > 0);
                     let is_supplementary = (reg.parent == reg.id) && (reg.sam_pri() == 0);
 
