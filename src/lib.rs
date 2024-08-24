@@ -790,18 +790,6 @@ impl Aligner {
         Ok(self)
     }
 
-    // https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L164
-    // TODO: I doubt extra_flags is working properly...
-    // TODO: Python allows for paired-end mapping with seq2: Option<&[u8]>, but more work to implement
-    /// Aligns a given sequence (as bytes) to the index associated with this aligner
-    ///
-    /// Parameters:
-    /// seq: Sequence to align
-    /// cs: Whether to output CIGAR string
-    /// MD: Whether to output MD tag
-    /// max_frag_len: Maximum fragment length
-    /// extra_flags: Extra flags to pass to minimap2 as `Vec<u64>`
-    ///
     pub fn map_with_name(
         &self,
         name: &[u8],
@@ -873,6 +861,351 @@ impl Aligner {
                         buf.borrow_mut().get_buf(),
                         &map_opt,
                         name.as_ptr() as *const i8, //std::ptr::null(),
+                    )
+                }
+            });
+            let mut mappings = Vec::with_capacity(n_regs as usize);
+
+            for i in 0..n_regs {
+                unsafe {
+                    let reg_ptr = (*mm_reg.as_ptr()).offset(i as isize);
+                    let const_ptr = reg_ptr as *const mm_reg1_t;
+                    let reg: mm_reg1_t = *reg_ptr;
+
+                    let contig: *mut ::std::os::raw::c_char =
+                        (*((*(self.idx.unwrap())).seq.offset(reg.rid as isize))).name;
+
+                    println!("\n\n{} :: sam_pri = {}", i, reg.sam_pri());
+                    println!(
+                        "\n\n{} :: reg.parent = {}, reg.id = {}",
+                        i, reg.parent, reg.id
+                    );
+                    let is_primary = reg.parent == reg.id && ((reg.sam_pri() & 0b10000000) > 0);
+                    let is_supplementary =
+                        (reg.parent == reg.id) && ((reg.sam_pri() & 0b10000000) == 0);
+
+                    // todo holy heck this code is ugly
+                    let alignment = if !reg.p.is_null() {
+                        let p = &*reg.p;
+
+                        // calculate the edit distance
+                        let nm = reg.blen - reg.mlen + p.n_ambi() as i32;
+                        let n_cigar = p.n_cigar;
+
+                        // Create a vector of the cigar blocks
+                        let (cigar, cigar_str) = if n_cigar > 0 {
+                            let mut cigar = p
+                                .cigar
+                                .as_slice(n_cigar as usize)
+                                .to_vec()
+                                .iter()
+                                .map(|c| ((c >> 4), (c & 0xf) as u8)) // unpack the length and op code
+                                .collect::<Vec<(u32, u8)>>();
+
+                            // Fix for adding in soft clipping cigar strings
+                            // Taken from minimap2 write_sam_cigar function
+                            // clip_len[0] = r->rev? qlen - r->qe : r->qs;
+                            // clip_len[1] = r->rev? r->qs : qlen - r->qe;
+
+                            let clip_len0 = if reg.rev() != 0 {
+                                seq.len() as i32 - reg.qe
+                            } else {
+                                reg.qs
+                            };
+
+                            let clip_len1 = if reg.rev() != 0 {
+                                reg.qs
+                            } else {
+                                seq.len() as i32 - reg.qe
+                            };
+
+                            let mut cigar_str = cigar
+                                .iter()
+                                .map(|(len, code)| {
+                                    let cigar_char = match code {
+                                        0 => "M",
+                                        1 => "I",
+                                        2 => "D",
+                                        3 => "N",
+                                        4 => "S",
+                                        5 => "H",
+                                        6 => "P",
+                                        7 => "=",
+                                        8 => "X",
+                                        _ => panic!("Invalid CIGAR code {code}"),
+                                    };
+                                    format!("{len}{cigar_char}")
+                                })
+                                .collect::<Vec<String>>()
+                                .join("");
+
+                            // int clip_char = (((sam_flag&0x800) || ((sam_flag&0x100) && (opt_flag&MM_F_SECONDARY_SEQ))) &&
+                            // !(opt_flag&MM_F_SOFTCLIP)) ? 'H' : 'S';
+
+                            // let clip_char = if (reg.flag & 0x800 != 0) || ((reg.flag & 0x100 != 0) && (map_opt.flag & 0x100 != 0)) && (map_opt.flag & 0x4 == 0) {
+                            // 'H'
+                            // } else {
+                            // 'S'
+                            // };
+
+                            // TODO: Support hard clipping
+                            let clip_char = 'S';
+
+                            // Pre and append soft clip identifiers to start and end
+                            if clip_len0 > 0 {
+                                cigar_str = format!("{}{}{}", clip_len0, cigar_str, clip_char);
+                                if self.cigar_clipping {
+                                    cigar.insert(0, (clip_len0 as u32, 4_u8));
+                                }
+                            }
+
+                            if clip_len1 > 0 {
+                                cigar_str = format!("{}{}{}", cigar_str, clip_len1, clip_char);
+                                if self.cigar_clipping {
+                                    cigar.push((clip_len1 as u32, 4_u8));
+                                }
+                            }
+
+                            (Some(cigar), Some(cigar_str))
+                        } else {
+                            (None, None)
+                        };
+
+                        let (cs_str, md_str) = if cs || md {
+                            let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
+                            let mut m_cs_string: libc::c_int = 0i32;
+
+                            let cs_str = if cs {
+                                //  conditionally compile using the correct pointer type (u8 or i8) for the platform
+                                #[cfg(any(
+                                    all(target_arch = "aarch64", target_os = "linux"),
+                                    all(target_arch = "arm", target_os = "linux")
+                                ))]
+                                {
+                                    let _cs_len = mm_gen_cs(
+                                        km,
+                                        &mut cs_string,
+                                        &mut m_cs_string,
+                                        &self.idx.unwrap() as *const mm_idx_t,
+                                        const_ptr,
+                                        seq.as_ptr() as *const u8,
+                                        true.into(),
+                                    );
+                                    let _cs_string = std::ffi::CStr::from_ptr(cs_string)
+                                        .to_str()
+                                        .unwrap()
+                                        .to_string();
+                                    Some(_cs_string)
+                                }
+                                #[cfg(any(
+                                    all(target_arch = "aarch64", target_os = "macos"),
+                                    all(target_arch = "x86_64", target_os = "linux"),
+                                    all(target_arch = "x86_64", target_os = "macos")
+                                ))]
+                                {
+                                    let _cs_len = mm_gen_cs(
+                                        km,
+                                        &mut cs_string,
+                                        &mut m_cs_string,
+                                        self.idx.unwrap() as *const mm_idx_t,
+                                        const_ptr,
+                                        seq.as_ptr() as *const i8,
+                                        true.into(),
+                                    );
+                                    let _cs_string = std::ffi::CStr::from_ptr(cs_string)
+                                        .to_str()
+                                        .unwrap()
+                                        .to_string();
+                                    Some(_cs_string)
+                                }
+                            } else {
+                                None
+                            };
+
+                            let md_str = if md {
+                                //  conditionally compile using the correct pointer type (u8 or i8) for the platform
+                                #[cfg(any(
+                                    all(target_arch = "aarch64", target_os = "linux"),
+                                    all(target_arch = "arm", target_os = "linux")
+                                ))]
+                                {
+                                    let _md_len = mm_gen_MD(
+                                        km,
+                                        &mut cs_string,
+                                        &mut m_cs_string,
+                                        &self.idx.unwrap() as *const mm_idx_t,
+                                        const_ptr,
+                                        seq.as_ptr() as *const u8,
+                                    );
+                                    let _md_string = std::ffi::CStr::from_ptr(cs_string)
+                                        .to_str()
+                                        .unwrap()
+                                        .to_string();
+                                    Some(_md_string)
+                                }
+                                #[cfg(any(
+                                    all(target_arch = "aarch64", target_os = "macos"),
+                                    all(target_arch = "x86_64", target_os = "linux"),
+                                    all(target_arch = "x86_64", target_os = "macos")
+                                ))]
+                                {
+                                    let _md_len = mm_gen_MD(
+                                        km,
+                                        &mut cs_string,
+                                        &mut m_cs_string,
+                                        self.idx.unwrap() as *const mm_idx_t,
+                                        const_ptr,
+                                        seq.as_ptr() as *const i8,
+                                    );
+                                    let _md_string = std::ffi::CStr::from_ptr(cs_string)
+                                        .to_str()
+                                        .unwrap()
+                                        .to_string();
+                                    Some(_md_string)
+                                }
+                            } else {
+                                None
+                            };
+                            libc::free(cs_string as *mut c_void);
+                            (cs_str, md_str)
+                        } else {
+                            (None, None)
+                        };
+
+                        Some(Alignment {
+                            nm,
+                            cigar,
+                            cigar_str,
+                            md: md_str,
+                            cs: cs_str,
+                            alignment_score: Some(p.dp_score as u32),
+                        })
+                    } else {
+                        None
+                    };
+                    mappings.push(Mapping {
+                        target_name: Some(
+                            std::ffi::CStr::from_ptr(contig)
+                                .to_str()
+                                .unwrap()
+                                .to_string(),
+                        ),
+                        target_len: (*((*(self.idx.unwrap())).seq.offset(reg.rid as isize))).len
+                            as i32,
+                        target_start: reg.rs,
+                        target_end: reg.re,
+                        query_name: None,
+                        query_len: NonZeroI32::new(seq.len() as i32),
+                        query_start: reg.qs,
+                        query_end: reg.qe,
+                        strand: if reg.rev() == 0 {
+                            Strand::Forward
+                        } else {
+                            Strand::Reverse
+                        },
+                        match_len: reg.mlen,
+                        block_len: reg.blen,
+                        mapq: reg.mapq(),
+                        is_primary,
+                        is_supplementary,
+                        alignment,
+                    });
+                    libc::free(reg.p as *mut c_void);
+                }
+            }
+            mappings
+        });
+        // free some stuff here
+        unsafe {
+            let ptr: *mut mm_reg1_t = mm_reg.assume_init();
+            let c_void_ptr: *mut c_void = ptr as *mut c_void;
+            libc::free(c_void_ptr);
+        }
+        Ok(mappings)
+    }
+
+    // https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L164
+    // TODO: I doubt extra_flags is working properly...
+    // TODO: Python allows for paired-end mapping with seq2: Option<&[u8]>, but more work to implement
+    /// Aligns a given sequence (as bytes) to the index associated with this aligner
+    ///
+    /// Parameters:
+    /// seq: Sequence to align
+    /// cs: Whether to output CIGAR string
+    /// MD: Whether to output MD tag
+    /// max_frag_len: Maximum fragment length
+    /// extra_flags: Extra flags to pass to minimap2 as `Vec<u64>`
+    ///
+    pub fn map(
+        &self,
+        seq: &[u8],
+        cs: bool,
+        md: bool, // TODO
+        max_frag_len: Option<usize>,
+        extra_flags: Option<&[u64]>,
+    ) -> Result<Vec<Mapping>, &'static str> {
+        // Make sure index is set
+        if !self.has_index() {
+            return Err("No index");
+        }
+
+        // Make sure sequence is not empty
+        if seq.is_empty() {
+            return Err("Sequence is empty");
+        }
+
+        let mut mm_reg: MaybeUninit<*mut mm_reg1_t> = MaybeUninit::uninit();
+
+        // Number of results
+        let mut n_regs: i32 = 0;
+        let mut map_opt = self.mapopt.clone();
+
+        // if max_frag_len is not None: map_opt.max_frag_len = max_frag_len
+        if let Some(max_frag_len) = max_frag_len {
+            map_opt.max_frag_len = max_frag_len as i32;
+        }
+
+        // if extra_flags is not None: map_opt.flag |= extra_flags
+        if let Some(extra_flags) = extra_flags {
+            for flag in extra_flags {
+                map_opt.flag |= *flag as i64;
+            }
+        }
+
+        let mappings = BUF.with(|buf| {
+            let km = unsafe { mm_tbuf_get_km(buf.borrow_mut().get_buf()) };
+
+            mm_reg = MaybeUninit::new(unsafe {
+                //  conditionally compile using the correct pointer type (u8 or i8) for the platform
+                #[cfg(any(
+                    all(target_arch = "aarch64", target_os = "linux"),
+                    all(target_arch = "arm", target_os = "linux")
+                ))]
+                {
+                    mm_map(
+                        self.idx.as_ref().unwrap() as *const mm_idx_t,
+                        seq.len() as i32,
+                        seq.as_ptr() as *const u8,
+                        &mut n_regs,
+                        buf.borrow_mut().get_buf(),
+                        &map_opt,
+                        std::ptr::null(),
+                    )
+                }
+                #[cfg(any(
+                    all(target_arch = "aarch64", target_os = "macos"),
+                    all(target_arch = "x86_64", target_os = "linux"),
+                    all(target_arch = "x86_64", target_os = "macos")
+                ))]
+                {
+                    mm_map(
+                        self.idx.unwrap() as *const mm_idx_t,
+                        seq.len() as i32,
+                        seq.as_ptr() as *const i8,
+                        &mut n_regs,
+                        buf.borrow_mut().get_buf(),
+                        &map_opt,
+                        std::ptr::null(),
                     )
                 }
             });
