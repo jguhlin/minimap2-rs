@@ -558,7 +558,6 @@ impl Aligner {
     // Check options
     pub fn check_opts(&self) -> Result<(), &'static str> {
         let result = unsafe { mm_check_opt(&self.idxopt, &self.mapopt) };
-
         if result == 0 {
             Ok(())
         } else {
@@ -1302,7 +1301,7 @@ impl Aligner {
 
                             // Pre and append soft clip identifiers to start and end
                             if clip_len0 > 0 {
-                                cigar_str = format!("{}{}{}", clip_len0, cigar_str, clip_char);
+                                cigar_str = format!("{}{}{}", clip_len0, clip_char, cigar_str);
                                 if self.cigar_clipping {
                                     cigar.insert(0, (clip_len0 as u32, 4_u8));
                                 }
