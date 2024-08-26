@@ -1,13 +1,10 @@
 [package]
-name = "minimap2-temp"
-version = "0.1.31+minimap2.2.28"
+name = "minimap2"
+version = "0.1.20+minimap2.2.28"
 edition = "2021"
-authors = [
-  "Joseph Guhlin <joseph.guhlin@gmail.com>",
-  "Rob Patro <rob@cs.umd.edu>",
-]
+authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
 license = "MIT OR Apache-2.0"
-description = "Bindings to libminimap2 (temporary fork)"
+description = "Bindings to libminimap2"
 repository = "https://github.com/rob-p/minimap2-rs"
 categories = ["science"]
 keywords = ["bioinformatics", "fasta", "alignment", "fastq"]
