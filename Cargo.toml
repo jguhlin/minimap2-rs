@@ -1,11 +1,14 @@
 [package]
-name = "minimap2"
-version = "0.1.20+minimap2.2.28"
+name = "minimap2-temp"
+version = "0.1.30+minimap2.2.28"
 edition = "2021"
-authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
+authors = [
+  "Joseph Guhlin <joseph.guhlin@gmail.com>",
+  "Rob Patro <rob@cs.umd.edu>",
+]
 license = "MIT OR Apache-2.0"
-description = "Bindings to libminimap2"
-repository = "https://github.com/jguhlin/minimap2-rs"
+description = "Bindings to libminimap2 (temporary fork)"
+repository = "https://github.com/rob-p/minimap2-rs"
 categories = ["science"]
 keywords = ["bioinformatics", "fasta", "alignment", "fastq"]
 exclude = [
@@ -24,16 +27,12 @@ exclude = [
 
 members = []
 
-exclude = [
-    "minimappers2",
-    "fakeminimap2",
-    "minimap2-sys"
-]
+exclude = ["minimappers2", "fakeminimap2", "minimap2-sys"]
 
 [dependencies]
 libc = "0.2"
-simdutf8 = {version = "0.1", optional = true}
-needletail = { version = "0.5", optional = true, default-features = false}
+simdutf8 = { version = "0.1", optional = true }
+needletail = { version = "0.5", optional = true, default-features = false }
 
 # Dep for development
 # minimap2-sys = { path = "./minimap2-sys" }
