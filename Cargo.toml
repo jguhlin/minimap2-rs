@@ -1,6 +1,6 @@
 [package]
 name = "minimap2-temp"
-version = "0.1.30+minimap2.2.28"
+version = "0.1.31+minimap2.2.28"
 edition = "2021"
 authors = [
   "Joseph Guhlin <joseph.guhlin@gmail.com>",
