@@ -198,7 +198,7 @@ pub struct Alignment {
     pub cigar_str: Option<String>,
     pub md: Option<String>,
     pub cs: Option<String>,
-    pub alignment_score: Option<u32>,
+    pub alignment_score: Option<i32>,
 }
 
 /// Mapping result
@@ -1087,7 +1087,7 @@ impl Aligner {
                             cigar_str,
                             md: md_str,
                             cs: cs_str,
-                            alignment_score: Some(p.dp_score as u32),
+                            alignment_score: Some(p.dp_score as i32),
                         })
                     } else {
                         None
@@ -1426,7 +1426,7 @@ impl Aligner {
                             cigar_str,
                             md: md_str,
                             cs: cs_str,
-                            alignment_score: Some(p.dp_score as u32),
+                            alignment_score: Some(p.dp_score as i32),
                         })
                     } else {
                         None
