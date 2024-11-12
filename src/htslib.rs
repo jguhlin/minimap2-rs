@@ -221,7 +221,6 @@ impl Aligner {
     }
 }
 
-
 pub fn mapping_to_record(
     mapping: Option<&Mapping>,
     seq: &[u8],
