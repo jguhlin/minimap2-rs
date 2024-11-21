@@ -558,9 +558,7 @@ impl Aligner {
 
     // Check options
     pub fn check_opts(&self) -> Result<(), &'static str> {
-        let result = unsafe {
-            mm_check_opt(&self.idxopt, &self.mapopt)
-        };
+        let result = unsafe { mm_check_opt(&self.idxopt, &self.mapopt) };
 
         if result == 0 {
             Ok(())
@@ -568,7 +566,6 @@ impl Aligner {
             Err("Invalid options")
         }
     }
-
 
     /// Set index parameters for minimap2 using builder pattern
     /// Creates the index as well with the given number of threads (set at struct creation).
@@ -822,9 +819,7 @@ impl Aligner {
 
         let qname = match query_name {
             None => std::ptr::null(),
-            Some(qname) => {
-                qname.as_ptr() as *const ::std::os::raw::c_char
-            }
+            Some(qname) => qname.as_ptr() as *const ::std::os::raw::c_char,
         };
 
         let mappings = BUF.with(|buf| {
@@ -854,7 +849,7 @@ impl Aligner {
 
                     let is_primary = reg.parent == reg.id;
                     let is_supplementary = reg.sam_pri() == 0;
-                    
+
                     // todo holy heck this code is ugly
                     let alignment = if !reg.p.is_null() {
                         let p = &*reg.p;
@@ -1390,7 +1385,7 @@ mod tests {
 
         let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagttatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), true, false, None, None).unwrap();
         println!("{:#?}", mappings);
-	panic!();
+        panic!();
     }
 
     #[test]
@@ -1401,9 +1396,7 @@ mod tests {
 
         aligner.check_opts().expect("Opts are invalid");
 
-        aligner = aligner
-            .with_index("test_data/genome.fa", None)
-            .unwrap();
+        aligner = aligner.with_index("test_data/genome.fa", None).unwrap();
 
         let output = aligner.map(
             b"GAAATACGGGTCTCTGGTTTGACATAAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGCCCAGACTTAAATCGCACATACTGCGTCGTGCAATGCCGGGCGCTAACGGCTCAATATCACGCTGCGTCACTATGGCTACCCCAAAGCGGGGGGGGCATCGACGGGCTGTTTGATTTGAGCTCCATTACCCTACAATTAGAACACTGGCAACATTTGGGCGTTGAGCGGTCTTCCGTGTCGCTCGATCCGCTGGAACTTGGCAACCACACTCTAAACTACATGTGGTATGGCTCATAAGATCATGCGGATCGTGGCACTGCTTTCGGCCACGTTAGAGCCGCTGTGCTCGAAGATTGGGACCTACCAAC",
@@ -1729,7 +1722,8 @@ mod tests {
                 Err("File does not exist")
             );
 
-            if let Err("File is empty") = Aligner::builder().with_index("test_data/empty.fa", None) {
+            if let Err("File is empty") = Aligner::builder().with_index("test_data/empty.fa", None)
+            {
                 println!("File is empty - Success");
             } else {
                 panic!("File is empty error not thrown");
