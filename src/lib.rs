@@ -782,6 +782,7 @@ impl Aligner {
     /// MD: Whether to output MD tag
     /// max_frag_len: Maximum fragment length
     /// extra_flags: Extra flags to pass to minimap2 as `Vec<u64>`
+    /// query_name: Name of the query sequence
     pub fn map(
         &self,
         seq: &[u8],
@@ -789,6 +790,7 @@ impl Aligner {
         md: bool, // TODO
         max_frag_len: Option<usize>,
         extra_flags: Option<&[u64]>,
+        query_name: Option<&[u8]>,
     ) -> Result<Vec<Mapping>, &'static str> {
         // Make sure index is set
         if !self.has_index() {
@@ -818,6 +820,13 @@ impl Aligner {
             }
         }
 
+        let qname = match query_name {
+            None => std::ptr::null(),
+            Some(qname) => {
+                qname.as_ptr() as *const ::std::os::raw::c_char
+            }
+        };
+
         let mappings = BUF.with(|buf| {
             let km = unsafe { mm_tbuf_get_km(buf.borrow_mut().get_buf()) };
 
@@ -829,7 +838,7 @@ impl Aligner {
                     &mut n_regs,
                     buf.borrow_mut().get_buf(),
                     &map_opt,
-                    std::ptr::null(),
+                    qname,
                 )
             });
             let mut mappings = Vec::with_capacity(n_regs as usize);
@@ -1001,7 +1010,7 @@ impl Aligner {
                             as i32,
                         target_start: reg.rs,
                         target_end: reg.re,
-                        query_name: None,
+                        query_name: query_name.map(|q| String::from_utf8_lossy(q).to_string()),
                         query_len: NonZeroI32::new(seq.len() as i32),
                         query_start: reg.qs,
                         query_end: reg.qe,
