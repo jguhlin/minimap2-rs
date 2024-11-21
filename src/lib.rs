@@ -198,7 +198,7 @@ pub struct Alignment {
     pub cigar_str: Option<String>,
     pub md: Option<String>,
     pub cs: Option<String>,
-    pub alignment_score: Option<u32>,
+    pub alignment_score: Option<i32>,
 }
 
 /// Mapping result
@@ -782,12 +782,12 @@ impl Aligner {
     /// query_name: Name of the query sequence
     pub fn map(
         &self,
+        query_name: Option<&[u8]>,
         seq: &[u8],
         cs: bool,
         md: bool, // TODO
         max_frag_len: Option<usize>,
         extra_flags: Option<&[u64]>,
-        query_name: Option<&[u8]>,
     ) -> Result<Vec<Mapping>, &'static str> {
         // Make sure index is set
         if !self.has_index() {
@@ -847,8 +847,8 @@ impl Aligner {
                     let contig: *mut ::std::os::raw::c_char =
                         (*((*(self.idx.unwrap())).seq.offset(reg.rid as isize))).name;
 
-                    let is_primary = reg.parent == reg.id;
-                    let is_supplementary = reg.sam_pri() == 0;
+                    let is_primary = reg.parent == reg.id && (reg.sam_pri() > 0);
+                    let is_supplementary = (reg.parent == reg.id) && (reg.sam_pri() == 0);
 
                     // todo holy heck this code is ugly
                     let alignment = if !reg.p.is_null() {
@@ -989,7 +989,7 @@ impl Aligner {
                             cigar_str,
                             md: md_str,
                             cs: cs_str,
-                            alignment_score: Some(p.dp_score as u32),
+                            alignment_score: Some(p.dp_score as i32),
                         })
                     } else {
                         None
