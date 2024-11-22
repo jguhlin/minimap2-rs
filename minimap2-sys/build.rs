@@ -4,7 +4,7 @@ use std::path::PathBuf;
 // Configure for minimap2
 fn configure(mut cc: &mut cc::Build) {
     println!("cargo:rerun-if-changed=minimap2/*.c");
- 
+
     cc.include("minimap2");
     cc.opt_level(2);
 
@@ -28,17 +28,17 @@ fn configure(mut cc: &mut cc::Build) {
         if file.file_name().unwrap() == "main.c" || file.file_name().unwrap() == "example.c" {
             continue;
         }
-    
+
         // Ignore all "neon"
         if file.file_name().unwrap().to_str().unwrap().contains("neon") {
             continue;
         }
-    
+
         // Ignore all "ksw"
         if file.file_name().unwrap().to_str().unwrap().contains("ksw") {
             continue;
         }
-    
+
         if let Some(x) = file.extension() {
             if x == "c" {
                 println!("Compiling: {:?}", file);
@@ -54,7 +54,6 @@ fn configure(mut cc: &mut cc::Build) {
 }
 
 fn target_specific(cc: &mut cc::Build) {
-
     // let host = env::var("HOST").unwrap();
     let target = env::var("TARGET").unwrap();
 
@@ -87,7 +86,7 @@ fn target_specific(cc: &mut cc::Build) {
             cc.file("minimap2/ksw2_extz2_neon.c");
             cc.file("minimap2/ksw2_extd2_neon.c");
             cc.file("minimap2/ksw2_exts2_neon.c");
-        
+
             cc.flag("-D_FILE_OFFSET_BITS=64");
             cc.flag("-fsigned-char");
             cc.flag("-Isse2neon");
@@ -125,7 +124,6 @@ fn simde(cc: &mut cc::Build) {
 }
 
 fn compile() {
-
     let mut cc = cc::Build::new();
 
     let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
@@ -173,7 +171,6 @@ fn compile() {
             let lib = lib.to_str().unwrap();
             println!("cargo:rustc-link-search=native={}", lib);
             println!("cargo:rustc-link-lib=static=z");
-            
         }
     }
 
@@ -216,11 +213,11 @@ fn gen_bindings() {
     let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
     let mut bindgen = bindgen::Builder::default()
-    .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-    .rustfmt_bindings(true);
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+        .rustfmt_bindings(true);
 
     let mut bindgen = bindgen.header("minimap2.h");
-   
+
     bindgen
         .generate_cstr(true)
         .generate()
@@ -232,7 +229,7 @@ fn gen_bindings() {
 #[cfg(not(feature = "bindgen"))]
 fn gen_bindings() {}
 
-fn main() {   
+fn main() {
     compile();
     gen_bindings();
 }

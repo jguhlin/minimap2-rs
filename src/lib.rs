@@ -30,7 +30,7 @@
 //!
 //! let seq = b"ACTGACTCACATCGACTACGACTACTAGACACTAGACTATCGACTACTGACATCGA";
 //! let alignment = aligner
-//! .map(seq, false, false, None, None)
+//! .map(seq, false, false, None, None, Some("Sample Query"))
 //! .expect("Unable to align");
 //! ```
 //!
@@ -40,15 +40,18 @@
 //! # let seq = "CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCGAAATTCTTTAACGGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
 //! let aligner = Aligner::builder().map_ont().with_seq(seq.as_bytes()).expect("Unable to build index");
 //! let query = b"CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCG";
-//! let hits = aligner.map(query, false, false, None, None);
+//! let hits = aligner.map(query, false, false, None, None, Some("Query Name"));
 //! assert_eq!(hits.unwrap().len(), 1);
 //! ```
 
+use std::borrow::Cow;
 use std::cell::RefCell;
 
+use std::ffi::{CStr, CString};
 use std::mem::MaybeUninit;
 use std::num::NonZeroI32;
 use std::path::Path;
+use std::sync::Arc;
 
 use std::os::unix::ffi::OsStrExt;
 
@@ -198,19 +201,19 @@ pub struct Alignment {
     pub cigar_str: Option<String>,
     pub md: Option<String>,
     pub cs: Option<String>,
-    pub alignment_score: Option<u32>,
+    pub alignment_score: Option<i32>,
 }
 
 /// Mapping result
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Mapping {
     // The query sequence name.
-    pub query_name: Option<String>,
+    pub query_name: Option<Arc<String>>,
     pub query_len: Option<NonZeroI32>,
     pub query_start: i32,
     pub query_end: i32,
     pub strand: Strand,
-    pub target_name: Option<String>,
+    pub target_name: Option<Arc<String>>,
     pub target_len: i32,
     pub target_start: i32,
     pub target_end: i32,
@@ -349,11 +352,17 @@ impl Aligner {
 
 impl Aligner {
     /// Ergonomic function for Aligner. Sets the minimap2 preset to lr:hq.
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     pub fn lrhq(self) -> Self {
         self.preset(Preset::LrHq)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to splice
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().splice();
@@ -363,6 +372,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to splice:hq
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().splice_hq();
@@ -372,6 +384,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().asm();
@@ -381,6 +396,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm5
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().asm5();
@@ -389,6 +407,9 @@ impl Aligner {
         self.preset(Preset::Asm5)
     }
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm10
+    ///
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().asm10();
@@ -397,6 +418,9 @@ impl Aligner {
         self.preset(Preset::Asm10)
     }
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm20
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().asm20();
@@ -406,6 +430,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to sr
+    ///
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().sr();
@@ -415,6 +442,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to MapPb
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().map_pb();
@@ -424,6 +454,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to MapHifi
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().map_hifi();
@@ -433,6 +466,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to MapOnt.
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().map_ont();
@@ -442,6 +478,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to AvaPb
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().ava_pb();
@@ -451,6 +490,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to AvaOnt.
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().ava_ont();
@@ -460,6 +502,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Short
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().short();
@@ -469,6 +514,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Map10k
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().map10k();
@@ -478,6 +526,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to cdna
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().cdna();
@@ -487,19 +538,22 @@ impl Aligner {
     }
 
     /// Create an aligner using a preset.
-    pub fn preset(self, preset: Preset) -> Self {
-        let mut idxopt = IdxOpt::default();
-        let mut mapopt = MapOpt::default();
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
+    pub fn preset(mut self, preset: Preset) -> Self {
+        // let mut idxopt = IdxOpt::default();
+        // let mut mapopt = MapOpt::default();
 
         unsafe {
-            mm_set_opt(&0, &mut idxopt, &mut mapopt);
-            mm_set_opt(preset.into(), &mut idxopt, &mut mapopt)
+            mm_set_opt(&0, &mut self.idxopt, &mut self.mapopt);
+            mm_set_opt(preset.into(), &mut self.idxopt, &mut self.mapopt)
         };
 
         Self {
-            idxopt,
-            mapopt,
-            ..Default::default()
+            idxopt: self.idxopt,
+            mapopt: self.mapopt,
+            ..self
         }
     }
 
@@ -558,9 +612,7 @@ impl Aligner {
 
     // Check options
     pub fn check_opts(&self) -> Result<(), &'static str> {
-        let result = unsafe {
-            mm_check_opt(&self.idxopt, &self.mapopt)
-        };
+        let result = unsafe { mm_check_opt(&self.idxopt, &self.mapopt) };
 
         if result == 0 {
             Ok(())
@@ -568,7 +620,6 @@ impl Aligner {
             Err("Invalid options")
         }
     }
-
 
     /// Set index parameters for minimap2 using builder pattern
     /// Creates the index as well with the given number of threads (set at struct creation).
@@ -671,7 +722,7 @@ impl Aligner {
     /// # let seq = "CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCGAAATTCTTTAACGGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
     /// let aligner = Aligner::builder().map_ont().with_seq(seq.as_bytes()).expect("Unable to build index");
     /// let query = b"CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCG";
-    /// let hits = aligner.map(query, false, false, None, None);
+    /// let hits = aligner.map(query, false, false, None, None, Some("Query Name"));
     /// assert_eq!(hits.unwrap().len(), 1);
     /// ```
     pub fn with_seq(self, seq: &[u8]) -> Result<Self, &'static str>
@@ -690,9 +741,9 @@ impl Aligner {
     /// # let id = "seq1";
     /// let aligner = Aligner::builder().map_ont().with_seq_and_id(seq.as_bytes(), id.as_bytes()).expect("Unable to build index");
     /// let query = b"CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCG";
-    /// let hits = aligner.map(query, false, false, None, None);
+    /// let hits = aligner.map(query, false, false, None, None, Some("Sample Query"));
     /// assert_eq!(hits.as_ref().unwrap().len(), 1);
-    /// assert_eq!(hits.as_ref().unwrap()[0].target_name.as_ref().unwrap(), id);
+    /// assert_eq!(hits.as_ref().unwrap()[0].target_name.as_ref().unwrap().as_str(), id);
     /// ```
     pub fn with_seq_and_id(self, seq: &[u8], id: &[u8]) -> Result<Self, &'static str>
 // where T: AsRef<[u8]> + std::ops::Deref<Target = str>,
@@ -790,7 +841,7 @@ impl Aligner {
         md: bool, // TODO
         max_frag_len: Option<usize>,
         extra_flags: Option<&[u64]>,
-        query_name: Option<&[u8]>,
+        query_name: Option<impl AsRef<[u8]>>,
     ) -> Result<Vec<Mapping>, &'static str> {
         // Make sure index is set
         if !self.has_index() {
@@ -801,6 +852,24 @@ impl Aligner {
         if seq.is_empty() {
             return Err("Sequence is empty");
         }
+
+        let mut qname_cstring = None;
+
+        let query_name_cstr: Option<&CStr> = match query_name.as_ref() {
+            None => None,
+            Some(qname_slice) => {
+                if qname_slice.as_ref().last() != Some(&b'\0') {
+                    qname_cstring =
+                        Some(CString::new(qname_slice.as_ref()).expect("Invalid query name"));
+                    Some(qname_cstring.as_ref().unwrap().as_c_str())
+                } else {
+                    Some(
+                        CStr::from_bytes_with_nul(query_name.as_ref().unwrap().as_ref())
+                            .expect("Invalid query name"),
+                    )
+                }
+            }
+        };
 
         let mut mm_reg: MaybeUninit<*mut mm_reg1_t> = MaybeUninit::uninit();
 
@@ -820,11 +889,11 @@ impl Aligner {
             }
         }
 
-        let qname = match query_name {
+        let query_name_arc = query_name_cstr.map(|x| Arc::new(x.to_owned().into_string().unwrap()));
+
+        let qname = match query_name_cstr {
             None => std::ptr::null(),
-            Some(qname) => {
-                qname.as_ptr() as *const ::std::os::raw::c_char
-            }
+            Some(qname) => qname.as_ref().as_ptr() as *const ::std::os::raw::c_char,
         };
 
         let mappings = BUF.with(|buf| {
@@ -852,9 +921,9 @@ impl Aligner {
                     let contig: *mut ::std::os::raw::c_char =
                         (*((*(self.idx.unwrap())).seq.offset(reg.rid as isize))).name;
 
-                    let is_primary = reg.parent == reg.id;
-                    let is_supplementary = reg.sam_pri() == 0;
-                    
+                    let is_primary = reg.parent == reg.id && (reg.sam_pri() > 0);
+                    let is_supplementary = (reg.parent == reg.id) && (reg.sam_pri() == 0);
+
                     // todo holy heck this code is ugly
                     let alignment = if !reg.p.is_null() {
                         let p = &*reg.p;
@@ -994,23 +1063,26 @@ impl Aligner {
                             cigar_str,
                             md: md_str,
                             cs: cs_str,
-                            alignment_score: Some(p.dp_score as u32),
+                            alignment_score: Some(p.dp_score as i32),
                         })
                     } else {
                         None
                     };
+
+                    let target_name_arc = Arc::new(
+                        std::ffi::CStr::from_ptr(contig)
+                            .to_str()
+                            .unwrap()
+                            .to_string(),
+                    );
+
                     mappings.push(Mapping {
-                        target_name: Some(
-                            std::ffi::CStr::from_ptr(contig)
-                                .to_str()
-                                .unwrap()
-                                .to_string(),
-                        ),
+                        target_name: Some(Arc::clone(&target_name_arc)),
                         target_len: (*((*(self.idx.unwrap())).seq.offset(reg.rid as isize))).len
                             as i32,
                         target_start: reg.rs,
                         target_end: reg.re,
-                        query_name: query_name.map(|q| String::from_utf8_lossy(q).to_string()),
+                        query_name: query_name_arc.clone(),
                         query_len: NonZeroI32::new(seq.len() as i32),
                         query_start: reg.qs,
                         query_end: reg.qe,
@@ -1079,16 +1151,17 @@ impl Aligner {
                 }
             };
 
-            let mut seq_mappings = self.map(&record.seq(), cs, md, None, None).unwrap();
+            let query_name = record.id().to_vec();
+            let mut seq_mappings = self
+                .map(&record.seq(), cs, md, None, None, Some(&query_name))
+                .unwrap();
 
             for mapping in seq_mappings.iter_mut() {
                 let id = record.id();
-                if !id.is_empty() {
-                    mapping.query_name = Some(from_utf8(id).unwrap().to_string());
-                } else {
-                    mapping.query_name = Some(
+                if id.is_empty() {
+                    mapping.query_name = Some(Arc::new(
                         format!("Unnamed Seq with Length: {}", record.seq().len()).to_string(),
-                    );
+                    ));
                 }
             }
 
@@ -1152,15 +1225,16 @@ mod tests {
                 false,
                 None,
                 None,
+                Some("Sample Query")
             )
             .unwrap();
-        let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
+        let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
         assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
 
         let jh = thread::spawn(move || {
-            let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
+            let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
             assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
-            let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
+            let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
             assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
             aligner
         });
@@ -1168,9 +1242,9 @@ mod tests {
         let aligner = jh.join().unwrap();
 
         let jh = thread::spawn(move || {
-            let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
+            let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
             assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
-            let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
+            let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
             assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
             aligner
         });
@@ -1198,24 +1272,25 @@ mod tests {
                 false,
                 None,
                 None,
+                Some("Sample Query")
             )
             .unwrap();
-        let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
+        let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
         assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
 
         let aligner_handle = Arc::clone(&aligner);
         let jh0 = thread::spawn(move || {
-            let mappings = aligner_handle.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
+            let mappings = aligner_handle.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
             assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
-            let mappings = aligner_handle.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
+            let mappings = aligner_handle.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
             assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
         });
 
         let aligner_handle = Arc::clone(&aligner);
         let jh1 = thread::spawn(move || {
-            let mappings = aligner_handle.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
+            let mappings = aligner_handle.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
             assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
-            let mappings = aligner_handle.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
+            let mappings = aligner_handle.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
             assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
         });
     }
@@ -1254,7 +1329,14 @@ mod tests {
             .par_iter()
             .map(|seq| {
                 aligner
-                    .map(seq.as_bytes(), false, false, None, None)
+                    .map(
+                        seq.as_bytes(),
+                        false,
+                        false,
+                        None,
+                        None,
+                        Some("Sample Query"),
+                    )
                     .unwrap()
             })
             .collect::<Vec<_>>();
@@ -1363,13 +1445,14 @@ mod tests {
                 false,
                 None,
                 None,
+                Some("Sample Query")
             )
             .unwrap();
-        let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None).unwrap();
+        let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
         println!("{:#?}", mappings);
 
         // This should be reverse strand
-        let mappings = aligner.map("TTTTGCATCGCTGAAAACCCCAAAGTATATTTTAGAACTCGTCTATAGGTTCTACGATTTAACATCCACAGCCTTCTGGTGTCGCTGGTGTTTCAAACACCTCGATATATCACTCCTTCTGAATAACATCCATGAAAGAAGAGCCCAATCCATACTACTAAAGCTATCGTCATATGCACCATGGTCTTTTGAGAAAATTTTGCCCTCTTTAATTGACTCTAAGCTAAAAAAGAAAATTTTAATCAGTCCTCAAATTACTTACGTAGTCTTCAAATCAATAAACTATATGATAACCACGAATGACGATAAAATACACAAGTCCGCTATTCCTTCTTCTTCCTCTCTACCGT".as_bytes(), false, false, None, None).unwrap();
+        let mappings = aligner.map("TTTTGCATCGCTGAAAACCCCAAAGTATATTTTAGAACTCGTCTATAGGTTCTACGATTTAACATCCACAGCCTTCTGGTGTCGCTGGTGTTTCAAACACCTCGATATATCACTCCTTCTGAATAACATCCATGAAAGAAGAGCCCAATCCATACTACTAAAGCTATCGTCATATGCACCATGGTCTTTTGAGAAAATTTTGCCCTCTTTAATTGACTCTAAGCTAAAAAAGAAAATTTTAATCAGTCCTCAAATTACTTACGTAGTCTTCAAATCAATAAACTATATGATAACCACGAATGACGATAAAATACACAAGTCCGCTATTCCTTCTTCTTCCTCTCTACCGT".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
         println!("Reverse Strand\n{:#?}", mappings);
         assert!(mappings[0].strand == Strand::Reverse);
 
@@ -1385,12 +1468,12 @@ mod tests {
                 false,
                 None,
                 None,
+                Some("Sample Query"),
             )
             .unwrap();
 
-        let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagttatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), true, false, None, None).unwrap();
+        let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagttatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), true, false, None, None, Some("Sample Query")).unwrap();
         println!("{:#?}", mappings);
-	panic!();
     }
 
     #[test]
@@ -1401,13 +1484,11 @@ mod tests {
 
         aligner.check_opts().expect("Opts are invalid");
 
-        aligner = aligner
-            .with_index("test_data/genome.fa", None)
-            .unwrap();
+        aligner = aligner.with_index("test_data/genome.fa", None).unwrap();
 
         let output = aligner.map(
             b"GAAATACGGGTCTCTGGTTTGACATAAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGCCCAGACTTAAATCGCACATACTGCGTCGTGCAATGCCGGGCGCTAACGGCTCAATATCACGCTGCGTCACTATGGCTACCCCAAAGCGGGGGGGGCATCGACGGGCTGTTTGATTTGAGCTCCATTACCCTACAATTAGAACACTGGCAACATTTGGGCGTTGAGCGGTCTTCCGTGTCGCTCGATCCGCTGGAACTTGGCAACCACACTCTAAACTACATGTGGTATGGCTCATAAGATCATGCGGATCGTGGCACTGCTTTCGGCCACGTTAGAGCCGCTGTGCTCGAAGATTGGGACCTACCAAC",
-            false, false, None, None).unwrap();
+            false, false, None, None, Some("Sample Query")).unwrap();
 
         println!("{:#?}", aligner.mapopt);
         println!("{:#?}", aligner.idxopt);
@@ -1431,9 +1512,10 @@ mod tests {
                 true,
                 None,
                 None,
+                Some("Sample Query"),
             )
             .unwrap();
-        let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagGGACatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), false, false, None, None).unwrap();
+        let mappings = aligner.map("atCCTACACTGCATAAACTATTTTGcaccataaaaaaaagGGACatgtgtgGGTCTAAAATAATTTGCTGAGCAATTAATGATTTCTAAATGATGCTAAAGTGAACCATTGTAatgttatatgaaaaataaatacacaattaagATCAACACAGTGAAATAACATTGATTGGGTGATTTCAAATGGGGTCTATctgaataatgttttatttaacagtaatttttatttctatcaatttttagtaatatctacaaatattttgttttaggcTGCCAGAAGATCGGCGGTGCAAGGTCAGAGGTGAGATGTTAGGTGGTTCCACCAACTGCACGGAAGAGCTGCCCTCTGTCATTCAAAATTTGACAGGTACAAACAGactatattaaataagaaaaacaaactttttaaaggCTTGACCATTAGTGAATAGGTTATATGCTTATTATTTCCATTTAGCTTTTTGAGACTAGTATGATTAGACAAATCTGCTTAGttcattttcatataatattgaGGAACAAAATTTGTGAGATTTTGCTAAAATAACTTGCTTTGCTTGTTTATAGAGGCacagtaaatcttttttattattattataattttagattttttaatttttaaat".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
         println!("{:#?}", mappings);
     }
 
@@ -1448,12 +1530,15 @@ mod tests {
 
         let mut mappings = aligner.map(
     b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGTTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG",
-            true, true, None, None).unwrap();
+            true, true, None, None, Some("Sample Query")).unwrap();
         assert_eq!(mappings.len(), 1);
 
         let observed = mappings.pop().unwrap();
 
-        assert_eq!(observed.target_name, Some(String::from("MT_human")));
+        assert_eq!(
+            observed.target_name,
+            Some(Arc::new(String::from("MT_human")))
+        );
         assert_eq!(observed.target_start, 576);
         assert_eq!(observed.target_end, 768);
         assert_eq!(observed.query_start, 0);
@@ -1495,12 +1580,15 @@ mod tests {
         aligner = aligner.with_cigar_clipping();
         let mut mappings = aligner.map(
             b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGTTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG",
-                    true, true, None, None).unwrap();
+                    true, true, None, None, Some("Sample Query")).unwrap();
         assert_eq!(mappings.len(), 1);
 
         let observed = mappings.pop().unwrap();
 
-        assert_eq!(observed.target_name, Some(String::from("MT_human")));
+        assert_eq!(
+            observed.target_name,
+            Some(Arc::new(String::from("MT_human")))
+        );
         assert_eq!(observed.target_start, 576);
         assert_eq!(observed.target_end, 768);
         assert_eq!(observed.query_start, 0);
@@ -1535,7 +1623,7 @@ mod tests {
 
         let mut mappings = aligner.map(
                     b"TTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG",
-                            true, true, None, None).unwrap();
+                            true, true, None, None, Some("Sample Query")).unwrap();
         assert_eq!(mappings.len(), 1);
 
         let observed = mappings.pop().unwrap();
@@ -1569,7 +1657,7 @@ mod tests {
 
         for (md, cs) in vec![(true, true), (false, false), (true, false), (false, true)].iter() {
             let mapping = aligner
-                .map(query, *cs, *md, None, None)
+                .map(query, *cs, *md, None, None, Some("Sample Query"))
                 .unwrap()
                 .pop()
                 .unwrap();
@@ -1603,7 +1691,14 @@ mod tests {
         let aligner = aligner.with_seq(seq.as_bytes()).unwrap();
 
         let alignments = aligner
-            .map(query.as_bytes(), false, false, None, None)
+            .map(
+                query.as_bytes(),
+                false,
+                false,
+                None,
+                None,
+                Some("Sample Query"),
+            )
             .unwrap();
 
         assert_eq!(alignments.len(), 2);
@@ -1613,7 +1708,14 @@ mod tests {
         let aligner = Aligner::builder().short();
         let aligner = aligner.with_seqs(&vec![seq.as_bytes().to_vec()]).unwrap();
         let alignments = aligner
-            .map(query.as_bytes(), false, false, None, None)
+            .map(
+                query.as_bytes(),
+                false,
+                false,
+                None,
+                None,
+                Some("Sample Query"),
+            )
             .unwrap();
         assert_eq!(alignments.len(), 2);
 
@@ -1628,7 +1730,14 @@ mod tests {
             )
             .unwrap();
         let alignments = aligner
-            .map(query.as_bytes(), false, false, None, None)
+            .map(
+                query.as_bytes(),
+                false,
+                false,
+                None,
+                None,
+                Some("Sample Query"),
+            )
             .unwrap();
         assert_eq!(alignments.len(), 2);
 
@@ -1640,7 +1749,14 @@ mod tests {
             .with_seq_and_id(seq.as_bytes(), &id.as_bytes().to_vec())
             .unwrap();
         let alignments = aligner
-            .map(query.as_bytes(), false, false, None, None)
+            .map(
+                query.as_bytes(),
+                false,
+                false,
+                None,
+                None,
+                Some("Sample Query"),
+            )
             .unwrap();
         assert_eq!(alignments.len(), 2);
 
@@ -1659,7 +1775,14 @@ mod tests {
             .unwrap();
         println!("mapping...");
         let alignments = aligner
-            .map(query.as_bytes(), true, true, None, None)
+            .map(
+                query.as_bytes(),
+                true,
+                true,
+                None,
+                None,
+                Some("Sample Query"),
+            )
             .unwrap();
         println!("Mapped");
         assert_eq!(alignments.len(), 1);
@@ -1729,7 +1852,8 @@ mod tests {
                 Err("File does not exist")
             );
 
-            if let Err("File is empty") = Aligner::builder().with_index("test_data/empty.fa", None) {
+            if let Err("File is empty") = Aligner::builder().with_index("test_data/empty.fa", None)
+            {
                 println!("File is empty - Success");
             } else {
                 panic!("File is empty error not thrown");
@@ -1758,7 +1882,14 @@ mod tests {
         let aligner = Aligner::builder().short();
         let aligner = std::sync::Arc::new(aligner.with_seq(seq.as_bytes()).unwrap());
         let alignments = aligner
-            .map(query.as_bytes(), false, false, None, None)
+            .map(
+                query.as_bytes(),
+                false,
+                false,
+                None,
+                None,
+                Some("Sample Query"),
+            )
             .unwrap();
         assert_eq!(alignments.len(), 2);
 
@@ -1776,7 +1907,14 @@ mod tests {
             new_send
                 .send(
                     new_aligner
-                        .map(query.as_bytes(), false, false, None, None)
+                        .map(
+                            query.as_bytes(),
+                            false,
+                            false,
+                            None,
+                            None,
+                            Some("Sample Query"),
+                        )
                         .expect("Failed to map"),
                 )
                 .expect("Failed to send")
@@ -1784,7 +1922,14 @@ mod tests {
         let new_sender = std::thread::spawn(move || {
             send.send(
                 aligner
-                    .map(query.as_bytes(), false, false, None, None)
+                    .map(
+                        query.as_bytes(),
+                        false,
+                        false,
+                        None,
+                        None,
+                        Some("Sample Query"),
+                    )
                     .expect("Failed to map"),
             )
             .expect("Failed to send")
