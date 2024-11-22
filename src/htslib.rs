@@ -166,7 +166,7 @@ impl Aligner {
                 mm_ffi::mm_map(
                     self.idx.unwrap() as *const mm_ffi::mm_idx_t,
                     query.inner.l_seq,
-                    query.inner.seq as *const i8,
+                    query.inner.seq as *const libc::c_char,
                     &mut n_regs,
                     buf.borrow_mut().buf,
                     &map_opt,
