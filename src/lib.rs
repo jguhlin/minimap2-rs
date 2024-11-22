@@ -349,11 +349,17 @@ impl Aligner {
 
 impl Aligner {
     /// Ergonomic function for Aligner. Sets the minimap2 preset to lr:hq.
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     pub fn lrhq(self) -> Self {
         self.preset(Preset::LrHq)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to splice
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().splice();
@@ -363,6 +369,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to splice:hq
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().splice_hq();
@@ -372,6 +381,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().asm();
@@ -381,6 +393,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm5
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().asm5();
@@ -389,6 +404,9 @@ impl Aligner {
         self.preset(Preset::Asm5)
     }
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm10
+    ///
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().asm10();
@@ -397,6 +415,9 @@ impl Aligner {
         self.preset(Preset::Asm10)
     }
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm20
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().asm20();
@@ -406,6 +427,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to sr
+    ///
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().sr();
@@ -415,6 +439,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to MapPb
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().map_pb();
@@ -424,6 +451,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to MapHifi
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().map_hifi();
@@ -433,6 +463,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to MapOnt.
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().map_ont();
@@ -442,6 +475,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to AvaPb
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().ava_pb();
@@ -460,6 +496,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Short
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().short();
@@ -469,6 +508,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Map10k
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().map10k();
@@ -478,6 +520,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to cdna
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().cdna();
@@ -487,19 +532,22 @@ impl Aligner {
     }
 
     /// Create an aligner using a preset.
-    pub fn preset(self, preset: Preset) -> Self {
-        let mut idxopt = IdxOpt::default();
-        let mut mapopt = MapOpt::default();
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
+    pub fn preset(mut self, preset: Preset) -> Self {
+        // let mut idxopt = IdxOpt::default();
+        // let mut mapopt = MapOpt::default();
 
         unsafe {
-            mm_set_opt(&0, &mut idxopt, &mut mapopt);
-            mm_set_opt(preset.into(), &mut idxopt, &mut mapopt)
+            mm_set_opt(&0, &mut self.idxopt, &mut self.mapopt);
+            mm_set_opt(preset.into(), &mut self.idxopt, &mut self.mapopt)
         };
 
         Self {
-            idxopt,
-            mapopt,
-            ..Default::default()
+            idxopt: self.idxopt,
+            mapopt: self.mapopt,
+            ..self
         }
     }
 
