@@ -23,7 +23,7 @@ jobs:
     - name: Run minimap2-sys simde tests
       run: cargo test --features simde
 
-  test:
+  test-ubuntu:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -32,8 +32,18 @@ jobs:
       run: cargo test
     - name: Run minimap2-sys simde tests
       run: cargo test --features simde
-
-  test-m1-mac:
+    
+  test-macos-13:
+    runs-on: macos-13
+    steps:
+    - uses: actions/checkout@v3
+    - run: cd minimap2-sys
+    - name: Run minimap2-sys tests
+      run: cargo test
+    - name: Run minimap2-sys simde tests
+      run: cargo test --features simde
+      
+  test-macos-14:
     runs-on: macos-14
     steps:
     - uses: actions/checkout@v3
@@ -42,4 +52,13 @@ jobs:
       run: cargo test
     - name: Run minimap2-sys simde tests
       run: cargo test --features simde
-
+      
+  test-macos-15:
+    runs-on: macos-15
+    steps:
+    - uses: actions/checkout@v3
+    - run: cd minimap2-sys
+    - name: Run minimap2-sys tests
+      run: cargo test
+    - name: Run minimap2-sys simde tests
+      run: cargo test --features simde
