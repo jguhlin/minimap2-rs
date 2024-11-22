@@ -454,6 +454,9 @@ impl Aligner {
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to AvaOnt.
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().ava_ont();
