@@ -1,5 +1,5 @@
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 // Configure for minimap2
 fn configure(mut cc: &mut cc::Build) {
@@ -137,10 +137,11 @@ fn compile() {
 
     if !env::var("TARGET").unwrap().contains("android") {
         println!("cargo:rustc-link-lib=pthread");
+        cc.flag("-lpthread");
     }
 
-    if !env::var("TARGET").unwrap().contains("android") {
-        cc.flag("-lpthread");
+    if env::var("CARGO_CFG_TARGET_OS").unwrap() == "android" {
+        android();
     }
 
     cc.flag("-lm");
@@ -158,16 +159,17 @@ fn compile() {
     #[cfg(feature = "static")]
     cc.static_flag(true);
 
-    println!("cargo:rustc-cfg=link_libz");
+    // println!("cargo:rustc-cfg=link_libz");
 
     if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
-        cc.include(include);
+        cc.include(include.clone());
         // Use env DEP_Z_ROOT to find the library
         if let Some(lib) = std::env::var_os("DEP_Z_ROOT") {
             let lib = lib.to_str().unwrap();
             println!("cargo:rustc-link-search=native={}", lib);
             println!("cargo:rustc-link-lib=static=z");
         }
+
     }
 
     if let Ok(lib) = pkg_config::find_library("zlib") {
@@ -219,6 +221,35 @@ fn gen_bindings() {
 
 #[cfg(not(feature = "bindgen"))]
 fn gen_bindings() {}
+
+fn android() {
+    println!("cargo:rustc-link-lib=z");
+
+    // If we are running via cross
+    if let Ok(sysroot) = env::var("CROSS_SYSROOT") {
+        let path = PathBuf::from(sysroot).join("usr/lib");
+        let path = path.join(&env::var("TARGET").unwrap());
+        println!("cargo:rustc-link-search=native={}", path.display());
+        let path = path.join("libz.so");
+        println!("cargo:rustc-link-search=native={}", path.display());
+        println!("cargo:rustc-link-lib=static=z");
+        
+        
+    }
+
+    if let Ok(output_path) = env::var("CARGO_NDK_OUTPUT_PATH") {
+        let sysroot_libs_path =
+            PathBuf::from(env::var_os("CARGO_NDK_SYSROOT_LIBS_PATH").unwrap());
+        let lib_path = sysroot_libs_path.join("libz.so");
+        std::fs::copy(
+            lib_path,
+            Path::new(&output_path)
+                .join(&env::var("CARGO_NDK_ANDROID_TARGET").unwrap())
+                .join("libz.so"),
+        )
+        .unwrap();
+    }
+}
 
 fn main() {
     compile();

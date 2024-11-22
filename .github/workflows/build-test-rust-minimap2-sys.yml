@@ -32,7 +32,24 @@ jobs:
       run: cargo test
     - name: Run minimap2-sys simde tests
       run: cargo test --features simde
-    
+
+  test-android:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install Rust Cross
+      run: rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+    - run: cargo install cross --git https://github.com/cross-rs/cross
+    - run: cd minimap2-sys
+    - name: Run minimap2-sys tests on Android aarch64
+      run: cross test --target aarch64-linux-android
+    - name: Run minimap2-sys tests on Android armv7
+      run: cross test --target armv7-linux-androideabi
+    - name: Run minimap2-sys tests on Android i686
+      run: cross test --target i686-linux-android
+    - name: Run minimap2-sys tests on Android x86_64
+      run: cross test --target x86_64-linux-android
+
   test-macos-13:
     runs-on: macos-13
     steps:
