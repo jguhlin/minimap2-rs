@@ -41,7 +41,6 @@ fn configure(mut cc: &mut cc::Build) {
 
         if let Some(x) = file.extension() {
             if x == "c" {
-                println!("Compiling: {:?}", file);
                 cc.file(file);
             }
         }
@@ -131,8 +130,6 @@ fn compile() {
     let _host = env::var("HOST").unwrap();
     let _target = env::var("TARGET").unwrap();
 
-    println!("{}", _target);
-
     println!("cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR");
 
     println!("cargo:rustc-link-lib=m");
@@ -164,7 +161,6 @@ fn compile() {
     println!("cargo:rustc-cfg=link_libz");
 
     if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
-        println!("-------------FOUND ZLIB INCLUDE: {:?}", include);
         cc.include(include);
         // Use env DEP_Z_ROOT to find the library
         if let Some(lib) = std::env::var_os("DEP_Z_ROOT") {
@@ -172,11 +168,6 @@ fn compile() {
             println!("cargo:rustc-link-search=native={}", lib);
             println!("cargo:rustc-link-lib=static=z");
         }
-    }
-
-    // Debugging, print out the entire environment
-    for (key, value) in std::env::vars() {
-        println!("{}: {}", key, value);
     }
 
     if let Ok(lib) = pkg_config::find_library("zlib") {
