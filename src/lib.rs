@@ -44,7 +44,6 @@
 //! assert_eq!(hits.unwrap().len(), 1);
 //! ```
 
-use std::borrow::Cow;
 use std::cell::RefCell;
 
 use std::ffi::{CStr, CString};
@@ -57,9 +56,6 @@ use std::os::unix::ffi::OsStrExt;
 
 use libc::c_void;
 use minimap2_sys::*;
-
-#[cfg(feature = "map-file")]
-use simdutf8::basic::from_utf8;
 
 #[cfg(feature = "map-file")]
 use needletail::parse_fastx_file;
@@ -75,25 +71,25 @@ pub type IdxOpt = mm_idxopt_t;
 
 // TODO: Probably a better way to handle this...
 /// C string constants for passing to minimap2
-static LRHQAE: &str = "lr:hqae\0";
-static LRHQ: &str = "lr:hq\0";
-static SPLICE: &str = "splice\0";
-static SPLICEHQ: &str = "splice:hq\0";
-static ASM: &str = "asm\0";
-static ASM5: &str = "asm5\0";
-static ASM10: &str = "asm10\0";
-static ASM20: &str = "asm20\0";
-static SR: &str = "sr\0";
-static MAP_PB: &str = "map-pb\0";
-static MAP_HIFI: &str = "map-hifi\0";
-static MAP_ONT: &str = "map-ont\0";
-static AVA_PB: &str = "ava-pb\0";
-static AVA_ONT: &str = "ava-ont\0";
+static LRHQAE: &CStr = c"lr:hqae";
+static LRHQ: &CStr = c"lr:hq";
+static SPLICE: &CStr = c"splice";
+static SPLICEHQ: &CStr = c"splice:hq";
+static ASM: &CStr = c"asm";
+static ASM5: &CStr = c"asm5";
+static ASM10: &CStr = c"asm10";
+static ASM20: &CStr = c"asm20";
+static SR: &CStr = c"sr";
+static MAP_PB: &CStr = c"map-pb";
+static MAP_HIFI: &CStr = c"map-hifi";
+static MAP_ONT: &CStr = c"map-ont";
+static AVA_PB: &CStr = c"ava-pb";
+static AVA_ONT: &CStr = c"ava-ont";
 
 // These aren't listed in the command anymore, but are still available
-static SHORT: &str = "short\0";
-static MAP10K: &str = "map10k\0";
-static CDNA: &str = "cdna\0";
+static SHORT: &CStr = c"short";
+static MAP10K: &CStr = c"map10k";
+static CDNA: &CStr = c"cdna";
 
 /// Strand enum
 #[derive(Debug, PartialEq, Eq, Copy, Clone, Default)]
@@ -135,51 +131,26 @@ pub enum Preset {
 }
 
 // Convert to c string for input into minimap2
-impl From<Preset> for *const i8 {
+impl From<Preset> for *const libc::c_char {
     fn from(preset: Preset) -> Self {
         match preset {
-            Preset::LrHqae => LRHQAE.as_bytes().as_ptr() as *const i8,
-            Preset::LrHq => LRHQ.as_bytes().as_ptr() as *const i8,
-            Preset::Splice => SPLICE.as_bytes().as_ptr() as *const i8,
-            Preset::SpliceHq => SPLICEHQ.as_bytes().as_ptr() as *const i8,
-            Preset::Asm => ASM.as_bytes().as_ptr() as *const i8,
-            Preset::Asm5 => ASM5.as_bytes().as_ptr() as *const i8,
-            Preset::Asm10 => ASM10.as_bytes().as_ptr() as *const i8,
-            Preset::Asm20 => ASM20.as_bytes().as_ptr() as *const i8,
-            Preset::Sr => SR.as_bytes().as_ptr() as *const i8,
-            Preset::MapPb => MAP_PB.as_bytes().as_ptr() as *const i8,
-            Preset::MapHifi => MAP_HIFI.as_bytes().as_ptr() as *const i8,
-            Preset::MapOnt => MAP_ONT.as_bytes().as_ptr() as *const i8,
-            Preset::AvaPb => AVA_PB.as_bytes().as_ptr() as *const i8,
-            Preset::AvaOnt => AVA_ONT.as_bytes().as_ptr() as *const i8,
-            Preset::Short => SHORT.as_bytes().as_ptr() as *const i8,
-            Preset::Map10k => MAP10K.as_bytes().as_ptr() as *const i8,
-            Preset::Cdna => CDNA.as_bytes().as_ptr() as *const i8,
-        }
-    }
-}
-
-// Convert to c string for input into minimap2
-impl From<Preset> for *const u8 {
-    fn from(preset: Preset) -> Self {
-        match preset {
-            Preset::LrHqae => LRHQAE.as_bytes().as_ptr(),
-            Preset::LrHq => LRHQ.as_bytes().as_ptr(),
-            Preset::Splice => SPLICE.as_bytes().as_ptr(),
-            Preset::SpliceHq => SPLICEHQ.as_bytes().as_ptr(),
-            Preset::Asm => ASM.as_bytes().as_ptr(),
-            Preset::Asm5 => ASM5.as_bytes().as_ptr(),
-            Preset::Asm10 => ASM10.as_bytes().as_ptr(),
-            Preset::Asm20 => ASM20.as_bytes().as_ptr(),
-            Preset::Sr => SR.as_bytes().as_ptr(),
-            Preset::MapPb => MAP_PB.as_bytes().as_ptr(),
-            Preset::MapHifi => MAP_HIFI.as_bytes().as_ptr(),
-            Preset::MapOnt => MAP_ONT.as_bytes().as_ptr(),
-            Preset::AvaPb => AVA_PB.as_bytes().as_ptr(),
-            Preset::AvaOnt => AVA_ONT.as_bytes().as_ptr(),
-            Preset::Short => SHORT.as_bytes().as_ptr(),
-            Preset::Map10k => MAP10K.as_bytes().as_ptr(),
-            Preset::Cdna => CDNA.as_bytes().as_ptr(),
+            Preset::LrHqae => LRHQAE.as_ptr(),
+            Preset::LrHq => LRHQ.as_ptr(),
+            Preset::Splice => SPLICE.as_ptr(),
+            Preset::SpliceHq => SPLICEHQ.as_ptr(),
+            Preset::Asm => ASM.as_ptr(),
+            Preset::Asm5 => ASM5.as_ptr(),
+            Preset::Asm10 => ASM10.as_ptr(),
+            Preset::Asm20 => ASM20.as_ptr(),
+            Preset::Sr => SR.as_ptr(),
+            Preset::MapPb => MAP_PB.as_ptr(),
+            Preset::MapHifi => MAP_HIFI.as_ptr(),
+            Preset::MapOnt => MAP_ONT.as_ptr(),
+            Preset::AvaPb => AVA_PB.as_ptr(),
+            Preset::AvaOnt => AVA_ONT.as_ptr(),
+            Preset::Short => SHORT.as_ptr(),
+            Preset::Map10k => MAP10K.as_ptr(),
+            Preset::Cdna => CDNA.as_ptr(),
         }
     }
 }
@@ -611,6 +582,7 @@ impl Aligner {
     }
 
     // Check options
+    /// Check if the options are valid - Maps to mm_check_opt in minimap2
     pub fn check_opts(&self) -> Result<(), &'static str> {
         let result = unsafe { mm_check_opt(&self.idxopt, &self.mapopt) };
 
@@ -853,7 +825,7 @@ impl Aligner {
             return Err("Sequence is empty");
         }
 
-        let mut qname_cstring = None;
+        let qname_cstring;
 
         let query_name_cstr: Option<&CStr> = match query_name.as_ref() {
             None => None,
@@ -1249,7 +1221,7 @@ mod tests {
             aligner
         });
 
-        let aligner = jh.join().unwrap();
+        let _aligner = jh.join().unwrap();
     }
 
     #[test]
@@ -1285,6 +1257,8 @@ mod tests {
             let mappings = aligner_handle.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
             assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
         });
+        
+        jh0.join().unwrap();
 
         let aligner_handle = Arc::clone(&aligner);
         let jh1 = thread::spawn(move || {
@@ -1293,6 +1267,9 @@ mod tests {
             let mappings = aligner_handle.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
             assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
         });
+
+        jh1.join().unwrap();
+
     }
 
     #[test]
@@ -1325,7 +1302,7 @@ mod tests {
             "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAG",
         ];
 
-        let results = sequences
+        let _results = sequences
             .par_iter()
             .map(|seq| {
                 aligner
@@ -1352,13 +1329,13 @@ mod tests {
 
     #[test]
     fn idxopt() {
-        let x: IdxOpt = Default::default();
+        let _x: IdxOpt = Default::default();
     }
 
     #[test]
     fn mapopt() {
-        let x: mm_mapopt_t = Default::default();
-        let y: MapOpt = Default::default();
+        let _x: mm_mapopt_t = Default::default();
+        let _y: MapOpt = Default::default();
     }
 
     #[test]
@@ -1371,7 +1348,7 @@ mod tests {
         let idx = None;
         let idx_reader = None;
 
-        let aligner = Aligner {
+        let _aligner = Aligner {
             idxopt,
             mapopt,
             threads,
@@ -1383,17 +1360,17 @@ mod tests {
 
     #[test]
     fn aligner_builder() {
-        let result = Aligner::builder();
+        let _result = Aligner::builder();
     }
 
     #[test]
     fn aligner_builder_preset() {
-        let result = Aligner::builder().preset(Preset::LrHq);
+        let _result = Aligner::builder().preset(Preset::LrHq);
     }
 
     #[test]
     fn aligner_builder_preset_with_threads() {
-        let result = Aligner::builder()
+        let _result = Aligner::builder()
             .preset(Preset::LrHq)
             .with_index_threads(1);
     }
@@ -1412,7 +1389,7 @@ mod tests {
 
     #[test]
     fn create_index() {
-        let mut aligner = Aligner::builder()
+        let aligner = Aligner::builder()
             .preset(Preset::MapOnt)
             .with_index_threads(1);
 
@@ -1420,7 +1397,7 @@ mod tests {
 
         assert!(aligner.idxopt.w == 10);
 
-        aligner = aligner
+        aligner
             .with_index("test_data/test_data.fasta", Some("test.mmi"))
             .unwrap();
     }
@@ -1459,7 +1436,7 @@ mod tests {
         // Assert the Display impl for strand works
         println!("{}", mappings[0].strand);
 
-        let mut aligner = aligner.with_cigar();
+        let aligner = aligner.with_cigar();
 
         aligner
             .map(
@@ -1626,7 +1603,7 @@ mod tests {
                             true, true, None, None, Some("Sample Query")).unwrap();
         assert_eq!(mappings.len(), 1);
 
-        let observed = mappings.pop().unwrap();
+        let _observed = mappings.pop().unwrap();
 
         assert_eq!(
             align.cigar,
@@ -1948,7 +1925,7 @@ mod tests {
         sr.mapopt.best_n = 1;
         sr.idxopt.k = 7;
 
-        let aligner = Aligner {
+        let _aligner = Aligner {
             mapopt: MapOpt {
                 best_n: 1,
                 ..Aligner::builder().sr().mapopt
