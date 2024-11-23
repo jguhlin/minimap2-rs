@@ -28,7 +28,7 @@ exclude = ["minimappers2", "fakeminimap2", "minimap2-sys"]
 
 [dependencies]
 libc = "0.2"
-simdutf8 = { version = "0.1", optional = true }
+# simdutf8 = { version = "0.1", optional = true }
 needletail = { version = "0.6", optional = true, default-features = false}
 
 # Dep for development
@@ -53,7 +53,7 @@ default = ["map-file"]
 sse2only = ["minimap2-sys/sse2only"]
 htslib = ['rust-htslib']
 simde = ["minimap2-sys/simde"]
-map-file = ["needletail", "simdutf8"]
+map-file = ["needletail"] #, "simdutf8"]
 zlib-ng = ["minimap2-sys/zlib-ng"]
 curl = ["rust-htslib/curl"]
 static = ["minimap2-sys/static", "rust-htslib/static"]
