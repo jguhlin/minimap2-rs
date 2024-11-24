@@ -631,29 +631,27 @@ impl Aligner {
     {
         let path_str = match std::ffi::CString::new(path.as_ref().as_os_str().as_bytes()) {
             Ok(path) => {
-                // println!("{:#?}", path);
                 path
             }
             Err(_) => {
-                println!("Got error");
-                return Err("Invalid Path");
+                return Err("Invalid Path for Index");
             }
         };
 
         // Confirm file exists
         if !path.as_ref().exists() {
-            return Err("File does not exist");
+            return Err("Index File does not exist");
         }
 
         // Confirm file is not empty
         if path.as_ref().metadata().unwrap().len() == 0 {
-            return Err("File is empty");
+            return Err("Index File is empty");
         }
 
         let output = match output {
             Some(output) => match std::ffi::CString::new(output) {
                 Ok(output) => output,
-                Err(_) => return Err("Invalid Output"),
+                Err(_) => return Err("Invalid Output for Index"),
             },
             None => std::ffi::CString::new(Vec::new()).unwrap(),
         };
