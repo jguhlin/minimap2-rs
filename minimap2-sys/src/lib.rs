@@ -41,6 +41,11 @@ impl Default for mm_idxopt_t {
     }
 }
 
+#[cfg(feature = "rust-threads")]
+mod rust_threads_index;
+
+#[cfg(feature = "rust-threads")]
+pub use rust_threads_index::*;
 // TODO: Add more tests!
 #[cfg(test)]
 mod tests {
