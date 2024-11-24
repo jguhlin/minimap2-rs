@@ -266,7 +266,7 @@ impl Default for ThreadLocalBuffer {
 /// Aligner::builder();
 /// ```
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Aligner {
     /// Index options passed to minimap2 (mm_idxopt_t)
     pub idxopt: IdxOpt,
