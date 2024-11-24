@@ -4686,7 +4686,7 @@ fn bindgen_test_layout_mm_idx_seq_t() {
     );
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct mm_idx_t {
     pub b: i32,
     pub w: i32,

@@ -266,7 +266,7 @@ impl Default for ThreadLocalBuffer {
 /// Aligner::builder();
 /// ```
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Aligner {
     /// Index options passed to minimap2 (mm_idxopt_t)
     pub idxopt: IdxOpt,
@@ -278,10 +278,10 @@ pub struct Aligner {
     pub threads: usize,
 
     /// Index created by minimap2
-    pub idx: Option<*mut mm_idx_t>,
+    pub idx: Option<Arc<mm_idx_t>>,
 
     /// Index reader created by minimap2
-    pub idx_reader: Option<mm_idx_reader_t>,
+    pub idx_reader: Option<Arc<mm_idx_reader_t>>,
 
     /// Whether to add soft clipping to CIGAR result
     pub cigar_clipping: bool,
@@ -871,7 +871,7 @@ impl Aligner {
 
             mm_reg = MaybeUninit::new(unsafe {
                 mm_map(
-                    self.idx.unwrap() as *const mm_idx_t,
+                    self.idx.unwrap().as_ref() as *const mm_idx_t,
                     seq.len() as i32,
                     seq.as_ptr() as *const ::std::os::raw::c_char,
                     &mut n_regs,
@@ -990,7 +990,7 @@ impl Aligner {
                                     km,
                                     &mut cs_string,
                                     &mut m_cs_string,
-                                    self.idx.unwrap() as *const mm_idx_t,
+                                    self.idx.unwrap().as_ref() as *const mm_idx_t,
                                     const_ptr,
                                     seq.as_ptr() as *const libc::c_char,
                                     true.into(),
@@ -1009,7 +1009,7 @@ impl Aligner {
                                     km,
                                     &mut cs_string,
                                     &mut m_cs_string,
-                                    self.idx.unwrap() as *const mm_idx_t,
+                                    self.idx.unwrap().as_ref() as *const mm_idx_t,
                                     const_ptr,
                                     seq.as_ptr() as *const libc::c_char,
                                 );
@@ -1934,5 +1934,36 @@ mod tests {
             },
             ..sr
         };
+    }
+
+    #[test]
+    fn double_free_test_index_load_before_threads() {
+        // Create a new aligner
+        let aligner = Aligner::builder().map_ont().with_index("yeast_ref.mmi", None).unwrap();
+
+        // Perform a test mapping to ensure the index is loaded and all
+        let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
+        assert(mappings.len() > 0);
+
+        // Spawn two threads using thread scoped aligners, clone aligner
+        std::thread::scope(|s| {
+            let aligner = aligner.clone();
+            let jh0 = s.spawn(|| {
+                let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
+                // Sleep 100ms
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            });
+
+            let aligner = aligner.clone();
+            let jh1 = s.spawn(|| {
+                std::thread::sleep(std::time::Duration::from_millis(200));
+                let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
+                // Sleep 100ms
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            });
+
+            jh0.join().unwrap();
+            jh1.join().unwrap();
+        });       
     }
 }
