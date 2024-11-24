@@ -79,3 +79,7 @@ jobs:
       run: cargo test
     - name: Run minimap2-sys simde tests
       run: cargo test --features simde
+    - name: Run minimap2-sys zlib-ng
+      run: cargo test --features zlib-ng
+    - name: Run minimap2-sys static
+      run: cargo test --features static
