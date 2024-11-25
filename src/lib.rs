@@ -282,7 +282,7 @@ impl Default for ThreadLocalBuffer {
 /// Aligner::builder();
 /// ```
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Aligner {
     /// Index options passed to minimap2 (mm_idxopt_t)
     pub idxopt: IdxOpt,
@@ -2050,6 +2050,8 @@ mod tests {
                 assert!(mappings.len() > 0);
                 // Sleep 100ms
                 std::thread::sleep(std::time::Duration::from_millis(100));
+                assert!(Arc::strong_count(&aligner1.idx.as_ref().unwrap()) == 1);
+                println!("Second thread done");                
             });
 
             // Join, to force drop logic from external thread
