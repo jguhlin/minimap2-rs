@@ -202,7 +202,7 @@ Contributors to this release: @mbhall88 @rob-p @Sam-Sims @charlesgregory @PB-DB
 + Add Send + Sync to Aligner, along with unit test @PB-DB
 + Only use rust-htslib/curl when curl feature is enabled @PB-DB
 + Mark bam::Record objects as supplementary @PB-DB
-+ Experimental Android support, solves [#66](https://github.com/jguhlin/minimap2-rs/issues/66)
++ Experimental Android support (tested on aarch64 and x86_64), solves [#66](https://github.com/jguhlin/minimap2-rs/issues/66)
 
 ### 0.1.20 minimap2 2.28
 + Fix htslib errors. No update to -sys crate needed.
