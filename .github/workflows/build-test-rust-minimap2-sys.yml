@@ -14,7 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     container: messense/rust-musl-cross:x86_64-musl
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+      submodules: 'recursive'
     - run: cd minimap2-sys
     - name: Build
       run: cargo build
@@ -26,7 +27,8 @@ jobs:
   test-ubuntu:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+      submodules: 'recursive'
     - run: cd minimap2-sys
     - name: Run minimap2-sys tests
       run: cargo test
@@ -36,7 +38,8 @@ jobs:
   test-android:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+      submodules: 'recursive'
     - name: Install Rust Cross
       run: rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
     - run: cargo install cross --git https://github.com/cross-rs/cross
@@ -63,7 +66,8 @@ jobs:
   test-macos-14:
     runs-on: macos-14
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+      submodules: 'recursive'
     - run: cd minimap2-sys
     - name: Run minimap2-sys tests
       run: cargo test
@@ -73,7 +77,8 @@ jobs:
   test-macos-15:
     runs-on: macos-15
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+      submodules: 'recursive'
     - run: cd minimap2-sys
     - name: Run minimap2-sys tests
       run: cargo test
