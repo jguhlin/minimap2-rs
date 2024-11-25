@@ -1,4 +1,4 @@
-//! API providing a rusty interface to minimap2 or mm2-fast libraries.
+//! API providing a rusty interface to minimap2
 //!
 //! This library supports statically linking and compiling minimap2 directly, no separate install is required.
 //!
@@ -12,10 +12,26 @@
 //! # Crate Features
 //! This crate has multiple create features available.
 //! * map-file - Enables the ability to map a file directly to a reference. Enabled by deafult
-//! * mm2-fast - Uses the mm2-fast library instead of standard minimap2
 //! * htslib - Provides an interface to minimap2 that returns rust_htslib::Records
 //! * simde - Enables SIMD Everywhere library in minimap2
-//! * sse - Enables the use of SSE instructions
+//! * zlib-ng - Enables the use of zlib-ng for faster compression
+//! * curl - Enables curl for htslib
+//! * static - Builds minimap2 as a static library
+//! * sse2only - Builds minimap2 with only SSE2 support
+//! 
+//! ## Previously Supported Features
+//! * mm2-fast - Uses the mm2-fast library instead of standard minimap2
+//! 
+//! If needed, this can be re-enabled.
+//! 
+//! # Compile-time options
+//! I recommend the following:
+//! ```toml
+//! [profile.release]
+//! opt-level = 3
+//! lto = "fat"
+//! codegen-units  = 1
+//! ```
 //!
 //! # Examples
 //! ## Mapping a file to a reference
@@ -2050,7 +2066,19 @@ mod tests {
 
             jh1.join().unwrap();
         });
-
-
     }
+
+    // Test aligner cloning for flag permanence
+    #[test]
+    fn aligner_cloning_flags() {
+        let aligner = Aligner::builder().map_ont().with_cigar().with_index("yeast_ref.mmi", None).unwrap();
+        // Confirm with_cigar is set
+        // self.mapopt.flag |= MM_F_CIGAR as i64;
+        assert_eq!(aligner.mapopt.flag & MM_F_CIGAR as i64, MM_F_CIGAR as i64);
+
+        // Clone aligner
+        let aligner_clone = aligner.clone();
+        assert_eq!(aligner_clone.mapopt.flag & MM_F_CIGAR as i64, MM_F_CIGAR as i64);
+    }
+
 }
