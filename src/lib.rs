@@ -18,12 +18,12 @@
 //! * curl - Enables curl for htslib
 //! * static - Builds minimap2 as a static library
 //! * sse2only - Builds minimap2 with only SSE2 support
-//! 
+//!
 //! ## Previously Supported Features
 //! * mm2-fast - Uses the mm2-fast library instead of standard minimap2
-//! 
+//!
 //! If needed, this can be re-enabled.
-//! 
+//!
 //! # Compile-time options
 //! I recommend the following:
 //! ```toml
@@ -63,6 +63,7 @@
 use std::cell::RefCell;
 
 use std::ffi::{CStr, CString};
+use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::num::NonZeroI32;
 use std::path::Path;
@@ -269,13 +270,24 @@ impl Default for ThreadLocalBuffer {
     }
 }
 
-// @property
-// def buffer(self):
-//     if self.uses > self.max_uses:
-//         self._b = ThreadBuffer()
-//         self.uses = 0
-//     self.uses += 1
-//     return self._b
+#[derive(Default, Clone, Copy)]
+pub struct Unset;
+
+#[derive(Default, Clone, Copy)]
+pub struct PresetSet;
+
+#[derive(Default, Clone, Copy)]
+pub struct Built;
+
+trait BuilderState {}
+impl BuilderState for Unset {}
+impl BuilderState for PresetSet {}
+impl BuilderState for Built {}
+impl BuilderState for () {}
+
+trait AcceptsParams {}
+impl AcceptsParams for PresetSet {}
+impl AcceptsParams for Unset {}
 
 /// Aligner struct, mimicking minimap2's python interface
 ///
@@ -285,7 +297,7 @@ impl Default for ThreadLocalBuffer {
 /// ```
 
 #[derive(Clone)]
-pub struct Aligner {
+pub struct Aligner<S: BuilderState> {
     /// Index options passed to minimap2 (mm_idxopt_t)
     pub idxopt: IdxOpt,
 
@@ -303,10 +315,13 @@ pub struct Aligner {
 
     /// Whether to add soft clipping to CIGAR result
     pub cigar_clipping: bool,
+
+    // State of the builder
+    state: S,
 }
 
 /// Create a default aligner
-impl Default for Aligner {
+impl Default for Aligner<Unset> {
     fn default() -> Self {
         Self {
             idxopt: Default::default(),
@@ -315,13 +330,14 @@ impl Default for Aligner {
             idx: None,
             idx_reader: None,
             cigar_clipping: false,
+            state: Unset,
         }
     }
 }
 
-impl Aligner {
+impl Aligner<()> {
     /// Create a new aligner with default options
-    pub fn builder() -> Self {
+    pub fn builder() -> Aligner<Unset> {
         let mut aligner = Aligner {
             mapopt: MapOpt {
                 seed: 11,
@@ -337,90 +353,62 @@ impl Aligner {
 
         aligner
     }
-
-    /// Returns the number of sequences in the index
-    pub fn n_seq(&self) -> u32 {
-        unsafe {
-            let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
-            let idx: *const mm_idx_t = *idx;
-            (*idx).n_seq as u32
-        }
-    }
-
-    /// Get sequences direct from the index
-    /// 
-    /// Returns a reference to the sequence at the given index
-    /// Remainds valid as long as the aligner is valid
-    pub fn get_seq<'aln>(&'aln self, i: usize) -> Option<&'aln mm_idx_seq_t> {
-        unsafe {
-            let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
-            let idx: *const mm_idx_t = *idx;
-            // todo, should this be > or >=
-            if i > self.n_seq() as usize {
-                return None;
-            }
-            let seq = (*idx).seq;
-            let seq = seq.offset(i as isize);
-            let seq = &*seq;
-            Some(seq)
-        }
-    }
 }
 
-impl Aligner {
+impl Aligner<Unset> {
     /// Ergonomic function for Aligner. Sets the minimap2 preset to lr:hq.
-    /// 
+    ///
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
-    pub fn lrhq(self) -> Self {
+    pub fn lrhq(self) -> Aligner<PresetSet> {
         self.preset(Preset::LrHq)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to splice
-    /// 
+    ///
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().splice();
     /// ```
-    pub fn splice(self) -> Self {
+    pub fn splice(self) -> Aligner<PresetSet> {
         self.preset(Preset::Splice)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to splice:hq
-    /// 
+    ///
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().splice_hq();
     /// ```
-    pub fn splice_hq(self) -> Self {
+    pub fn splice_hq(self) -> Aligner<PresetSet> {
         self.preset(Preset::SpliceHq)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm
-    /// 
+    ///
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().asm();
     /// ```
-    pub fn asm(self) -> Self {
+    pub fn asm(self) -> Aligner<PresetSet> {
         self.preset(Preset::Asm)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm5
-    /// 
+    ///
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().asm5();
     /// ```
-    pub fn asm5(self) -> Self {
+    pub fn asm5(self) -> Aligner<PresetSet> {
         self.preset(Preset::Asm5)
     }
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm10
@@ -431,18 +419,18 @@ impl Aligner {
     /// # use minimap2::*;
     /// Aligner::builder().asm10();
     /// ```
-    pub fn asm10(self) -> Self {
+    pub fn asm10(self) -> Aligner<PresetSet> {
         self.preset(Preset::Asm10)
     }
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm20
-    /// 
+    ///
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().asm20();
     /// ```
-    pub fn asm20(self) -> Self {
+    pub fn asm20(self) -> Aligner<PresetSet> {
         self.preset(Preset::Asm20)
     }
 
@@ -454,126 +442,135 @@ impl Aligner {
     /// # use minimap2::*;
     /// Aligner::builder().sr();
     /// ```
-    pub fn sr(self) -> Self {
+    pub fn sr(self) -> Aligner<PresetSet> {
         self.preset(Preset::Sr)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to MapPb
-    /// 
+    ///
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().map_pb();
     /// ```
-    pub fn map_pb(self) -> Self {
+    pub fn map_pb(self) -> Aligner<PresetSet> {
         self.preset(Preset::MapPb)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to MapHifi
-    /// 
+    ///
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().map_hifi();
     /// ```
-    pub fn map_hifi(self) -> Self {
+    pub fn map_hifi(self) -> Aligner<PresetSet> {
         self.preset(Preset::MapHifi)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to MapOnt.
-    /// 
+    ///
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().map_ont();
     /// ```
-    pub fn map_ont(self) -> Self {
+    pub fn map_ont(self) -> Aligner<PresetSet> {
         self.preset(Preset::MapOnt)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to AvaPb
-    /// 
+    ///
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().ava_pb();
     /// ```
-    pub fn ava_pb(self) -> Self {
+    pub fn ava_pb(self) -> Aligner<PresetSet> {
         self.preset(Preset::AvaPb)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to AvaOnt.
-    /// 
+    ///
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().ava_ont();
     /// ```
-    pub fn ava_ont(self) -> Self {
+    pub fn ava_ont(self) -> Aligner<PresetSet> {
         self.preset(Preset::AvaOnt)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Short
-    /// 
+    ///
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().short();
     /// ```
-    pub fn short(self) -> Self {
+    pub fn short(self) -> Aligner<PresetSet> {
         self.preset(Preset::Short)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Map10k
-    /// 
+    ///
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().map10k();
     /// ```
-    pub fn map10k(self) -> Self {
+    pub fn map10k(self) -> Aligner<PresetSet> {
         self.preset(Preset::Map10k)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to cdna
-    /// 
+    ///
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
     /// ```
     /// # use minimap2::*;
     /// Aligner::builder().cdna();
     /// ```
-    pub fn cdna(self) -> Self {
+    pub fn cdna(self) -> Aligner<PresetSet> {
         self.preset(Preset::Cdna)
     }
 
     /// Create an aligner using a preset.
-    /// 
+    ///
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
-    pub fn preset(mut self, preset: Preset) -> Self {
-        // let mut idxopt = IdxOpt::default();
-        // let mut mapopt = MapOpt::default();
-
+    pub fn preset(mut self, preset: Preset) -> Aligner<PresetSet> {
         unsafe {
             mm_set_opt(&0, &mut self.idxopt, &mut self.mapopt);
             mm_set_opt(preset.into(), &mut self.idxopt, &mut self.mapopt)
         };
 
-        Self {
+        Aligner {
             idxopt: self.idxopt,
             mapopt: self.mapopt,
-            ..self
+            threads: self.threads,
+            idx: self.idx,
+            idx_reader: self.idx_reader,
+            cigar_clipping: self.cigar_clipping,
+            state: PresetSet,
         }
     }
 
+    // These next few are valid for both Unset and PresetSet
+    // If you make a change copy it below!
+}
+
+impl<S> Aligner<S>
+where
+    S: BuilderState + AcceptsParams,
+{
     /// Set Alignment mode / cigar mode in minimap2
     /// ```
     /// # use minimap2::*;
@@ -660,25 +657,31 @@ impl Aligner {
     /// // Use the previously built index
     /// Aligner::builder().map_ont().with_index("my_index.mmi", None);
     /// ```
-    pub fn with_index<P>(mut self, path: P, output: Option<&str>) -> Result<Self, &'static str>
+    pub fn with_index<P>(
+        self,
+        path: P,
+        output: Option<&str>,
+    ) -> Result<Aligner<Built>, &'static str>
     where
         P: AsRef<Path>,
     {
         match self.set_index(path, output) {
-            Ok(_) => Ok(self),
+            Ok(aln) => Ok(aln),
             Err(e) => Err(e),
         }
     }
 
-    /// Set the index (in-place, without builder pattern)
-    pub fn set_index<P>(&mut self, path: P, output: Option<&str>) -> Result<(), &'static str>
+    /// Sets the index, uses the builder pattern. Returns Aligner<Built> if successful.
+    pub fn set_index<P>(
+        mut self,
+        path: P,
+        output: Option<&str>,
+    ) -> Result<Aligner<Built>, &'static str>
     where
         P: AsRef<Path>,
     {
         let path_str = match std::ffi::CString::new(path.as_ref().as_os_str().as_bytes()) {
-            Ok(path) => {
-                path
-            }
+            Ok(path) => path,
             Err(_) => {
                 return Err("Invalid Path for Index");
             }
@@ -730,7 +733,15 @@ impl Aligner {
         let mm_idx = unsafe { idx.assume_init() };
         self.idx = Some(Arc::new(mm_idx));
 
-        Ok(())
+        Ok(Aligner {
+            idxopt: self.idxopt,
+            mapopt: self.mapopt,
+            threads: self.threads,
+            idx: self.idx,
+            idx_reader: Some(Arc::new(unsafe { *idx_reader })),
+            cigar_clipping: self.cigar_clipping,
+            state: Built,
+        })
     }
 
     /// Use a single sequence as the index. Sets the sequence ID to "N/A".
@@ -744,7 +755,7 @@ impl Aligner {
     /// let hits = aligner.map(query, false, false, None, None, Some("Query Name"));
     /// assert_eq!(hits.unwrap().len(), 1);
     /// ```
-    pub fn with_seq(self, seq: &[u8]) -> Result<Self, &'static str>
+    pub fn with_seq(self, seq: &[u8]) -> Result<Aligner<Built>, &'static str>
 // where T: AsRef<[u8]> + std::ops::Deref<Target = str>,
     {
         let default_id = "N/A";
@@ -764,7 +775,7 @@ impl Aligner {
     /// assert_eq!(hits.as_ref().unwrap().len(), 1);
     /// assert_eq!(hits.as_ref().unwrap()[0].target_name.as_ref().unwrap().as_str(), id);
     /// ```
-    pub fn with_seq_and_id(self, seq: &[u8], id: &[u8]) -> Result<Self, &'static str>
+    pub fn with_seq_and_id(self, seq: &[u8], id: &[u8]) -> Result<Aligner<Built>, &'static str>
 // where T: AsRef<[u8]> + std::ops::Deref<Target = str>,
     {
         assert!(
@@ -782,7 +793,7 @@ impl Aligner {
     /// Following the mappy implementation, this also sets mapopt.mid_occ to 1000.
     /// Can not be combined with `with_index` or `set_index`.
     /// Sets the sequence IDs to "Unnamed Sequence n" where n is the sequence number.
-    pub fn with_seqs(self, seqs: &[Vec<u8>]) -> Result<Self, &'static str> {
+    pub fn with_seqs(self, seqs: &[Vec<u8>]) -> Result<Aligner<Built>, &'static str> {
         assert!(
             self.idx.is_none(),
             "Index already set. Can not set sequence as index."
@@ -807,7 +818,7 @@ impl Aligner {
         mut self,
         seqs: &[Vec<u8>],
         ids: &[Vec<u8>],
-    ) -> Result<Self, &'static str> {
+    ) -> Result<Aligner<Built>, &'static str> {
         assert!(
             seqs.len() == ids.len(),
             "Number of sequences and IDs must be equal"
@@ -841,7 +852,47 @@ impl Aligner {
         self.idx = Some(Arc::new(mm_idx));
         self.mapopt.mid_occ = 1000;
 
-        Ok(self)
+        let aln = Aligner {
+            idxopt: self.idxopt,
+            mapopt: self.mapopt,
+            threads: self.threads,
+            idx: self.idx,
+            idx_reader: None,
+            cigar_clipping: self.cigar_clipping,
+            state: Built,
+        };
+
+        Ok(aln)
+    }
+}
+
+impl Aligner<Built> {
+    /// Returns the number of sequences in the index
+    pub fn n_seq(&self) -> u32 {
+        unsafe {
+            let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
+            let idx: *const mm_idx_t = *idx;
+            (*idx).n_seq as u32
+        }
+    }
+
+    /// Get sequences direct from the index
+    ///
+    /// Returns a reference to the sequence at the given index
+    /// Remainds valid as long as the aligner is valid
+    pub fn get_seq<'aln>(&'aln self, i: usize) -> Option<&'aln mm_idx_seq_t> {
+        unsafe {
+            let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
+            let idx: *const mm_idx_t = *idx;
+            // todo, should this be > or >=
+            if i > self.n_seq() as usize {
+                return None;
+            }
+            let seq = (*idx).seq;
+            let seq = seq.offset(i as isize);
+            let seq = &*seq;
+            Some(seq)
+        }
     }
 
     // https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L164
@@ -933,7 +984,6 @@ impl Aligner {
                 )
             });
 
-
             let mut mappings = Vec::with_capacity(n_regs as usize);
 
             for i in 0..n_regs {
@@ -943,13 +993,8 @@ impl Aligner {
                     let reg: mm_reg1_t = *reg_ptr;
 
                     let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
-                    let contig = std::ffi::CStr::from_ptr(
-                        (*(**idx).seq.offset(reg.rid as isize)).name,
-                    );
-                    let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
-                    let contig = std::ffi::CStr::from_ptr(
-                        (*(**idx).seq.offset(reg.rid as isize)).name,
-                    );
+                    let contig =
+                        std::ffi::CStr::from_ptr((*(**idx).seq.offset(reg.rid as isize)).name);
 
                     let is_primary = reg.parent == reg.id && (reg.sam_pri() > 0);
                     let is_supplementary = (reg.parent == reg.id) && (reg.sam_pri() == 0);
@@ -1108,8 +1153,6 @@ impl Aligner {
 
                     let target_len = (*(**idx).seq.offset(reg.rid as isize)).len as i32;
 
-                    let target_len = (*(**idx).seq.offset(reg.rid as isize)).len as i32;
-
                     mappings.push(Mapping {
                         target_name: Some(Arc::clone(&target_name_arc)),
                         target_len,
@@ -1211,9 +1254,14 @@ impl Aligner {
 }
 
 mod send {
-    use crate::Aligner;
-    unsafe impl Sync for Aligner {}
-    unsafe impl Send for Aligner {}
+    use super::{Aligner, Built, PresetSet, Unset};
+
+    unsafe impl Sync for Aligner<Unset> {}
+    unsafe impl Send for Aligner<Unset> {}
+    unsafe impl Sync for Aligner<Built> {}
+    unsafe impl Send for Aligner<Built> {}
+    unsafe impl Sync for Aligner<PresetSet> {}
+    unsafe impl Send for Aligner<PresetSet> {}
 }
 
 #[derive(PartialEq, Eq)]
@@ -1231,11 +1279,11 @@ mod tests {
         // Because I'm not sure how this will work with FFI + Threads, want a sanity check
         use std::thread;
 
-        let mut aligner = Aligner::builder()
+        let aligner = Aligner::builder()
             .preset(Preset::MapOnt)
-            .with_index_threads(2);
-
-        aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
+            .with_index_threads(2)
+            .with_index("yeast_ref.mmi", None)
+            .unwrap();
 
         aligner
             .map(
@@ -1277,11 +1325,12 @@ mod tests {
         use std::sync::Arc;
         use std::thread;
 
-        let mut aligner = Aligner::builder()
+        let aligner = Aligner::builder()
             .preset(Preset::MapOnt)
-            .with_index_threads(2);
+            .with_index_threads(2)
+            .with_index("yeast_ref.mmi", None)
+            .unwrap();
 
-        aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
         let aligner = Arc::new(aligner);
 
         aligner
@@ -1304,7 +1353,7 @@ mod tests {
             let mappings = aligner_handle.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
             assert!(mappings[0].query_len == Some(NonZeroI32::new(350).unwrap()));
         });
-        
+
         jh0.join().unwrap();
 
         let aligner_handle = Arc::clone(&aligner);
@@ -1316,7 +1365,6 @@ mod tests {
         });
 
         jh1.join().unwrap();
-
     }
 
     #[test]
@@ -1327,9 +1375,9 @@ mod tests {
         let mut aligner = Aligner::builder()
             .preset(Preset::MapOnt)
             .with_index_threads(2)
-            .with_cigar();
-
-        aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
+            .with_cigar()
+            .with_index("yeast_ref.mmi", None)
+            .unwrap();
 
         let sequences = vec![
             "ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA",
@@ -1402,6 +1450,7 @@ mod tests {
             idx,
             idx_reader,
             cigar_clipping: false,
+            state: Unset,
         };
     }
 
@@ -1458,9 +1507,9 @@ mod tests {
     fn test_mapping() {
         let mut aligner = Aligner::builder()
             .preset(Preset::MapOnt)
-            .with_index_threads(2);
-
-        aligner = aligner.with_index("yeast_ref.mmi", None).unwrap();
+            .with_index_threads(2)
+            .with_index("yeast_ref.mmi", None)
+            .unwrap();
 
         aligner
             .map(
@@ -1483,7 +1532,12 @@ mod tests {
         // Assert the Display impl for strand works
         println!("{}", mappings[0].strand);
 
-        let aligner = aligner.with_cigar();
+        let mut aligner = Aligner::builder()
+            .preset(Preset::MapOnt)
+            .with_index_threads(2)
+            .with_cigar()
+            .with_index("yeast_ref.mmi", None)
+            .unwrap();
 
         aligner
             .map(
@@ -1508,7 +1562,7 @@ mod tests {
 
         aligner.check_opts().expect("Opts are invalid");
 
-        aligner = aligner.with_index("test_data/genome.fa", None).unwrap();
+        let aligner = aligner.with_index("test_data/genome.fa", None).unwrap();
 
         let output = aligner.map(
             b"GAAATACGGGTCTCTGGTTTGACATAAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGCCCAGACTTAAATCGCACATACTGCGTCGTGCAATGCCGGGCGCTAACGGCTCAATATCACGCTGCGTCACTATGGCTACCCCAAAGCGGGGGGGGCATCGACGGGCTGTTTGATTTGAGCTCCATTACCCTACAATTAGAACACTGGCAACATTTGGGCGTTGAGCGGTCTTCCGTGTCGCTCGATCCGCTGGAACTTGGCAACCACACTCTAAACTACATGTGGTATGGCTCATAAGATCATGCGGATCGTGGCACTGCTTTCGGCCACGTTAGAGCCGCTGTGCTCGAAGATTGGGACCTACCAAC",
@@ -1524,10 +1578,10 @@ mod tests {
         let mut aligner = Aligner::builder()
             .preset(Preset::MapOnt)
             .with_index_threads(2);
-        aligner = aligner
+        let aligner = aligner
+            .with_cigar()
             .with_index("test_data/test_data.fasta", Some("test.mmi"))
-            .unwrap()
-            .with_cigar();
+            .unwrap();
 
         aligner
             .map(
@@ -1548,9 +1602,9 @@ mod tests {
         let mut aligner = Aligner::builder()
             .preset(Preset::MapOnt)
             .with_index_threads(1)
+            .with_cigar()
             .with_index("test_data/MT-human.fa", None)
-            .unwrap()
-            .with_cigar();
+            .unwrap();
 
         let mut mappings = aligner.map(
     b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGTTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG",
@@ -1601,7 +1655,14 @@ mod tests {
         );
         assert_eq!(align.cs, Some(String::from(":14-cc:1*ct:2+atc:9*ag:12*tc:1*ac:7*tc:4-t:1*ag:48*ag:2*ag:21*tc*tc:8-t:2*ag:5*tc:2*ag:4*ct*ac*ct:2*tc*ct:2*ag:4*ag:17")));
 
-        aligner = aligner.with_cigar_clipping();
+        let mut aligner = Aligner::builder()
+            .preset(Preset::MapOnt)
+            .with_index_threads(1)
+            .with_cigar()
+            .with_cigar_clipping()
+            .with_index("test_data/MT-human.fa", None)
+            .unwrap();
+
         let mut mappings = aligner.map(
             b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGTTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG",
                     true, true, None, None, Some("Sample Query")).unwrap();
@@ -1674,9 +1735,9 @@ mod tests {
         let aligner = Aligner::builder()
             .preset(Preset::MapOnt)
             .with_index_threads(1)
+            .with_cigar()
             .with_index("test_data/MT-human.fa", None)
-            .unwrap()
-            .with_cigar();
+            .unwrap();
         let query =  b"GTTTATGTAGCTTATTCTATCCAAAGCAATGCACTGAAAATGTCTCGACGGGCCCACACGCCCCATAAACAAATAGGTTTGGTCCTAGCCTTTCTATTAGCTCTTAGTGAGGTTACACATGCAAGCATCCCCGCCCCAGTGAGTCGCCCTCCAAGTCACTCTGACTAAGAGGAGCAAGCATCAAGCACGCAACAGCGCAG";
 
         for (md, cs) in vec![(true, true), (false, false), (true, false), (false, true)].iter() {
@@ -1865,25 +1926,25 @@ mod tests {
 
         #[cfg(feature = "map-file")]
         {
-            let aligner = Aligner::builder();
-            assert_eq!(
-                aligner.map_file("test_data/MT-human.fa", false, false),
-                Err("No index")
-            );
-            let aligner = aligner.with_index("test_data/MT-human.fa", None).unwrap();
+            let aligner = Aligner::builder()
+                .with_index("test_data/MT-human.fa", None)
+                .unwrap();
             assert_eq!(
                 aligner.map_file("test_data/file-does-not-exist", false, false),
                 Err("File does not exist")
             );
 
-            if let Err("Index File is empty") = Aligner::builder().with_index("test_data/empty.fa", None)
+            if let Err("Index File is empty") =
+                Aligner::builder().with_index("test_data/empty.fa", None)
             {
                 println!("File is empty - Success");
             } else {
                 panic!("File is empty error not thrown");
             }
 
-            if let Err("Invalid Path for Index") = Aligner::builder().with_index("\0invalid_\0path\0", None) {
+            if let Err("Invalid Path for Index") =
+                Aligner::builder().with_index("\0invalid_\0path\0", None)
+            {
                 println!("Invalid Path - Success");
             } else {
                 panic!("Invalid Path error not thrown");
@@ -1989,7 +2050,10 @@ mod tests {
     fn double_free_index_test() {
         // Create a new aligner
         println!("Creating aligner");
-        let aligner = Aligner::builder().map_ont().with_index("yeast_ref.mmi", None).unwrap();
+        let aligner = Aligner::builder()
+            .map_ont()
+            .with_index("yeast_ref.mmi", None)
+            .unwrap();
         println!("Aligner created");
 
         // Perform a test mapping to ensure the index is loaded and all
@@ -2003,7 +2067,10 @@ mod tests {
             let aligner_ = aligner.clone();
 
             // Confirm that aligner_ idx points to the same memory as aligner idx arc
-            assert_eq!(Arc::as_ptr(aligner.idx.as_ref().unwrap()), Arc::as_ptr(aligner_.idx.as_ref().unwrap()));
+            assert_eq!(
+                Arc::as_ptr(aligner.idx.as_ref().unwrap()),
+                Arc::as_ptr(aligner_.idx.as_ref().unwrap())
+            );
 
             // Confirm we have a strong count of 2
             assert_eq!(Arc::strong_count(&aligner.idx.as_ref().unwrap()), 2);
@@ -2031,7 +2098,10 @@ mod tests {
         println!("Past the first one");
 
         // Create a new aligner
-        let aligner = Aligner::builder().map_ont().with_index("yeast_ref.mmi", None).unwrap();
+        let aligner = Aligner::builder()
+            .map_ont()
+            .with_index("yeast_ref.mmi", None)
+            .unwrap();
 
         // Perform a test mapping to ensure the index is loaded and all
         let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
@@ -2041,7 +2111,7 @@ mod tests {
         std::thread::scope(|s| {
             let aligner0 = aligner.clone();
             let aligner1 = aligner.clone();
-            
+
             // Force drop logic
             drop(aligner);
 
@@ -2075,13 +2145,16 @@ mod tests {
 
         // Finally with no test mapping
         // Create a new aligner
-        let aligner = Aligner::builder().map_ont().with_index("yeast_ref.mmi", None).unwrap();
+        let aligner = Aligner::builder()
+            .map_ont()
+            .with_index("yeast_ref.mmi", None)
+            .unwrap();
 
         // Spawn two threads using thread scoped aligners, clone aligner
         std::thread::scope(|s| {
             let aligner0 = aligner.clone();
             let aligner1 = aligner.clone();
-            
+
             // Force drop logic
             drop(aligner);
 
@@ -2112,13 +2185,20 @@ mod tests {
     // Test aligner cloning for flag permanence
     #[test]
     fn aligner_cloning_flags() {
-        let aligner = Aligner::builder().map_ont().with_cigar().with_index("yeast_ref.mmi", None).unwrap();
+        let aligner = Aligner::builder()
+            .map_ont()
+            .with_cigar()
+            .with_index("yeast_ref.mmi", None)
+            .unwrap();
         // Confirm with_cigar is set
         // self.mapopt.flag |= MM_F_CIGAR as i64;
         assert_eq!(aligner.mapopt.flag & MM_F_CIGAR as i64, MM_F_CIGAR as i64);
 
         // Clone aligner
         let aligner_clone = aligner.clone();
-        assert_eq!(aligner_clone.mapopt.flag & MM_F_CIGAR as i64, MM_F_CIGAR as i64);
+        assert_eq!(
+            aligner_clone.mapopt.flag & MM_F_CIGAR as i64,
+            MM_F_CIGAR as i64
+        );
     }
 }

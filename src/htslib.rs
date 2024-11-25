@@ -310,7 +310,7 @@ pub struct MMIndex {
 
 impl MMIndex {
     pub fn n_seq(&self) -> u32 {
-        unsafe { (**self.inner).n_seq }        
+        unsafe { (**self.inner).n_seq }
     }
 
     pub fn seqs(&self) -> Vec<SeqMetaData> {
@@ -346,7 +346,7 @@ impl From<&Aligner> for MMIndex {
     fn from(aligner: &Aligner) -> Self {
         MMIndex {
             // inner: aligner.idx.unwrap(),
-            inner: std::sync::Arc::clone(&aligner.idx.as_ref().unwrap())
+            inner: std::sync::Arc::clone(&aligner.idx.as_ref().unwrap()),
         }
     }
 }
