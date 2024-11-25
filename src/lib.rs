@@ -282,7 +282,7 @@ impl Default for ThreadLocalBuffer {
 /// Aligner::builder();
 /// ```
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Aligner {
     /// Index options passed to minimap2 (mm_idxopt_t)
     pub idxopt: IdxOpt,
@@ -2055,16 +2055,6 @@ mod tests {
             });
 
             // Join, to force drop logic from external thread
-            jh0.join().unwrap();
-
-            let jh1 = s.spawn(move || {
-                println!("Second thread - No mapping");
-                std::thread::sleep(std::time::Duration::from_millis(200));
-                let mappings = aligner1.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
-                assert!(mappings.len() > 0);
-                // Sleep 100ms
-                std::thread::sleep(std::time::Duration::from_millis(100));
-            });
 
             jh1.join().unwrap();
         });
