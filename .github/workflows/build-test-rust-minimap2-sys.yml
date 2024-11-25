@@ -3,8 +3,8 @@ name: minimap2-sys
 on:
   pull_request:
     branches: [ "main" ]
-    paths: 
-      - 'minimap2-sys/'
+    #paths: 
+      #- 'minimap2-sys/'
 
 env:
   CARGO_TERM_COLOR: always
