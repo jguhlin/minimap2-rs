@@ -14,6 +14,7 @@ unsafe impl Send for mm_mapopt_t {}
 
 impl Drop for mm_idx_t {
     fn drop(&mut self) {
+        println!("----- Destroying index!");
         unsafe { mm_idx_destroy(self) };
     }
 }
