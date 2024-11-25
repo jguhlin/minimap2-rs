@@ -73,6 +73,8 @@ use std::os::unix::ffi::OsStrExt;
 use libc::c_void;
 use minimap2_sys::*;
 
+pub use minimap2_sys as ffi;
+
 #[cfg(feature = "map-file")]
 use needletail::parse_fastx_file;
 
