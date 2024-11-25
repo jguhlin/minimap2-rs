@@ -7,3 +7,4 @@ test_data/*.bam
 test_data/*.mmi
 .ipynb_checkpoints
 .vscode/
+.quarto

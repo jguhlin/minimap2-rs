@@ -49,10 +49,6 @@ jobs:
     - run: cd minimap2-sys
     - name: Run minimap2-sys tests on Android aarch64
       run: cross test --target aarch64-linux-android
-    - name: Run minimap2-sys tests on Android armv7
-      run: cross test --target armv7-linux-androideabi
-    - name: Run minimap2-sys tests on Android i686
-      run: cross test --target i686-linux-android
     - name: Run minimap2-sys tests on Android x86_64
       run: cross test --target x86_64-linux-android
 

@@ -50,6 +50,7 @@ use rust_htslib::bam::{Header, HeaderView, Record};
 use std::ffi::{CStr, CString};
 use std::mem::MaybeUninit;
 use std::ptr;
+use std::sync::Arc;
 
 /// A wrapper around mm_bseq1_t
 #[derive(Debug)]
@@ -164,7 +165,7 @@ impl Aligner {
 
             let mm_reg = MaybeUninit::new(unsafe {
                 mm_ffi::mm_map(
-                    self.idx.unwrap() as *const mm_ffi::mm_idx_t,
+                    &**self.idx.as_ref().unwrap().as_ref() as *const mm_ffi::mm_idx_t,
                     query.inner.l_seq,
                     query.inner.seq as *const libc::c_char,
                     &mut n_regs,
@@ -191,7 +192,7 @@ impl Aligner {
                     // TODO: use mm_write_sam3 t do the writing so that we can pass the map_opt flags
                     mm_ffi::mm_write_sam(
                         result.as_mut_ptr(),
-                        self.idx.unwrap() as *const mm_ffi::mm_idx_t,
+                        &**self.idx.as_ref().unwrap().as_ref() as *const mm_ffi::mm_idx_t,
                         &query.inner as *const mm_ffi::mm_bseq1_t,
                         const_ptr,
                         n_regs,
@@ -304,19 +305,20 @@ pub struct SeqMetaData {
 
 #[derive(Debug)]
 pub struct MMIndex {
-    pub inner: mm_ffi::mm_idx_t,
+    pub inner: Arc<*mut mm_ffi::mm_idx_t>,
 }
 
 impl MMIndex {
     pub fn n_seq(&self) -> u32 {
-        self.inner.n_seq
+        unsafe { (**self.inner).n_seq }        
     }
 
     pub fn seqs(&self) -> Vec<SeqMetaData> {
         let mut seqs: Vec<SeqMetaData> = Vec::with_capacity(self.n_seq() as usize);
         for i in 0..self.n_seq() {
-            let _seq = unsafe { *(self.inner.seq).offset(i as isize) };
-            let c_str = unsafe { ffi::CStr::from_ptr(_seq.name) };
+            let _seq = unsafe { *(**self.inner).seq.offset(i as isize) };
+            // let c_str = unsafe { ffi::CStr::from_ptr(_seq.name) };
+            let c_str = unsafe { CStr::from_ptr(_seq.name) };
             let rust_str = c_str.to_str().unwrap().to_string();
             seqs.push(SeqMetaData {
                 name: rust_str,
@@ -344,7 +346,7 @@ impl From<&Aligner> for MMIndex {
     fn from(aligner: &Aligner) -> Self {
         MMIndex {
             // inner: aligner.idx.unwrap(),
-            inner: unsafe { **aligner.idx.as_ref().unwrap() },
+            inner: std::sync::Arc::clone(&aligner.idx.as_ref().unwrap())
         }
     }
 }
