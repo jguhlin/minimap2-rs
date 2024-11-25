@@ -14,7 +14,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
     - run: cd minimappers2
     - name: Build
       run: cargo build --verbose
@@ -24,7 +26,9 @@ jobs:
   build-manylinux-x64_64:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
       - uses: actions/setup-python@v4
         with:
           python-version: '3.7'
