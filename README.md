@@ -43,7 +43,7 @@ Align a sequence:
 ```rust
 let seq: Vec<u8> = b"ACTGACTCACATCGACTACGACTACTAGACACTAGACTATCGACTACTGACATCGA";
 let alignment = aligner
-    .map(&seq, false, false, None, None)
+    .map(&seq, false, false, None, None, Some(b"My Sequence Name"))
     .expect("Unable to align");
 ```
 
@@ -53,6 +53,9 @@ All minimap2 presets should be available (see [functions section](https://docs.r
 let aligner = map_ont();
 let aligner = asm20();
 ```
+
+**Note** Each preset overwrites different arguments. Using multiple at a time is not technically supported, but will work. Results unknown. So be careful!
+It's equivalent to running minimap2 -x map_ont -x short ...
 
 ### Customization
 [MapOpts](https://docs.rs/minimap2-sys/0.1.5/minimap2_sys/struct.mm_mapopt_t.html) and [IdxOpts](https://docs.rs/minimap2-sys/0.1.5/minimap2_sys/struct.mm_idxopt_t.html) can be customized with Rust's struct pattern, as well as applying mapping settings. Inspired by [bevy](https://bevyengine.org/).
@@ -84,7 +87,7 @@ let mut fasta = Fasta::from_buffer(&mut reader)
 for seq in reader {
     let seq = seq.unwrap();
     let alignment: Vec<Mapping> = aligner
-        .map(&seq.sequence.unwrap(), false, false, None, None)
+        .map(&seq.sequence.unwrap(), false, false, None, None, None)
         .expect("Unable to align");
     println!("{:?}", alignment);
 }
@@ -112,7 +115,7 @@ This _appears_ to work.
 use rayon::prelude::*;
 
 let results = sequences.par_iter().map(|seq| {
-    aligner.map(seq.as_bytes(), false, false, None, None).unwrap()
+    aligner.map(seq.as_bytes(), false, false, None, None, None).unwrap()
 }).collect::<Vec<_>>();
 ```
 
@@ -179,9 +182,26 @@ and/or:
 
 # Changelog
 ### 0.1.21 minimap2 2.28
+Contributors to this release: @mbhall88 @rob-p @Sam-Sims @charlesgregory @PB-DB
 #### Breaking Changes
 + Map now returns Arc String's to reduce memory allocation for large and/or repetitive jobs
-+ map now takes an additional argument, query_name: Option<impl AsRef<[u8]>>
++ map now takes an additional argument, query_name: Option<impl AsRef<[u8]>>, possibly solves [#75](https://github.com/jguhlin/minimap2-rs/issues/75) (@rob-p @mbhall88 @jguhlin)
++ Arc the Index, to prevent double-frees, solves [#71](https://github.com/jguhlin/minimap2-rs/issues/71)
++ Map file now passes in query name, which should help with [#75](https://github.com/jguhlin/minimap2-rs/issues/75)
++ Supplementary flag now better detected (@rob-p)
++ FIX: Cigar string missing softclip operation (@Sam-Sims)
+
+### Other Changes
++ Experimental Android support, solves [#66](https://github.com/jguhlin/minimap2-rs/issues/66)
++ Better docs on applying presets, solves [#84](https://github.com/jguhlin/minimap2-rs/issues/84)
++ Better detection of target arch c_char's and ptr's, solves [#82](https://github.com/jguhlin/minimap2-rs/issues/82)
++ Support for M1 Mac compilation and addition of github workflows to test it, solving [#81](https://github.com/jguhlin/minimap2-rs/issues/81)
++ Rayon test, so some support, closes [#5](https://github.com/jguhlin/minimap2-rs/issues/5)
++ Static str's and now static CStr's
++ FIX: memory leak due to sequences allocated by minimap2 not being freed @charlesgregory
++ Add Send + Sync to Aligner, along with unit test @PB-DB
++ Only use rust-htslib/curl when curl feature is enabled @PB-DB
++ Mark bam::Record objects as supplementary @PB-DB
 
 ### 0.1.20 minimap2 2.28
 + Fix htslib errors. No update to -sys crate needed.
