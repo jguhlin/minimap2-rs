@@ -6,20 +6,21 @@ A rust FFI library for [minimap2](https://github.com/lh3/minimap2/). In developm
 [![codecov](https://codecov.io/gh/jguhlin/minimap2-rs/branch/main/graph/badge.svg?token=huw27ZC6Qy)](https://codecov.io/gh/jguhlin/minimap2-rs)
 
 # Structure
-minimap2-sys is the library of the raw FFI bindings to minimap2. minimap2 is the more rusty version.
+minimap2-sys is the raw FFI bindings to minimap2. minimap2 is the more opinionated, rusty version.
 
 # How to use
 ## Requirements
 ```toml
-minimap2 = "0.1.20+minimap2.2.28"
+minimap2 = "0.1.21+minimap2.2.28"
 ```
 Also see [Features](#features)
 
-Tested with rustc 1.64.0 and nightly. So probably a good idea to upgrade before running. But let me know if you run into pain points with older versions and will try to fix!
+Tested with rustc 1.82.0 and nightly. So probably a good idea to upgrade before running. But let me know if you run into pain points with older versions and will try to fix.
 
 ## Minimap2 Version Table
 | minimap2-rs | minimap2 |
 |-------------|----------|
+| 0.1.21      | 2.28     |
 | 0.1.20      | 2.28     |
 | 0.1.19      | 2.28     |
 | 0.1.18      | 2.28     |
@@ -42,7 +43,7 @@ Align a sequence:
 ```rust
 let seq: Vec<u8> = b"ACTGACTCACATCGACTACGACTACTAGACACTAGACTATCGACTACTGACATCGA";
 let alignment = aligner
-    .map(&seq, false, false, None, None)
+    .map(&seq, false, false, None, None, Some(b"My Sequence Name"))
     .expect("Unable to align");
 ```
 
@@ -52,6 +53,9 @@ All minimap2 presets should be available (see [functions section](https://docs.r
 let aligner = map_ont();
 let aligner = asm20();
 ```
+
+**Note** Each preset overwrites different arguments. Using multiple at a time is not technically supported, but will work. Results unknown. So be careful!
+It's equivalent to running minimap2 -x map_ont -x short ...
 
 ### Customization
 [MapOpts](https://docs.rs/minimap2-sys/0.1.5/minimap2_sys/struct.mm_mapopt_t.html) and [IdxOpts](https://docs.rs/minimap2-sys/0.1.5/minimap2_sys/struct.mm_idxopt_t.html) can be customized with Rust's struct pattern, as well as applying mapping settings. Inspired by [bevy](https://bevyengine.org/).
@@ -83,7 +87,7 @@ let mut fasta = Fasta::from_buffer(&mut reader)
 for seq in reader {
     let seq = seq.unwrap();
     let alignment: Vec<Mapping> = aligner
-        .map(&seq.sequence.unwrap(), false, false, None, None)
+        .map(&seq.sequence.unwrap(), false, false, None, None, None)
         .expect("Unable to align");
     println!("{:?}", alignment);
 }
@@ -111,17 +115,19 @@ This _appears_ to work.
 use rayon::prelude::*;
 
 let results = sequences.par_iter().map(|seq| {
-    aligner.map(seq.as_bytes(), false, false, None, None).unwrap()
+    aligner.map(seq.as_bytes(), false, false, None, None, None).unwrap()
 }).collect::<Vec<_>>();
 ```
 
 ## Features
 The following crate features are available:
-* `mm2-fast` - Replace minimap2 with [mm2-fast](https://github.com/bwa-mem2/mm2-fast). This is likely not portable.
-* `htslib` - Support output of bam/sam files using htslib.
-* `simde` - Compile minimap2 / mm2-fast with [simd-everywhere](https://github.com/simd-everywhere/simde) support. 
-* `map-file` - *Default* - Convenience function for mapping an entire file. Caution, this is single-threaded. 
-* `sse2only` - Compiles for SSE2 support only (Default is to try to compile for SSE4.1, SSE2 only is default on aarch64)
+* map-file - Enables the ability to map a file directly to a reference. Enabled by deafult
+* htslib - Provides an interface to minimap2 that returns rust_htslib::Records
+* simde - Enables SIMD Everywhere library in minimap2
+* zlib-ng - Enables the use of zlib-ng for faster compression
+* curl - Enables curl for htslib
+* static - Builds minimap2 as a static library
+* sse2only - Builds minimap2 with only SSE2 support
 
 Map-file is a *default* feature and enabled unless otherwise specified.
 
@@ -129,7 +135,7 @@ Map-file is a *default* feature and enabled unless otherwise specified.
 * setting mismatch penalty for base transitions [minimap 2.27 release notes](https://github.com/lh3/minimap2/releases/tag/v2.27)
 * Generate ds tags to indicate uncertainty in indels
 
-Potentially more, but I'm using this to keep track. I'd expect those would get implemented over time, but if you have urgent need open a pull request or an issue! Thanks
+Potentially others. Please create an issue! 
 
 ## Building for MUSL
 Follow these [instructions](https://github.com/rust-cross/rust-musl-cross#prebuilt-images).
@@ -141,10 +147,9 @@ alias rust-musl-builder='docker run --rm -it -v "$(pwd)":/home/rust/src messense
 rust-musl-builder cargo build --release
 ```
 
-Please note minimap2 is only tested for x86_64. Other platforms may work, please open an issue if minimap2 compiles but minimap2-rs does not.
+Minimap2 is tested on x86_64 and aarch64 (arm64). Other platforms may work, please open an issue if minimap2 compiles but minimap2-rs does not.
 
 ### Features tested with MUSL
-* `mm2-fast` - **Fail**
 * `htslib` - **Success**
 * `simde` - **Success**
 
@@ -153,23 +158,19 @@ Please note minimap2 is only tested for x86_64. Other platforms may work, please
 - [mappy-rs](https://github.com/Adoni5/mappy-rs) - Drop-in multi-threaded replacement for python's mappy
 - [HiFiHLA](https://github.com/PacificBiosciences/hifihla) - HLA star-calling tool for PacBio HiFi data
 - [STRdust](https://github.com/wdecoster/STRdust) - Tandem repeat genotyper for long reads
-
-# Want feedback
-* Many fields are i32 / i8 to mimic the C environment, but would it make more sense to convert to u32 / u8 / usize?
-* Let me know pain points!
+- [oarfish](https://github.com/COMBINE-lab/oarfish) - transcript quantification from long-read RNA-seq data
 
 # Next things todo
-* Print other tags so we can have an entire PAF format
-* -sys Compile with SSE2 / SSE4.1 (auto-detect, but also make with features)
 * Multi-thread guide (tokio async threads or use crossbeam queue and traditional threads?)
 * Iterator interface for map_file
-* MORE TESTS
-* -sys Get SSE working with "sse" feature (compiles and tests work in -sys crate, but not main crate)
 * -sys Possible to decouple from pthread?
-* -sys Enable Lisa-hash for mm2-fast? But must handle build arguments from the command-line.
 
 # Citation
-You should cite the minimap2 papers if you use this in your work.
+Please cite the appropriate minimap2 papers if you use this in your work, as well as this library.
+
+## DOI for this library
+
+## Minimap2 Papers
 
 > Li, H. (2018). Minimap2: pairwise alignment for nucleotide sequences.
 > *Bioinformatics*, **34**:3094-3100. [doi:10.1093/bioinformatics/bty191][doi]
@@ -180,6 +181,29 @@ and/or:
 > *Bioinformatics*, **37**:4572-4574. [doi:10.1093/bioinformatics/btab705][doi2]
 
 # Changelog
+### 0.1.21 minimap2 2.28
+Contributors to this release: @mbhall88 @rob-p @Sam-Sims @charlesgregory @PB-DB
+#### Breaking Changes
++ Map now returns Arc String's to reduce memory allocation for large and/or repetitive jobs
++ map now takes an additional argument, query_name: Option<impl AsRef<[u8]>>, possibly solves [#75](https://github.com/jguhlin/minimap2-rs/issues/75) (@rob-p @mbhall88 @jguhlin)
++ Arc the Index, to prevent double-frees, solves [#71](https://github.com/jguhlin/minimap2-rs/issues/71)
++ Map file now passes in query name, which should help with [#75](https://github.com/jguhlin/minimap2-rs/issues/75)
++ Supplementary flag now better detected (@rob-p)
++ FIX: Cigar string missing softclip operation (@Sam-Sims)
+
+### Other Changes
++ Add ergonomic functions n_seq and get_seq.
++ Better docs on applying presets, solves [#84](https://github.com/jguhlin/minimap2-rs/issues/84)
++ Better detection of target arch c_char's and ptr's, solves [#82](https://github.com/jguhlin/minimap2-rs/issues/82)
++ Support for M1 Mac compilation and addition of github workflows to test it, solving [#81](https://github.com/jguhlin/minimap2-rs/issues/81)
++ Rayon test, so some support, closes [#5](https://github.com/jguhlin/minimap2-rs/issues/5)
++ Static str's and now static CStr's
++ FIX: memory leak due to sequences allocated by minimap2 not being freed @charlesgregory
++ Add Send + Sync to Aligner, along with unit test @PB-DB
++ Only use rust-htslib/curl when curl feature is enabled @PB-DB
++ Mark bam::Record objects as supplementary @PB-DB
++ Experimental Android support (tested on aarch64 and x86_64), solves [#66](https://github.com/jguhlin/minimap2-rs/issues/66)
+
 ### 0.1.20 minimap2 2.28
 + Fix htslib errors. No update to -sys crate needed.
 

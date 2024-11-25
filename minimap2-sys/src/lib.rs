@@ -12,6 +12,13 @@ unsafe impl Send for mm_idx_t {}
 unsafe impl Send for mm_idx_reader_t {}
 unsafe impl Send for mm_mapopt_t {}
 
+impl Drop for mm_idx_t {
+    fn drop(&mut self) {
+        unsafe { mm_idx_destroy(self) };
+    }
+}
+
+
 use std::mem::MaybeUninit;
 
 impl Default for mm_mapopt_t {

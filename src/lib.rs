@@ -1,4 +1,4 @@
-//! API providing a rusty interface to minimap2 or mm2-fast libraries.
+//! API providing a rusty interface to minimap2
 //!
 //! This library supports statically linking and compiling minimap2 directly, no separate install is required.
 //!
@@ -12,10 +12,26 @@
 //! # Crate Features
 //! This crate has multiple create features available.
 //! * map-file - Enables the ability to map a file directly to a reference. Enabled by deafult
-//! * mm2-fast - Uses the mm2-fast library instead of standard minimap2
 //! * htslib - Provides an interface to minimap2 that returns rust_htslib::Records
 //! * simde - Enables SIMD Everywhere library in minimap2
-//! * sse - Enables the use of SSE instructions
+//! * zlib-ng - Enables the use of zlib-ng for faster compression
+//! * curl - Enables curl for htslib
+//! * static - Builds minimap2 as a static library
+//! * sse2only - Builds minimap2 with only SSE2 support
+//! 
+//! ## Previously Supported Features
+//! * mm2-fast - Uses the mm2-fast library instead of standard minimap2
+//! 
+//! If needed, this can be re-enabled.
+//! 
+//! # Compile-time options
+//! I recommend the following:
+//! ```toml
+//! [profile.release]
+//! opt-level = 3
+//! lto = "fat"
+//! codegen-units  = 1
+//! ```
 //!
 //! # Examples
 //! ## Mapping a file to a reference
@@ -56,6 +72,8 @@ use std::os::unix::ffi::OsStrExt;
 
 use libc::c_void;
 use minimap2_sys::*;
+
+pub use minimap2_sys as ffi;
 
 #[cfg(feature = "map-file")]
 use needletail::parse_fastx_file;
@@ -278,10 +296,10 @@ pub struct Aligner {
     pub threads: usize,
 
     /// Index created by minimap2
-    pub idx: Option<*mut mm_idx_t>,
+    pub idx: Option<Arc<*mut mm_idx_t>>,
 
     /// Index reader created by minimap2
-    pub idx_reader: Option<mm_idx_reader_t>,
+    pub idx_reader: Option<Arc<mm_idx_reader_t>>,
 
     /// Whether to add soft clipping to CIGAR result
     pub cigar_clipping: bool,
@@ -318,6 +336,34 @@ impl Aligner {
         }
 
         aligner
+    }
+
+    /// Returns the number of sequences in the index
+    pub fn n_seq(&self) -> u32 {
+        unsafe {
+            let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
+            let idx: *const mm_idx_t = *idx;
+            (*idx).n_seq as u32
+        }
+    }
+
+    /// Get sequences direct from the index
+    /// 
+    /// Returns a reference to the sequence at the given index
+    /// Remainds valid as long as the aligner is valid
+    pub fn get_seq<'aln>(&'aln self, i: usize) -> Option<&'aln mm_idx_seq_t> {
+        unsafe {
+            let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
+            let idx: *const mm_idx_t = *idx;
+            // todo, should this be > or >=
+            if i > self.n_seq() as usize {
+                return None;
+            }
+            let seq = (*idx).seq;
+            let seq = seq.offset(i as isize);
+            let seq = &*seq;
+            Some(seq)
+        }
     }
 }
 
@@ -679,7 +725,10 @@ impl Aligner {
             mm_idx_index_name(idx.assume_init());
         }
 
-        self.idx = Some(unsafe { idx.assume_init() });
+        let mm_idx = unsafe { idx.assume_init() };
+        self.idx = Some(Arc::new(mm_idx));
+        let mm_idx = unsafe { idx.assume_init() };
+        self.idx = Some(Arc::new(mm_idx));
 
         Ok(())
     }
@@ -786,7 +835,10 @@ impl Aligner {
             )
         });
 
-        self.idx = Some(unsafe { idx.assume_init() });
+        let mm_idx = unsafe { idx.assume_init() };
+        self.idx = Some(Arc::new(mm_idx));
+        let mm_idx = unsafe { idx.assume_init() };
+        self.idx = Some(Arc::new(mm_idx));
         self.mapopt.mid_occ = 1000;
 
         Ok(self)
@@ -871,7 +923,7 @@ impl Aligner {
 
             mm_reg = MaybeUninit::new(unsafe {
                 mm_map(
-                    self.idx.unwrap() as *const mm_idx_t,
+                    &**self.idx.as_ref().unwrap().as_ref() as *const mm_idx_t,
                     seq.len() as i32,
                     seq.as_ptr() as *const ::std::os::raw::c_char,
                     &mut n_regs,
@@ -880,6 +932,8 @@ impl Aligner {
                     qname,
                 )
             });
+
+
             let mut mappings = Vec::with_capacity(n_regs as usize);
 
             for i in 0..n_regs {
@@ -888,8 +942,14 @@ impl Aligner {
                     let const_ptr = reg_ptr as *const mm_reg1_t;
                     let reg: mm_reg1_t = *reg_ptr;
 
-                    let contig: *mut ::std::os::raw::c_char =
-                        (*((*(self.idx.unwrap())).seq.offset(reg.rid as isize))).name;
+                    let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
+                    let contig = std::ffi::CStr::from_ptr(
+                        (*(**idx).seq.offset(reg.rid as isize)).name,
+                    );
+                    let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
+                    let contig = std::ffi::CStr::from_ptr(
+                        (*(**idx).seq.offset(reg.rid as isize)).name,
+                    );
 
                     let is_primary = reg.parent == reg.id && (reg.sam_pri() > 0);
                     let is_supplementary = (reg.parent == reg.id) && (reg.sam_pri() == 0);
@@ -990,7 +1050,7 @@ impl Aligner {
                                     km,
                                     &mut cs_string,
                                     &mut m_cs_string,
-                                    self.idx.unwrap() as *const mm_idx_t,
+                                    &**self.idx.as_ref().unwrap().as_ref() as *const mm_idx_t,
                                     const_ptr,
                                     seq.as_ptr() as *const libc::c_char,
                                     true.into(),
@@ -1009,7 +1069,7 @@ impl Aligner {
                                     km,
                                     &mut cs_string,
                                     &mut m_cs_string,
-                                    self.idx.unwrap() as *const mm_idx_t,
+                                    &**self.idx.as_ref().unwrap().as_ref() as *const mm_idx_t,
                                     const_ptr,
                                     seq.as_ptr() as *const libc::c_char,
                                 );
@@ -1040,16 +1100,19 @@ impl Aligner {
                     };
 
                     let target_name_arc = Arc::new(
-                        std::ffi::CStr::from_ptr(contig)
+                        std::ffi::CStr::from_ptr(contig.as_ptr())
                             .to_str()
                             .unwrap()
                             .to_string(),
                     );
 
+                    let target_len = (*(**idx).seq.offset(reg.rid as isize)).len as i32;
+
+                    let target_len = (*(**idx).seq.offset(reg.rid as isize)).len as i32;
+
                     mappings.push(Mapping {
                         target_name: Some(Arc::clone(&target_name_arc)),
-                        target_len: (*((*(self.idx.unwrap())).seq.offset(reg.rid as isize))).len
-                            as i32,
+                        target_len,
                         target_start: reg.rs,
                         target_end: reg.re,
                         query_name: query_name_arc.clone(),
@@ -1151,20 +1214,6 @@ mod send {
     use crate::Aligner;
     unsafe impl Sync for Aligner {}
     unsafe impl Send for Aligner {}
-}
-
-/* TODO: This stopped working when we switched to not storing raw pointers but the structs themselves
-/ Since Rust is now handling the structs, I think memory gets freed that way, maybe this is no longer
-/ necessary?
-/ TODO: Test for memory leaks
-*/
-impl Drop for Aligner {
-    fn drop(&mut self) {
-        if self.idx.is_some() {
-            let idx = self.idx.take().unwrap();
-            unsafe { mm_idx_destroy(idx) };
-        }
-    }
 }
 
 #[derive(PartialEq, Eq)]
@@ -1827,20 +1876,20 @@ mod tests {
                 Err("File does not exist")
             );
 
-            if let Err("File is empty") = Aligner::builder().with_index("test_data/empty.fa", None)
+            if let Err("Index File is empty") = Aligner::builder().with_index("test_data/empty.fa", None)
             {
                 println!("File is empty - Success");
             } else {
                 panic!("File is empty error not thrown");
             }
 
-            if let Err("Invalid Path") = Aligner::builder().with_index("\0invalid_\0path\0", None) {
+            if let Err("Invalid Path for Index") = Aligner::builder().with_index("\0invalid_\0path\0", None) {
                 println!("Invalid Path - Success");
             } else {
                 panic!("Invalid Path error not thrown");
             }
 
-            if let Err("Invalid Output") =
+            if let Err("Invalid Output for Index") =
                 Aligner::builder().with_index("test_data/MT-human.fa", Some("test\0test"))
             {
                 println!("Invalid output - Success");
@@ -1934,5 +1983,142 @@ mod tests {
             },
             ..sr
         };
+    }
+
+    #[test]
+    fn double_free_index_test() {
+        // Create a new aligner
+        println!("Creating aligner");
+        let aligner = Aligner::builder().map_ont().with_index("yeast_ref.mmi", None).unwrap();
+        println!("Aligner created");
+
+        // Perform a test mapping to ensure the index is loaded and all
+        let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
+        assert!(mappings.len() > 0);
+
+        println!("Going into threads");
+
+        // Spawn two threads using thread scoped aligners, clone aligner
+        std::thread::scope(|s| {
+            let aligner_ = aligner.clone();
+
+            // Confirm that aligner_ idx points to the same memory as aligner idx arc
+            assert_eq!(Arc::as_ptr(aligner.idx.as_ref().unwrap()), Arc::as_ptr(aligner_.idx.as_ref().unwrap()));
+
+            // Confirm we have a strong count of 2
+            assert_eq!(Arc::strong_count(&aligner.idx.as_ref().unwrap()), 2);
+
+            let jh0 = s.spawn(move || {
+                let mappings = aligner_.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
+                assert!(mappings.len() > 0);
+                // Sleep 100ms
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            });
+
+            let aligner_ = aligner.clone();
+            let jh1 = s.spawn(move || {
+                std::thread::sleep(std::time::Duration::from_millis(200));
+                let mappings = aligner_.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
+                assert!(mappings.len() > 0);
+                // Sleep 100ms
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            });
+
+            jh0.join().unwrap();
+            jh1.join().unwrap();
+        });
+
+        println!("Past the first one");
+
+        // Create a new aligner
+        let aligner = Aligner::builder().map_ont().with_index("yeast_ref.mmi", None).unwrap();
+
+        // Perform a test mapping to ensure the index is loaded and all
+        let mappings = aligner.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
+        assert!(mappings.len() > 0);
+
+        // Spawn two threads using thread scoped aligners, clone aligner
+        std::thread::scope(|s| {
+            let aligner0 = aligner.clone();
+            let aligner1 = aligner.clone();
+            
+            // Force drop logic
+            drop(aligner);
+
+            let jh0 = s.spawn(move || {
+                println!("First thread");
+                let mappings = aligner0.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
+                assert!(mappings.len() > 0);
+                // Sleep 100ms
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                println!("First thread done");
+            });
+
+            // Join, to force drop logic from external thread
+            jh0.join().unwrap();
+
+            let jh1 = s.spawn(move || {
+                println!("Second thread");
+                std::thread::sleep(std::time::Duration::from_millis(200));
+                let mappings = aligner1.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
+                assert!(mappings.len() > 0);
+                // Sleep 100ms
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                assert!(Arc::strong_count(&aligner1.idx.as_ref().unwrap()) == 1);
+                println!("Second thread done");                
+            });
+
+            jh1.join().unwrap();
+        });
+
+        println!("Moving to the third test");
+
+        // Finally with no test mapping
+        // Create a new aligner
+        let aligner = Aligner::builder().map_ont().with_index("yeast_ref.mmi", None).unwrap();
+
+        // Spawn two threads using thread scoped aligners, clone aligner
+        std::thread::scope(|s| {
+            let aligner0 = aligner.clone();
+            let aligner1 = aligner.clone();
+            
+            // Force drop logic
+            drop(aligner);
+
+            let jh0 = s.spawn(move || {
+                println!("First thread - No mapping");
+                let mappings = aligner0.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
+                assert!(mappings.len() > 0);
+                // Sleep 100ms
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            });
+
+            // Join, to force drop logic from external thread
+            jh0.join().unwrap();
+
+            let jh1 = s.spawn(move || {
+                println!("Second thread - No mapping");
+                std::thread::sleep(std::time::Duration::from_millis(200));
+                let mappings = aligner1.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some("Sample Query")).unwrap();
+                assert!(mappings.len() > 0);
+                // Sleep 100ms
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            });
+
+            jh1.join().unwrap();
+        });
+    }
+
+    // Test aligner cloning for flag permanence
+    #[test]
+    fn aligner_cloning_flags() {
+        let aligner = Aligner::builder().map_ont().with_cigar().with_index("yeast_ref.mmi", None).unwrap();
+        // Confirm with_cigar is set
+        // self.mapopt.flag |= MM_F_CIGAR as i64;
+        assert_eq!(aligner.mapopt.flag & MM_F_CIGAR as i64, MM_F_CIGAR as i64);
+
+        // Clone aligner
+        let aligner_clone = aligner.clone();
+        assert_eq!(aligner_clone.mapopt.flag & MM_F_CIGAR as i64, MM_F_CIGAR as i64);
     }
 }

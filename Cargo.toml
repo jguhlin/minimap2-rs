@@ -50,13 +50,14 @@ rayon = "1.10"
 
 [features]
 default = ["map-file"]
-sse2only = ["minimap2-sys/sse2only"]
+map-file = ["needletail"] #, "simdutf8"]
 htslib = ['rust-htslib']
 simde = ["minimap2-sys/simde"]
-map-file = ["needletail"] #, "simdutf8"]
 zlib-ng = ["minimap2-sys/zlib-ng"]
 curl = ["rust-htslib/curl"]
 static = ["minimap2-sys/static", "rust-htslib/static"]
+sse2only = ["minimap2-sys/sse2only"]
+
 
 [package.metadata.docs.rs]
 features = ["map-file", "htslib"]
