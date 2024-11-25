@@ -338,7 +338,7 @@ impl Aligner {
         aligner
     }
 
-    /// Get the number of sequences in the index
+    /// Returns the number of sequences in the index
     pub fn n_seq(&self) -> u32 {
         unsafe {
             let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
@@ -348,6 +348,9 @@ impl Aligner {
     }
 
     /// Get sequences direct from the index
+    /// 
+    /// Returns a reference to the sequence at the given index
+    /// Remainds valid as long as the aligner is valid
     pub fn get_seq<'aln>(&'aln self, i: usize) -> Option<&'aln mm_idx_seq_t> {
         unsafe {
             let idx = Arc::as_ptr(self.idx.as_ref().unwrap());

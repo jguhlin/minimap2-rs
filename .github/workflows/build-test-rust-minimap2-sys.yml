@@ -55,7 +55,9 @@ jobs:
   test-macos-13:
     runs-on: macos-13
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
     - run: cd minimap2-sys
     - name: Run minimap2-sys tests
       run: cargo test

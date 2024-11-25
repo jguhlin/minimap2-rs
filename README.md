@@ -192,7 +192,7 @@ Contributors to this release: @mbhall88 @rob-p @Sam-Sims @charlesgregory @PB-DB
 + FIX: Cigar string missing softclip operation (@Sam-Sims)
 
 ### Other Changes
-+ Experimental Android support, solves [#66](https://github.com/jguhlin/minimap2-rs/issues/66)
++ Add ergonomic functions n_seq and get_seq.
 + Better docs on applying presets, solves [#84](https://github.com/jguhlin/minimap2-rs/issues/84)
 + Better detection of target arch c_char's and ptr's, solves [#82](https://github.com/jguhlin/minimap2-rs/issues/82)
 + Support for M1 Mac compilation and addition of github workflows to test it, solving [#81](https://github.com/jguhlin/minimap2-rs/issues/81)
@@ -202,6 +202,7 @@ Contributors to this release: @mbhall88 @rob-p @Sam-Sims @charlesgregory @PB-DB
 + Add Send + Sync to Aligner, along with unit test @PB-DB
 + Only use rust-htslib/curl when curl feature is enabled @PB-DB
 + Mark bam::Record objects as supplementary @PB-DB
++ Experimental Android support, solves [#66](https://github.com/jguhlin/minimap2-rs/issues/66)
 
 ### 0.1.20 minimap2 2.28
 + Fix htslib errors. No update to -sys crate needed.

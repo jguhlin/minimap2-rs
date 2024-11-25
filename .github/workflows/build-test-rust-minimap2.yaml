@@ -55,3 +55,17 @@ jobs:
       run: cargo test --features htslib
     - name: Run tests simde
       run: cargo test --features simde
+
+  test-android:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    - name: Install Rust Cross
+      run: rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+    - run: cargo install cross --git https://github.com/cross-rs/cross
+    - name: Run minimap2 tests on Android aarch64
+      run: cross test --target aarch64-linux-android
+    - name: Run minimap2 tests on Android x86_64
+      run: cross test --target x86_64-linux-android
