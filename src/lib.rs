@@ -337,6 +337,31 @@ impl Aligner {
 
         aligner
     }
+
+    /// Get the number of sequences in the index
+    pub fn n_seq(&self) -> u32 {
+        unsafe {
+            let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
+            let idx: *const mm_idx_t = *idx;
+            (*idx).n_seq as u32
+        }
+    }
+
+    /// Get sequences direct from the index
+    pub fn get_seq<'aln>(&'aln self, i: usize) -> Option<&'aln mm_idx_seq_t> {
+        unsafe {
+            let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
+            let idx: *const mm_idx_t = *idx;
+            // todo, should this be > or >=
+            if i > self.n_seq() as usize {
+                return None;
+            }
+            let seq = (*idx).seq;
+            let seq = seq.offset(i as isize);
+            let seq = &*seq;
+            Some(seq)
+        }
+    }
 }
 
 impl Aligner {
