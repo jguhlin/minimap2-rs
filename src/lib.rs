@@ -63,7 +63,6 @@
 use std::cell::RefCell;
 
 use std::ffi::{CStr, CString};
-use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::num::NonZeroI32;
 use std::path::Path;
@@ -279,13 +278,13 @@ pub struct PresetSet;
 #[derive(Default, Clone, Copy)]
 pub struct Built;
 
-trait BuilderState {}
+pub trait BuilderState {}
 impl BuilderState for Unset {}
 impl BuilderState for PresetSet {}
 impl BuilderState for Built {}
 impl BuilderState for () {}
 
-trait AcceptsParams {}
+pub trait AcceptsParams {}
 impl AcceptsParams for PresetSet {}
 impl AcceptsParams for Unset {}
 
@@ -864,6 +863,19 @@ where
 
         Ok(aln)
     }
+
+    /// Applies an additional preset to the aligner
+    /// WARNING: This overwrites multiple other parameters. Make sure you know what you are doing
+    ///
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
+    pub fn additional_preset(mut self, preset: Preset) -> Self {
+        unsafe {
+            mm_set_opt(preset.into(), &mut self.idxopt, &mut self.mapopt)
+        };
+
+        self
+    }
 }
 
 impl Aligner<Built> {
@@ -1372,7 +1384,7 @@ mod tests {
         // Because I'm not sure how this will work with FFI + Threads, want a sanity check
         use rayon::prelude::*;
 
-        let mut aligner = Aligner::builder()
+        let aligner = Aligner::builder()
             .preset(Preset::MapOnt)
             .with_index_threads(2)
             .with_cigar()
@@ -1505,7 +1517,7 @@ mod tests {
 
     #[test]
     fn test_mapping() {
-        let mut aligner = Aligner::builder()
+        let aligner = Aligner::builder()
             .preset(Preset::MapOnt)
             .with_index_threads(2)
             .with_index("yeast_ref.mmi", None)
@@ -1532,7 +1544,7 @@ mod tests {
         // Assert the Display impl for strand works
         println!("{}", mappings[0].strand);
 
-        let mut aligner = Aligner::builder()
+        let aligner = Aligner::builder()
             .preset(Preset::MapOnt)
             .with_index_threads(2)
             .with_cigar()
@@ -1556,7 +1568,7 @@ mod tests {
 
     #[test]
     fn test_alignment_score() {
-        let mut aligner = Aligner::builder()
+        let aligner = Aligner::builder()
             .preset(Preset::Splice)
             .with_index_threads(1);
 
@@ -1575,7 +1587,7 @@ mod tests {
 
     #[test]
     fn test_aligner_config_and_mapping() {
-        let mut aligner = Aligner::builder()
+        let aligner = Aligner::builder()
             .preset(Preset::MapOnt)
             .with_index_threads(2);
         let aligner = aligner
@@ -1599,7 +1611,7 @@ mod tests {
 
     #[test]
     fn test_mappy_output() {
-        let mut aligner = Aligner::builder()
+        let aligner = Aligner::builder()
             .preset(Preset::MapOnt)
             .with_index_threads(1)
             .with_cigar()
@@ -1655,7 +1667,7 @@ mod tests {
         );
         assert_eq!(align.cs, Some(String::from(":14-cc:1*ct:2+atc:9*ag:12*tc:1*ac:7*tc:4-t:1*ag:48*ag:2*ag:21*tc*tc:8-t:2*ag:5*tc:2*ag:4*ct*ac*ct:2*tc*ct:2*ag:4*ag:17")));
 
-        let mut aligner = Aligner::builder()
+        let aligner = Aligner::builder()
             .preset(Preset::MapOnt)
             .with_index_threads(1)
             .with_cigar()

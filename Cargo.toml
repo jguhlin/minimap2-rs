@@ -49,7 +49,7 @@ rayon = "1.10"
 # opt-level = 3
 
 [features]
-default = ["map-file"]
+default = ["map-file", "htslib"]
 map-file = ["needletail"] #, "simdutf8"]
 htslib = ['rust-htslib']
 simde = ["minimap2-sys/simde"]
