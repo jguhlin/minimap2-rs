@@ -42,8 +42,8 @@
 //! assert_eq!((record.tid(), record.pos(), record.mapq()), (0, 180, 13));
 //! ```
 
-use crate::{Aligner, Mapping, Strand, BUF, Built};
 use super::ffi as mm_ffi;
+use crate::{Aligner, Built, Mapping, Strand, BUF};
 use rust_htslib::bam::header::HeaderRecord;
 use rust_htslib::bam::record::{Cigar, CigarString};
 use rust_htslib::bam::{Header, HeaderView, Record};
@@ -438,14 +438,21 @@ mod tests {
     fn get_test_case(
         query_name: &str,
         spliced: bool,
-    ) -> (Aligner<Built>, MMIndex, HeaderView, Vec<Record>, Vec<u8>, Vec<u8>) {
+    ) -> (
+        Aligner<Built>,
+        MMIndex,
+        HeaderView,
+        Vec<Record>,
+        Vec<u8>,
+        Vec<u8>,
+    ) {
         let aligner = match spliced {
             false => Aligner::builder()
                 .with_index_threads(1)
                 .with_cigar()
                 .with_index("test_data/genome.fa", None)
                 .unwrap(),
-                
+
             true => Aligner::builder()
                 .splice()
                 .with_index_threads(1)
