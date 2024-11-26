@@ -191,6 +191,10 @@ Contributors to this release: @mbhall88 @rob-p @Sam-Sims @charlesgregory @PB-DB
 + Supplementary flag now better detected (@rob-p)
 + FIX: Cigar string missing softclip operation (@Sam-Sims)
 
+#### Migration Guide
++ Make all setting changes before calling a with_index, with_seq's function
++ Change all map calls to include a query name, or None if not needed
+
 ### Other Changes
 + Add ergonomic functions n_seq and get_seq.
 + Better docs on applying presets, solves [#84](https://github.com/jguhlin/minimap2-rs/issues/84)

@@ -7,9 +7,10 @@
 //! use rust_htslib::bam::{Header, HeaderView};
 //! use rust_htslib::bam::record::Aux;
 //! let aligner = Aligner::builder()
+//!     .with_cigar()
 //!     .with_index("test_data/genome.fa", None)
-//!     .unwrap()
-//!     .with_cigar();
+//!     .unwrap();
+//!     
 //! let mut header = Header::new();
 //! aligner.populate_header(&mut header);
 //! let header_view = HeaderView::from_header(&header);
@@ -41,9 +42,8 @@
 //! assert_eq!((record.tid(), record.pos(), record.mapq()), (0, 180, 13));
 //! ```
 
-use crate::{Aligner, Mapping, Strand, BUF};
-use core::ffi;
-use minimap2_sys as mm_ffi;
+use crate::{Aligner, Mapping, Strand, BUF, Built};
+use super::ffi as mm_ffi;
 use rust_htslib::bam::header::HeaderRecord;
 use rust_htslib::bam::record::{Cigar, CigarString};
 use rust_htslib::bam::{Header, HeaderView, Record};
@@ -111,7 +111,7 @@ impl Query {
     }
 }
 
-impl Aligner {
+impl Aligner<Built> {
     pub fn populate_header(&self, header: &mut Header) {
         let mm_idx = MMIndex::from(self);
         for seq in mm_idx.seqs() {
@@ -310,7 +310,7 @@ pub struct MMIndex {
 
 impl MMIndex {
     pub fn n_seq(&self) -> u32 {
-        unsafe { (**self.inner).n_seq }        
+        unsafe { (**self.inner).n_seq }
     }
 
     pub fn seqs(&self) -> Vec<SeqMetaData> {
@@ -342,11 +342,11 @@ impl MMIndex {
     }
 }
 
-impl From<&Aligner> for MMIndex {
-    fn from(aligner: &Aligner) -> Self {
+impl From<&Aligner<Built>> for MMIndex {
+    fn from(aligner: &Aligner<Built>) -> Self {
         MMIndex {
             // inner: aligner.idx.unwrap(),
-            inner: std::sync::Arc::clone(&aligner.idx.as_ref().unwrap())
+            inner: std::sync::Arc::clone(&aligner.idx.as_ref().unwrap()),
         }
     }
 }
@@ -362,7 +362,7 @@ mod tests {
     #[test]
     fn test_index() {
         let aligner = Aligner::builder()
-            .with_threads(1)
+            .with_index_threads(1)
             .with_index("test_data/genome.fa", None)
             .unwrap();
 
@@ -438,19 +438,20 @@ mod tests {
     fn get_test_case(
         query_name: &str,
         spliced: bool,
-    ) -> (Aligner, MMIndex, HeaderView, Vec<Record>, Vec<u8>, Vec<u8>) {
+    ) -> (Aligner<Built>, MMIndex, HeaderView, Vec<Record>, Vec<u8>, Vec<u8>) {
         let aligner = match spliced {
             false => Aligner::builder()
-                .with_threads(1)
+                .with_index_threads(1)
+                .with_cigar()
                 .with_index("test_data/genome.fa", None)
-                .unwrap()
-                .with_cigar(),
+                .unwrap(),
+                
             true => Aligner::builder()
                 .splice()
-                .with_threads(1)
+                .with_index_threads(1)
+                .with_cigar()
                 .with_index("test_data/genome.fa", None)
-                .unwrap()
-                .with_cigar(),
+                .unwrap(),
         };
 
         let idx = MMIndex::from(&aligner);
@@ -644,9 +645,9 @@ mod tests {
     #[test]
     fn test_doctest() {
         let aligner = Aligner::builder()
+            .with_cigar()
             .with_index("test_data/genome.fa", None)
-            .unwrap()
-            .with_cigar();
+            .unwrap();
         let mut header = Header::new();
         aligner.populate_header(&mut header);
         let header_view = HeaderView::from_header(&header);
