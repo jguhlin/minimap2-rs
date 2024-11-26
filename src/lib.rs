@@ -605,6 +605,23 @@ where
         self
     }
 
+
+    /// Sets the gap open penalty for minimap2. 
+    /// 
+    /// minimap2 -O 4 sets both the short and long gap open penalty to 4.
+    /// [minimap2 code](https://github.com/lh3/minimap2/blob/618d33515e5853c4576d5a3d126fdcda28f0e8a4/main.c#L315)
+    /// 
+    /// To set the long gap open penalty, simply provide a value for `penalty_long`.
+    pub fn with_gap_open_penalty(mut self, penalty: i32, penalty_long: Option<i32>) -> Self {
+        self.mapopt.q = penalty;
+        if let Some(penalty_long) = penalty_long {
+            self.mapopt.q2 = penalty_long;
+        } else {
+            self.mapopt.q2 = penalty;
+        }
+        self
+    }
+
     /// Sets the number of threads minimap2 will use for building the index
     /// ```
     /// # use minimap2::*;
