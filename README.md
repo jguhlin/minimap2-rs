@@ -181,6 +181,8 @@ and/or:
 
 # Minimap2 Mapping and Indexing Options
 
+See [customization](#customization) for how to use these.
+
 ## Mapping Options (`MapOpt` in rust, alias for `mm_mapopt_t`)
 
 | Field Name        | Type                    | Description                                                          |
