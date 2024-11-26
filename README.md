@@ -99,6 +99,7 @@ let mappings: Result<Vec<Mapping>> = aligner.map_file("query.fa", false, false);
 ## Multithreading
 Multithreading is supported, for implementation example see [fakeminimap2](https://github.com/jguhlin/minimap2-rs/blob/main/fakeminimap2/src/main.rs). Minimap2 also supports threading itself, and will use a minimum of 3 cores for building the index. Multithreading for mapping is left to the end-user.
 
+Adjust the number of threads used to build the index:
 ```rust
 let mut aligner = Aligner::builder()
     .map_ont()
@@ -106,7 +107,7 @@ let mut aligner = Aligner::builder()
 ```
 
 ### Experimental Rayon support
-This _appears_ to work.
+This _appears_ to work. See [fakeminimap2](https://github.com/jguhlin/minimap2-rs/tree/main/fakeminimap2) for full implementation.
 
 ```rust
 use rayon::prelude::*;
@@ -115,6 +116,9 @@ let results = sequences.par_iter().map(|seq| {
     aligner.map(seq.as_bytes(), false, false, None, None, None).unwrap()
 }).collect::<Vec<_>>();
 ```
+
+### Arc cloning the Aligner
+Also works. Otherwise directly cloning the aligner will Arc clone the internal index.
 
 ## Features
 The following crate features are available:
