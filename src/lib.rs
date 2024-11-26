@@ -46,7 +46,7 @@
 //!
 //! let seq = b"ACTGACTCACATCGACTACGACTACTAGACACTAGACTATCGACTACTGACATCGA";
 //! let alignment = aligner
-//! .map(seq, false, false, None, None, Some("Sample Query"))
+//! .map(seq, false, false, None, None, Some(b"Sample Query"))
 //! .expect("Unable to align");
 //! ```
 //!
@@ -56,7 +56,7 @@
 //! # let seq = "CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCGAAATTCTTTAACGGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
 //! let aligner = Aligner::builder().map_ont().with_seq(seq.as_bytes()).expect("Unable to build index");
 //! let query = b"CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCG";
-//! let hits = aligner.map(query, false, false, None, None, Some("Query Name"));
+//! let hits = aligner.map(query, false, false, None, None, Some(b"Query Name"));
 //! assert_eq!(hits.unwrap().len(), 1);
 //! ```
 
@@ -751,7 +751,7 @@ where
     /// # let seq = "CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCGAAATTCTTTAACGGTCGTCGTCTCGATACTGCCACTATGCCTTTATATTATTGTCTTCAGGTGATGCTGCAGATCGTGCAGACGGGTGGCTTTAGTGTTGTGGGATGCATAGCTATTGACGGATCTTTGTCAATTGACAGAAATACGGGTCTCTGGTTTGACATGAAGGTCCAACTGTAATAACTGATTTTATCTGTGGGTGATGCGTTTCTCGGACAACCACGACCGCGACCAGACTTAAGTCTGGGCGCGGTCGTGGTTGTCCGAGAAACGCATCACCCACAGATAAAATCAGTTATTACAGTTGGACCTTTATGTCAAACCAGAGACCCGTATTTC";
     /// let aligner = Aligner::builder().map_ont().with_seq(seq.as_bytes()).expect("Unable to build index");
     /// let query = b"CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCG";
-    /// let hits = aligner.map(query, false, false, None, None, Some("Query Name"));
+    /// let hits = aligner.map(query, false, false, None, None, Some(b"Query Name"));
     /// assert_eq!(hits.unwrap().len(), 1);
     /// ```
     pub fn with_seq(self, seq: &[u8]) -> Result<Aligner<Built>, &'static str>
@@ -770,7 +770,7 @@ where
     /// # let id = "seq1";
     /// let aligner = Aligner::builder().map_ont().with_seq_and_id(seq.as_bytes(), id.as_bytes()).expect("Unable to build index");
     /// let query = b"CGGCACCAGGTTAAAATCTGAGTGCTGCAATAGGCGATTACAGTACAGCACCCAGCCTCCG";
-    /// let hits = aligner.map(query, false, false, None, None, Some("Sample Query"));
+    /// let hits = aligner.map(query, false, false, None, None, Some(b"Sample Query"));
     /// assert_eq!(hits.as_ref().unwrap().len(), 1);
     /// assert_eq!(hits.as_ref().unwrap()[0].target_name.as_ref().unwrap().as_str(), id);
     /// ```
