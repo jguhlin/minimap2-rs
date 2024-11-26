@@ -102,10 +102,7 @@ fn main() {
     // I just do this in the main thread, but you can split threads
     let backoff = crossbeam::utils::Backoff::new();
     while let Some(Ok(record)) = reader.next() {
-        let mut work = WorkQueue::Work((
-            record.id().to_vec(),
-            record.seq().to_vec(),
-        ));
+        let mut work = WorkQueue::Work((record.id().to_vec(), record.seq().to_vec()));
         while let Err(work_packet) = work_queue.push(work) {
             work = work_packet; // Simple way to maintain ownership
                                 // If we have an error, it's 99% because the queue is full
