@@ -30,16 +30,40 @@ impl Sequence {
     #[new]
     fn new(id: &str, sequence: &str) -> Self {
         Sequence {
-            id: id.to_string(),
+            id: id.to_string(), // todo use CString and convert to String as needed
             sequence: sequence.as_bytes().to_vec(),
         }
     }
 }
 
-/// Wrapper around minimap2::Aligner
 #[pyclass]
 pub struct Aligner {
-    pub aligner: minimap2::Aligner,
+    pub aligner: minimap2::Aligner<Built>,
+}
+
+#[pymethods]
+impl Aligner {
+    /// Set the number of threads for minimap2 to use to build index and perform mapping
+    fn index_threads(&mut self, threads: usize) {
+        self.aligner.threads = threads;
+    }
+
+    /// Build the minimap2 index
+    fn index(&mut self, index: &str) {
+        self.aligner.set_index(index, None);
+    }
+
+    /// Index and save index to output
+    fn index_and_save(&mut self, index: &str, output: &str) {
+        self.aligner.set_index(index, Some(output));
+    }
+
+    /// Enable CIGAR strings
+    fn cigar(&mut self) {
+        // todo inefficient
+        let aligner = self.aligner.clone();
+        self.aligner = aligner.with_cigar();
+    }
 }
 
 unsafe impl Send for Aligner {}
@@ -147,117 +171,6 @@ impl Aligner {
         }
     }
 
-    // Builder functions
-    /// Returns an unconfigured Aligner
-    #[new]
-    fn new() -> Self {
-        Aligner {
-            aligner: minimap2::Aligner::builder(),
-        }
-    }
-
-    /// Set the number of threads for minimap2 to use to build index and perform mapping
-    fn index_threads(&mut self, threads: usize) {
-        self.aligner.threads = threads;
-    }
-
-    /// Build the minimap2 index
-    fn index(&mut self, index: &str) {
-        self.aligner.set_index(index, None);
-    }
-
-    /// Index and save index to output
-    fn index_and_save(&mut self, index: &str, output: &str) {
-        self.aligner.set_index(index, Some(output));
-    }
-
-    /// Enable CIGAR strings
-    fn cigar(&mut self) {
-        // todo inefficient
-        let aligner = self.aligner.clone();
-        self.aligner = aligner.with_cigar();
-    }
-
-    fn lrhq(&mut self) {
-        self.preset(Preset::LrHq);
-    }
-
-    fn lrhqae(&mut self) {
-        self.preset(Preset::LrHqae);
-    }
-
-    /// Configure Aligner for Splice
-    fn splice(&mut self) {
-        self.preset(Preset::Splice);
-    }
-
-    /// Configure Aligner for Splice
-    fn splicehq(&mut self) {
-        self.preset(Preset::SpliceHq);
-    }
-    /// Configure aligner for Asm
-    fn asm(&mut self) {
-        self.preset(Preset::Asm);
-    }
-
-    /// Configure Aligner for Asm5
-    fn asm5(&mut self) {
-        self.preset(Preset::Asm5);
-    }
-
-    /// Configure Aligner for Asm10
-    fn asm10(&mut self) {
-        self.preset(Preset::Asm10);
-    }
-
-    /// Configure Aligner for Asm20
-    fn asm20(&mut self) {
-        self.preset(Preset::Asm20);
-    }
-
-    // Convenience Functions, at the bottom, because it pollutes the namespace
-    /// Configure Aligner for ONT reads
-    fn map_ont(&mut self) {
-        self.preset(Preset::MapOnt);
-    }
-
-    /// Configure Aligner for PacBio HIFI reads
-    fn map_hifi(&mut self) {
-        self.preset(Preset::MapHifi);
-    }
-
-    /// Configure aligner for AvaOnt
-    fn ava_ont(&mut self) {
-        self.preset(Preset::AvaOnt);
-    }
-
-    /// Configure aligner for Map10k
-    fn map_10k(&mut self) {
-        self.preset(Preset::Map10k);
-    }
-
-    /// Configure aligner for AvaPb
-    fn ava_pb(&mut self) {
-        self.preset(Preset::AvaPb);
-    }
-
-    /// Configure Aligner for Short
-    fn short(&mut self) {
-        self.preset(Preset::Short);
-    }
-
-    /// Configure Aligner for Sr
-    fn sr(&mut self) {
-        self.preset(Preset::Sr);
-    }
-
-    /// Configure Aligner for Cdna
-    fn cdna(&mut self) {
-        self.preset(Preset::Cdna);
-    }
-}
-
-impl Aligner {
     /// Create an aligner using a preset.
     fn preset(&mut self, preset: Preset) {
         // Set preset

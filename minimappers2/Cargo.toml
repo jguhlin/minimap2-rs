@@ -8,14 +8,13 @@ name = "minimappers2"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-minimap2 = { version = "0.1.18", features = ["simde"] }
-minimap2-sys = { version = "0.1.19", features = ["simde"] }
+minimap2 = { path = "../", version = "0.1.21+minimap2.2.28", features = ["simde", "zlib-ng"] }
 crossbeam = "0.8.4"
-mimalloc = {version = "0.1", default-features = false }
+mimalloc = { version = "0.1.43", default-features = false }
 
 pyo3 = { version = "0.21" }
-polars = "0.40"
-pyo3-polars = "0.14"
+polars = "0.44"
+pyo3-polars = "0.18"
 
 [profile.release]
 opt-level = 3
