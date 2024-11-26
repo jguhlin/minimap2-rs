@@ -6,14 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-minimap2 = "0.1.16+minimap2.2.26"
-# minimap2 = { path = "../" }
+minimap2 = { path = "../", version = "0.1.21+minimap2.2.28" }
 crossbeam = "0.8.4"
-needletail = "0.5.1"
-fern = { version = "0.6.2", features = ["colored", "chrono"] }
+needletail = "0.6"
 humantime = "2.1.0"
-log = "0.4.21"
-colored = { version = "2.1.0", features = ["no-color"] }
+log = "0.4.22"
+env_logger = "0.11.5"
 
 [profile.release]
 opt-level = 3
