@@ -23,7 +23,6 @@ exclude = [
 [workspace]
 
 members = []
-
 exclude = ["minimappers2", "fakeminimap2", "minimap2-sys"]
 
 [dependencies]
