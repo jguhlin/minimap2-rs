@@ -1,3 +1,162 @@
+use std::sync::{Arc, Condvar, Mutex};
+use std::sync::atomic::{AtomicI64, AtomicIsize, Ordering};
+use std::thread;
+use std::os::raw::{c_void, c_int, c_long};
+
+#[no_mangle]
+pub extern "C" fn kt_pipeline(
+    n_threads: c_int,
+    func: extern "C" fn(*mut c_void, c_int, *mut c_void) -> *mut c_void,
+    shared_data: *mut c_void,
+    n_steps: c_int,
+) {
+    println!("Hello from Rust!");
+    let n_threads = n_threads as usize;
+    let n_steps = n_steps as usize;
+    let index = AtomicIsize::new(0);
+
+    struct KtpWorker {
+        step: usize,
+        index: isize,
+        data: *mut c_void,
+    }
+
+    struct KtpShared {
+        shared: *mut c_void,
+        func: extern "C" fn(*mut c_void, c_int, *mut c_void) -> *mut c_void,
+        index: AtomicIsize,
+        n_workers: usize,
+        n_steps: usize,
+        workers: Vec<KtpWorker>,
+    }
+
+    struct SharedData {
+        shared: Mutex<KtpShared>,
+        condvar: Condvar,
+    }
+
+    // Implement Send and Sync for raw pointers manually
+    unsafe impl Send for KtpShared {}
+    unsafe impl Sync for KtpShared {}
+    unsafe impl Send for SharedData {}
+    unsafe impl Sync for SharedData {}
+
+    let workers = (0..n_threads)
+        .map(|_| KtpWorker {
+            step: 0,
+            index: index.fetch_add(1, Ordering::SeqCst),
+            data: std::ptr::null_mut(),
+        })
+        .collect::<Vec<_>>();
+
+    let shared = Arc::new(SharedData {
+        shared: Mutex::new(KtpShared {
+            shared: shared_data,
+            func: func,
+            index: index,
+            n_workers: n_threads,
+            n_steps: n_steps,
+            workers: workers,
+        }),
+        condvar: Condvar::new(),
+    });
+
+    let handles = (0..n_threads)
+        .map(|thread_id| {
+            let shared = shared.clone();
+            thread::spawn(move || {
+                loop {
+                    // Lock mutex
+                    let mut guard = shared.shared.lock().unwrap();
+                    loop {
+                        // Test whether we can proceed
+                        let can_proceed = guard.workers.iter().enumerate().all(|(i, other_w)| {
+                            if i == thread_id {
+                                true
+                            } else {
+                                let w = &guard.workers[thread_id];
+                                !(other_w.step <= w.step && other_w.index < w.index)
+                            }
+                        });
+                        if can_proceed {
+                            break;
+                        }
+                        guard = shared.condvar.wait(guard).unwrap();
+                    }
+
+                    // Prepare data for calling func
+                    let func = guard.func;
+                    let shared_ptr = guard.shared;
+                    let step = guard.workers[thread_id].step;
+                    let input_data = if step == 0 {
+                        std::ptr::null_mut()
+                    } else {
+                        guard.workers[thread_id].data
+                    };
+                    drop(guard); // Release the mutex before calling the function
+
+                    // Call func outside the mutex to avoid deadlocks
+                    let data = unsafe {
+                        func(shared_ptr, step as c_int, input_data)
+                    };
+
+                    // Lock mutex to update state
+                    let mut guard = shared.shared.lock().unwrap();
+                    let w_step = guard.workers[thread_id].step;
+                    let n_steps = guard.n_steps;
+                    // let w = &mut guard.workers[thread_id];
+                    guard.workers[thread_id].data = data;
+                    if w_step == n_steps - 1 || !guard.workers[thread_id].data.is_null() {
+                        guard.workers[thread_id].step = (guard.workers[thread_id].step + 1) % guard.n_steps;
+                    } else {
+                        guard.workers[thread_id].step = guard.n_steps;
+                    }
+                    if guard.workers[thread_id].step == 0 {
+                        guard.workers[thread_id].index = guard.index.fetch_add(1, Ordering::SeqCst);
+                    }
+                    shared.condvar.notify_all();
+
+                    // Check if we should exit
+                    if guard.workers[thread_id].step >= guard.n_steps {
+                        break;
+                    }
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+}
+
+// Wrapper that encapsulates function pointer and ensures thread-safety
+struct ThreadSafeFunc {
+    func: *const c_void,
+    _marker: std::marker::PhantomData<*const ()>,
+}
+
+unsafe impl Send for ThreadSafeFunc {}
+unsafe impl Sync for ThreadSafeFunc {}
+
+impl ThreadSafeFunc {
+    fn new(func: *const c_void) -> Self {
+        ThreadSafeFunc {
+            func,
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    unsafe fn call(&self, data: *mut c_void, index: c_long, thread_id: c_int) {
+        let func: extern "C" fn(*mut c_void, c_long, c_int) = 
+            std::mem::transmute(self.func);
+        func(data, index, thread_id)
+    }
+}
+
+
+// Previous attempt. Keeping
+/*
 use needletail::{parse_fastx_file, Sequence, FastxReader};
 
 use std::sync::{Arc, Mutex, RwLock};
@@ -324,4 +483,5 @@ mod tests {
         assert!(!idx.is_null());
     }
 
-}
+} 
+*/

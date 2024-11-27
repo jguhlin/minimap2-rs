@@ -11,7 +11,7 @@
 #include "minimap2/ketopt.h"
 #include "minimap2/krmq.h"
 #include "minimap2/ksort.h"
-#include "minimap2/kthread.h"
+// #include "minimap2/kthread.h"
 #include "minimap2/sdust.h"
 
 mm_idx_t *mm_idx_init(int w, int k, int b, int flag);

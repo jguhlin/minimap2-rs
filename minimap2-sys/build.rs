@@ -23,6 +23,12 @@ fn configure(mut cc: &mut cc::Build) {
 
     assert!(files.len() != 0, "No files found in minimap2 directory -- Did you forget to clone the submodule? git submodule init --recursive");
 
+    #[cfg(feature = "rust-threads")]
+    println!("cargo:rustc-cfg=disable_kt_pipeline");
+
+    #[cfg(feature = "rust-threads")]
+    println!("cargo:rustc-link-lib=static=libminimap"); // Link the modified library
+
     for file in files {
         // Skip "main.c" and "example.c"
         if file.file_name().unwrap() == "main.c" || file.file_name().unwrap() == "example.c" {
@@ -135,6 +141,7 @@ fn compile() {
     println!("cargo:rustc-link-lib=m");
     println!("cargo:rustc-link-lib=z");
 
+    #[cfg(not(feature = "rust-threads"))]
     if !env::var("TARGET").unwrap().contains("android") {
         println!("cargo:rustc-link-lib=pthread");
         cc.flag("-lpthread");
@@ -151,6 +158,7 @@ fn compile() {
 
     cc.warnings(false);
     cc.flag("-Wc++-compat");
+
     cc.out_dir(&out_path);
 
     configure(&mut cc);
@@ -169,7 +177,6 @@ fn compile() {
             println!("cargo:rustc-link-search=native={}", lib);
             println!("cargo:rustc-link-lib=static=z");
         }
-
     }
 
     if let Ok(lib) = pkg_config::find_library("zlib") {
@@ -177,6 +184,9 @@ fn compile() {
             cc.include(path);
         }
     }
+
+    #[cfg(feature = "rust-threads")]
+    cc.define("DISABLE_KT_PIPELINE", None);
 
     cc.compile("libminimap");
 }
