@@ -163,7 +163,6 @@ Minimap2 is tested on x86_64 and aarch64 (arm64). Other platforms may work, plea
 - [oarfish](https://github.com/COMBINE-lab/oarfish) - transcript quantification from long-read RNA-seq data
 
 # Next things todo
-* Multi-thread guide (tokio async threads or use crossbeam queue and traditional threads?)
 * Iterator interface for map_file
 * -sys Possible to decouple from pthread?
 
