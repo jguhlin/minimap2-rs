@@ -56,7 +56,7 @@ zlib-ng = ["minimap2-sys/zlib-ng"]
 curl = ["rust-htslib/curl"]
 static = ["minimap2-sys/static", "rust-htslib/static"]
 sse2only = ["minimap2-sys/sse2only"]
-rust-threads = ["minimap2-sys/rust-threads"]
+# rust-threads = ["minimap2-sys/rust-threads"]
 
 [package.metadata.docs.rs]
 features = ["map-file", "htslib"]
