@@ -317,7 +317,7 @@ See [customization](#customization) for how to use these.
 Contributors to this release: @mbhall88 @rob-p @Sam-Sims @charlesgregory @PB-DB
 #### Breaking Changes
 + Map now returns Arc String's to reduce memory allocation for large and/or repetitive jobs
-+ map now takes an additional argument, query_name: Option<impl AsRef<[u8]>>, possibly solves [#75](https://github.com/jguhlin/minimap2-rs/issues/75) (@rob-p @mbhall88 @jguhlin)
++ map now takes an additional argument, query_name: Option<&[u8]>, possibly solves [#75](https://github.com/jguhlin/minimap2-rs/issues/75) (@rob-p @mbhall88 @jguhlin)
 + Arc the Index, to prevent double-frees, solves [#71](https://github.com/jguhlin/minimap2-rs/issues/71)
 + Map file now passes in query name, which should help with [#75](https://github.com/jguhlin/minimap2-rs/issues/75)
 + Supplementary flag now better detected (@rob-p)
@@ -339,6 +339,8 @@ Contributors to this release: @mbhall88 @rob-p @Sam-Sims @charlesgregory @PB-DB
 + Only use rust-htslib/curl when curl feature is enabled @PB-DB
 + Mark bam::Record objects as supplementary @PB-DB
 + Experimental Android support (tested on aarch64 and x86_64), solves [#66](https://github.com/jguhlin/minimap2-rs/issues/66)
++ Added flag and option documents
++ Added with_gap_open penalty ergonomic function
 
 ### 0.1.20 minimap2 2.28
 + Fix htslib errors. No update to -sys crate needed.
