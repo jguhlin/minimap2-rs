@@ -30,7 +30,7 @@ exclude = [
 ]
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["staticlib", "cdylib", "rlib"]
 
 [dependencies]
 libz-sys = { version = "1.1", default-features = false, features = ["libc"] }
