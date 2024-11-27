@@ -5,11 +5,8 @@
 #[cfg(feature = "bindgen")]
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-#[cfg(all(not(feature = "bindgen"), not(feature = "rust-threads")))]
+#[cfg(all(not(feature = "bindgen")))]
 include!("bindings.rs");
-
-#[cfg(feature = "rust-threads")]
-include!("bindings_rust_threads.rs");
 
 unsafe impl Send for mm_idx_t {}
 unsafe impl Send for mm_idx_reader_t {}
@@ -43,12 +40,6 @@ impl Default for mm_idxopt_t {
         }
     }
 }
-
-#[cfg(feature = "rust-threads")]
-mod rust_threads_index;
-
-#[cfg(feature = "rust-threads")]
-pub use rust_threads_index::*;
 
 // TODO: Add more tests!
 #[cfg(test)]

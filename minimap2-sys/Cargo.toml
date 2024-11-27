@@ -26,6 +26,7 @@ exclude = [
 	"/mm2-fast/test",
 	"/minimap2/test",
 	"/mm2-fast/test_bench/",
+
 ]
 
 [lib]
@@ -47,11 +48,10 @@ features = ["which-rustfmt", "runtime"]
 version = "1.2"
 
 [features]
-default = ["rust-threads"] # "libz-sys/libc"
+default = [] # "libz-sys/libc"
 vendored = ["bindgen"]
 sse2only = []
 simde = []
 noopt = []
 zlib-ng = ["libz-sys/zlib-ng"]
 static = ["libz-sys/static"]
-rust-threads = []
