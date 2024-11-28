@@ -3,7 +3,10 @@ use std::path::PathBuf;
 use clap::{Parser, ValueEnum};
 
 #[derive(Parser, Debug)]
-#[command(name = "fakeminimap2", about = "An example of how to use the minimap2 crate with multithreading")]
+#[command(
+    name = "fakeminimap2",
+    about = "An example of how to use the minimap2 crate with multithreading"
+)]
 pub(crate) struct Cli {
     /// The target file to align to (e.g. a reference genome - can be in FASTA, FASTQ, or mmi format)
     pub target: PathBuf,
