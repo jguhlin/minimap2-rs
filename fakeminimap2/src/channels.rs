@@ -4,6 +4,9 @@ use needletail::{parse_fastx_file, FastxReader};
 
 use std::{error::Error, path::Path, sync::Arc, time::Duration};
 
+use crate::state::QuerySequence;
+
+
 /// We use a worker queue to pass around work between threads.
 /// We do it this way to be generic over the type.
 enum WorkQueue<T> {
@@ -25,6 +28,9 @@ pub(crate) fn map_with_channels(
     target_file: impl AsRef<Path>,
     query_file: impl AsRef<Path>,
     threads: usize,
+
+    // UI Stuff
+    dispatcher_tx: tokio::sync::mpsc::UnboundedSender<crate::state::Action>,
 ) -> Result<(), Box<dyn Error>> {
     // Aligner gets created using the build pattern.
     // Once .with_index is called, the aligner is set to "Built" and can no longer be changed.
@@ -56,21 +62,15 @@ pub(crate) fn map_with_channels(
         let shutdown = Arc::clone(&shutdown);
         let aligner = Arc::clone(&aligner);
 
-        let handle = std::thread::spawn(move || {
-            worker(
-                work_queue,
-                results_queue,
-                shutdown,
-                aligner,
-            )
-        });
+        let handle =
+            std::thread::spawn(move || worker(work_queue, results_queue, shutdown, aligner));
 
         jh.push(handle);
     }
 
     // Now that the threads are running, read the input file and push the work to the queue
-    let mut reader: Box<dyn FastxReader> = parse_fastx_file(query_file)
-        .unwrap_or_else(|_| panic!("Can't find query FASTA file"));
+    let mut reader: Box<dyn FastxReader> =
+        parse_fastx_file(query_file).unwrap_or_else(|_| panic!("Can't find query FASTA file"));
 
     // I just do this in the main thread, but you can split threads
     let backoff = crossbeam::utils::Backoff::new();
@@ -81,6 +81,12 @@ pub(crate) fn map_with_channels(
                                 // If we have an error, it's 99% because the queue is full
             backoff.snooze();
         }
+
+        // Oh and add it to the UI (this should be first, but trying to keep multithreading and UI separate)
+        let _ = dispatcher_tx.send(crate::state::Action::AddQuerySequence(
+            QuerySequence::new(std::str::from_utf8(record.id()).unwrap().to_string(), record.seq().to_vec()),
+        ));
+        println!("Sent query sequence");
     }
 
     // Set the shutdown flag

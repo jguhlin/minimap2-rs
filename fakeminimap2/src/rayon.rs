@@ -1,14 +1,16 @@
 use std::{error::Error, path::Path};
 
-use rayon::prelude::*;
-use needletail::{parse_fastx_file, FastxReader};
 use minimap2::*;
-
+use needletail::{parse_fastx_file, FastxReader};
+use rayon::prelude::*;
 
 pub(crate) fn map(
     target_file: impl AsRef<Path>,
     query_file: impl AsRef<Path>,
     threads: usize,
+
+    // UI Stuff
+    dispatcher_tx: tokio::sync::mpsc::UnboundedSender<crate::state::Action>,
 ) -> Result<(), Box<dyn Error>> {
     // Set the number of threads to use
     rayon::ThreadPoolBuilder::new()
@@ -39,7 +41,9 @@ pub(crate) fn map(
     let results: Vec<Vec<Mapping>> = queries
         .par_iter()
         .map(|(id, seq)| {
-            aligner.map(&seq, false, false, None, None, Some(&id)).expect("Error mapping")
+            aligner
+                .map(&seq, false, false, None, None, Some(&id))
+                .expect("Error mapping")
         })
         .collect();
 
@@ -48,6 +52,6 @@ pub(crate) fn map(
     // Count total number of alignments
     let total_alignments: usize = results.iter().map(|x| x.len()).sum();
     println!("Iteration complete, total alignments {}", total_alignments);
-    
+
     Ok(())
 }
