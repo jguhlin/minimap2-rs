@@ -71,7 +71,27 @@ self.idxopt.flag |= MM_I_HPC as i32;
 See [full list of options](#minimap2-mapping-and-indexing-options) below.
 
 ### Working Example
-There is a binary called "fakeminimap2" which demonstrates basic usage and multithreading using mpsc channels. You can find it [in this repo](https://github.com/jguhlin/minimap2-rs/tree/main/fakeminimap2) for an example.
+
+#### Examples Directory
+There are two working examples directly in this repo. In both instances below, 64 is the number of threads to allocate.
+
+**Channel-based multi-threading**
+```
+cargo run --example channels -- reference_genome.fasta reads.fasta 64
+```
+
+**Rayon-based multi-threading**
+```
+cargo run --example rayon -- reference_genome.fasta reads.fasta 64
+```
+
+**Depending on your needs** you can probably do just fine with Rayon. But for very large implementations, interactivity, or limited memory, using channels may be the way to go.
+
+#### Fakeminimap2
+
+There is a binary called "fakeminimap2" which demonstrates basic usage and multithreading using channels or rayon. You can find it [in this repo](https://github.com/jguhlin/minimap2-rs/tree/main/fakeminimap2) for an example. It it much more fully featured example, with an output interface, some mouse support, and interaction.
+
+#### Code Examples
 
 Alignment functions return a [Mapping](https://docs.rs/minimap2/latest/minimap2/struct.Mapping.html) struct. The [Alignment](https://docs.rs/minimap2/latest/minimap2/struct.Alignment.html) struct is only returned when the [Aligner](https://docs.rs/minimap2/latest/minimap2/struct.Aligner.html) is created using [.with_cigar()](https://docs.rs/minimap2/latest/minimap2/struct.Aligner.html#method.with_cigar).
 
@@ -312,6 +332,10 @@ See [customization](#customization) for how to use these.
 | `MM_I_NO_NAME`    | `4`    | Do not store sequence names in the index.                |
 
 # Changelog
+### 0.1.22 minimap2 2.28
+#### Changes
++ Fixed a memory segfault when re-using a thread local buffer. Not sure why it occurs, but this fix seems to solve it.
+
 ### 0.1.21 minimap2 2.28
 Contributors to this release: @mbhall88 @rob-p @Sam-Sims @charlesgregory @PB-DB
 #### Breaking Changes
@@ -335,8 +359,6 @@ Contributors to this release: @mbhall88 @rob-p @Sam-Sims @charlesgregory @PB-DB
 + Static str's and now static CStr's
 + FIX: memory leak due to sequences allocated by minimap2 not being freed @charlesgregory
 + Add Send + Sync to Aligner, along with unit test @PB-DB
-+ Only use rust-htslib/curl when curl feature is enabled @PB-DB
-+ Mark bam::Record objects as supplementary @PB-DB
 + Experimental Android support (tested on aarch64 and x86_64), solves [#66](https://github.com/jguhlin/minimap2-rs/issues/66)
 + Added flag and option documents
 + Added with_gap_open penalty ergonomic function

@@ -1,6 +1,6 @@
 [package]
 name = "minimap2"
-version = "0.1.21+minimap2.2.28"
+version = "0.1.22+minimap2.2.28"
 edition = "2021"
 authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
 license = "MIT OR Apache-2.0"
@@ -67,4 +67,9 @@ features = ["map-file", "htslib"]
 [[example]]
 name = "channels"
 path = "examples/channels.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "rayon"
+path = "examples/rayon.rs"
 doc-scrape-examples = true

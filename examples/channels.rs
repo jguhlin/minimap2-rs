@@ -5,7 +5,7 @@ use needletail::{parse_fastx_file, FastxReader};
 use std::path::PathBuf;
 use std::{error::Error, path::Path, sync::Arc, time::Duration};
 
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 
 /// We use a worker queue to pass around work between threads.
 /// We do it this way to be generic over the type.
