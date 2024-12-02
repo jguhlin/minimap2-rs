@@ -37,6 +37,9 @@ rust-htslib = { version = "0.48", default-features = false, optional = true }
 
 [dev-dependencies]
 rayon = "1.10"
+crossbeam = "0.8.4"
+clap = { version = "4.5.21", features = ["derive"] }
+needletail = { version = "0.6", default-features = false}
 
 # The end-user should decide this...
 # [profile.release]
@@ -60,3 +63,8 @@ sse2only = ["minimap2-sys/sse2only"]
 
 [package.metadata.docs.rs]
 features = ["map-file", "htslib"]
+
+[[example]]
+name = "channels"
+path = "examples/channels.rs"
+doc-scrape-examples = true
