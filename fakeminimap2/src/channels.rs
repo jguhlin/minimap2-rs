@@ -6,7 +6,6 @@ use std::{error::Error, path::Path, sync::Arc, time::Duration};
 
 use crate::state::QuerySequence;
 
-
 /// We use a worker queue to pass around work between threads.
 /// We do it this way to be generic over the type.
 enum WorkQueue<T> {
@@ -32,18 +31,31 @@ pub(crate) fn map_with_channels(
     // UI Stuff
     dispatcher_tx: tokio::sync::mpsc::UnboundedSender<crate::state::Action>,
 ) -> Result<(), Box<dyn Error>> {
+    dispatcher_tx
+        .send(crate::state::Action::SetStatus(
+            "Indexing Sequence".to_string(),
+        ))
+        .expect("Unable to send status update");
+
     // Aligner gets created using the build pattern.
     // Once .with_index is called, the aligner is set to "Built" and can no longer be changed.
     let aligner = Aligner::builder()
         .map_ont()
         .with_cigar()
+        .with_index_threads(threads)
         .with_index(target_file, None)
         .expect("Unable to build index");
 
+    dispatcher_tx
+        .send(crate::state::Action::SetStatus(
+            "Indexing Complete".to_string(),
+        ))
+        .expect("Unable to send status update");
+
     log::info!("Made aligner");
     // Create a queue for work and for results
-    let work_queue = Arc::new(ArrayQueue::<WorkQueue<WorkUnit>>::new(32)); // Artificially low, but the best depends on tuning
-    let results_queue = Arc::new(ArrayQueue::<WorkQueue<WorkResult>>::new(32));
+    let work_queue = Arc::new(ArrayQueue::<WorkQueue<WorkUnit>>::new(1024));
+    let results_queue = Arc::new(ArrayQueue::<WorkQueue<WorkResult>>::new(1024));
 
     // I use a shutdown flag
     let shutdown = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -55,6 +67,7 @@ pub(crate) fn map_with_channels(
 
     // Spin up the threads
     log::info!("Spawn threads");
+    log::trace!("Spawning {} threads", threads);
     for _ in 0..threads {
         // Clone everything we will need...
         let work_queue = Arc::clone(&work_queue);
@@ -68,68 +81,106 @@ pub(crate) fn map_with_channels(
         jh.push(handle);
     }
 
-    // Now that the threads are running, read the input file and push the work to the queue
-    let mut reader: Box<dyn FastxReader> =
-        parse_fastx_file(query_file).unwrap_or_else(|_| panic!("Can't find query FASTA file"));
+    // Let's split this into another thread
 
-    // I just do this in the main thread, but you can split threads
-    let backoff = crossbeam::utils::Backoff::new();
-    while let Some(Ok(record)) = reader.next() {
-        let mut work = WorkQueue::Work((record.id().to_vec(), record.seq().to_vec()));
-        while let Err(work_packet) = work_queue.push(work) {
-            work = work_packet; // Simple way to maintain ownership
-                                // If we have an error, it's 99% because the queue is full
-            backoff.snooze();
-        }
+    {
+        let work_queue = Arc::clone(&work_queue);
+        let shutdown = Arc::clone(&shutdown);
+        let dispatcher_tx = dispatcher_tx.clone();
+        let query_file = query_file.as_ref().to_path_buf();
 
-        // Oh and add it to the UI (this should be first, but trying to keep multithreading and UI separate)
-        let _ = dispatcher_tx.send(crate::state::Action::AddQuerySequence(
-            QuerySequence::new(std::str::from_utf8(record.id()).unwrap().to_string(), record.seq().to_vec()),
-        ));
-        println!("Sent query sequence");
+        let handle = std::thread::spawn(move || {
+            // Now that the threads are running, read the input file and push the work to the queue
+            let mut reader: Box<dyn FastxReader> = parse_fastx_file(query_file)
+                .unwrap_or_else(|_| panic!("Can't find query FASTA file"));
+
+            dispatcher_tx
+                .send(crate::state::Action::SetStatus(
+                    "Mapping Sequences".to_string(),
+                ))
+                .expect("Unable to send status update");
+
+            // I just do this in the main thread, but you can split threads
+            let backoff = crossbeam::utils::Backoff::new();
+            while let Some(Ok(record)) = reader.next() {
+                let mut work = WorkQueue::Work((record.id().to_vec(), record.seq().to_vec()));
+                while let Err(work_packet) = work_queue.push(work) {
+                    work = work_packet; // Simple way to maintain ownership
+                                        // If we have an error, it's 99% because the queue is full
+                    backoff.snooze();
+                }
+
+                // Oh and add it to the UI (this should be first, but trying to keep multithreading and UI separate)
+                let _ =
+                    dispatcher_tx.send(crate::state::Action::AddQuerySequence(QuerySequence::new(
+                        std::str::from_utf8(record.id()).unwrap().to_string(),
+                        record.seq().to_vec(),
+                    )));
+            }
+
+            dispatcher_tx
+                .send(crate::state::Action::SetStatus(
+                    "All Sequences Submitted".to_string(),
+                ))
+                .expect("Unable to send status update");
+
+            // Set the shutdown flag
+            shutdown.store(true, std::sync::atomic::Ordering::Relaxed);
+        });
+
+        jh.push(handle);
     }
-
-    // Set the shutdown flag
-    shutdown.store(true, std::sync::atomic::Ordering::Relaxed);
 
     let mut num_alignments = 0;
 
     let backoff = crossbeam::utils::Backoff::new();
     loop {
         match results_queue.pop() {
+            // This is where we processs mapping results as they come in...
             Some(WorkQueue::Result((record, alignments))) => {
+                log::trace!("Found {} alignments", alignments.len());
                 num_alignments += alignments.len();
                 log::info!(
                     "Got {} alignments for {}",
                     alignments.len(),
                     std::str::from_utf8(&record.0).unwrap()
                 );
+
+                // Add the mappings to the UI
+                let _ = dispatcher_tx.send(crate::state::Action::AddMappings((
+                    std::str::from_utf8(&record.0).unwrap().to_string(),
+                    alignments,
+                )));
             }
             Some(_) => unimplemented!("Unexpected result type"),
             None => {
-                log::trace!("Awaiting results");
                 backoff.snooze();
 
-                // If all join handles are 'finished' we can break
+                // If all join handles are finished, we can break
                 if jh.iter().all(|h| h.is_finished()) {
+                    log::trace!("All threads finished - Breaking from Receiving Results Loop");
                     break;
                 }
                 if backoff.is_completed() {
                     backoff.reset();
-                    std::thread::sleep(Duration::from_millis(1));
+                    std::thread::sleep(Duration::from_millis(3));
                 }
             }
         }
     }
 
-    println!("Iteration complete, total alignments {}", num_alignments);
+    dispatcher_tx
+        .send(crate::state::Action::SetStatus(
+            "Mapping Complete".to_string(),
+        ))
+        .expect("Unable to send status update");
 
-    // Join all threads
+    log::info!("Iteration complete, total alignments {}", num_alignments);
+
+    // Join all the threads
+    log::trace!("Joining all threads");
     for handle in jh {
-        match handle.join() {
-            Ok(_) => log::trace!("Thread finished"),
-            Err(e) => log::error!("Thread panicked: {:?}", e),
-        }
+        handle.join().expect("Unable to join thread");
     }
 
     Ok(())
