@@ -11,9 +11,16 @@ crossbeam = "0.8.4"
 needletail = "0.6"
 humantime = "2.1.0"
 log = "0.4.22"
-env_logger = "0.11.5"
+flexi_logger = "0.29"
 clap = { version = "4.5.21", features = ["derive"] }
 rayon = "1.10.0"
+ratatui = "0.29.0"
+tokio = { version = "1", features = ["full"] }
+crossterm = { version = "0.28.1", features = ["event-stream"] }
+tachyonfx = "0.9.3"
+tokio-stream = { version = "0.1.16", features = ["sync"] }
+num-format = { version = "0.4.4", features = ["with-system-locale"] }
+dashmap = "6.1.0"
 
 [profile.release]
 opt-level = 3

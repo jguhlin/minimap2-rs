@@ -11,7 +11,7 @@ minimap2-sys is the raw FFI bindings to minimap2. minimap2 is the more opinionat
 # How to use
 ## Requirements
 ```toml
-minimap2 = "0.1.21+minimap2.2.28"
+minimap2 = "0.1.22+minimap2.2.28"
 ```
 Also see [Features](#features)
 
@@ -20,6 +20,7 @@ Tested with rustc 1.82.0 and nightly. So probably a good idea to upgrade before 
 ## Minimap2 Version Table
 | minimap2-rs | minimap2 |
 |-------------|----------|
+| 0.1.22      | 2.28     |
 | 0.1.21      | 2.28     |
 | 0.1.20      | 2.28     |
 | 0.1.19      | 2.28     |
