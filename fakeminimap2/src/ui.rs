@@ -49,14 +49,17 @@ pub async fn main_loop(
         last_frame_instant = Instant::now();
 
         tokio::select! {
-            _ = ticker.tick() => (),
+            _ = ticker.tick() => {
+                app_display.render(&mut terminal).await;
+            },
             Some(state) = ui_rx.next() => {
                 // Update the state
                 app_display.set_state(state.unwrap());
+                app_display.render(&mut terminal).await;
             },
             evt = crossterm_events.next() => match evt {
                 Some(Ok(Event::Key(key)))  => {
-                    dispatcher_tx.send(state::Action::KeyPress(key)).expect("Unable to send key press event");
+                    app_display.handle_keypress(key).await;
                 },
                 Some(Ok(Event::Mouse(evt))) => {
                     let col = evt.column;
@@ -67,7 +70,6 @@ pub async fn main_loop(
                             app_display.handle_click(col, row);
                         },
                         MouseEventKind::Up(_) => {
-                            //
                         },
                         MouseEventKind::Moved => {
                         }
@@ -83,8 +85,6 @@ pub async fn main_loop(
         if app_display.should_quit() {
             break;
         }
-
-        app_display.render(&mut terminal).await;
     }
 
     restore_terminal(&mut terminal).expect("Unable to restore terminal");

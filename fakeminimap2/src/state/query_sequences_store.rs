@@ -29,7 +29,7 @@ impl QuerySequencesStore {
                 // Set selected mappings
                 self.dispatcher_tx
                     .send(Action::SetSelectedMappings(
-                        self.query_sequences[n].id.clone(),
+                        self.query_sequences[self.current].id.clone(),
                     ))
                     .expect("Unable to send selected mappings");
             }
@@ -52,6 +52,9 @@ impl QuerySequencesStore {
 
     /// Set the currently viewed QuerySequence
     pub fn set_current(&mut self, n: usize) {
+        // Clamp
+        let n = n.min(self.query_sequences.len() - 1);
+        let n = n.max(0);
         self.current = n;
         let _ = self
             .dispatcher_tx

@@ -18,7 +18,7 @@ const COLORS: [Color; 6] = [
     // Pink, Yellow, Brighter Pink, Brighter Yellow, Darker Pink, Darker Yellow
     Color::Rgb(255, 62, 181),
     Color::Rgb(255, 233, 0),
-    Color::Rgb(201, 0, 124),
+    Color::Rgb(197, 0, 102),
     Color::Rgb(255, 243, 112),
     Color::Rgb(255, 112, 200),
     Color::Rgb(156, 142, 0)
@@ -34,6 +34,8 @@ pub struct AppDisplay {
     left_area_effect: Option<Effect>,
     mappings_list_effect: Option<Effect>,
     plot_area_effect: Option<Effect>,
+
+    query_list_height: usize,
     
     pub last_tick: Duration,
     pub plot_data: Vec<Vec<(f64, f64)>>,
@@ -56,6 +58,7 @@ impl AppDisplay {
             plot_area_effect: None,
             last_tick: Duration::ZERO,
             plot_data: Vec::new(),
+            query_list_height: 0,
         }
     }
 
@@ -71,6 +74,56 @@ impl AppDisplay {
         }
 
         self.state = state;
+    }
+
+    pub async fn handle_keypress(&mut self, key: event::KeyEvent) {
+
+        // Only if the selected panel is QuerySequences
+        if self.state.selected_panel == ui_state::SelectedPanel::QuerySequences {
+            // todo, replace with a function
+            // PgUp and PgDown
+            match key.code {
+                event::KeyCode::PageUp => {
+                    let new_selection = self.query_list.selected().unwrap_or(0).saturating_sub(self.query_list_height);
+                    self.query_list.select(Some(new_selection));
+                    self.dispatcher_tx
+                        .send(state::Action::SetSelectedQuery(new_selection.into()))
+                        .expect("Unable to send selected query sequence");
+                    return
+                },
+                event::KeyCode::PageDown => {
+                    let new_selection = self.query_list.selected().unwrap_or(0) + self.query_list_height;
+                    self.query_list.select(Some(new_selection));
+                    self.dispatcher_tx
+                        .send(state::Action::SetSelectedQuery(new_selection.into()))
+                        .expect("Unable to send selected query sequence");
+                    return
+                },
+                // Home and End Keys
+                event::KeyCode::Home => {
+                    self.query_list.select(Some(0));
+                    self.dispatcher_tx
+                        .send(state::Action::SetSelectedQuery(0))
+                        .expect("Unable to send selected query sequence");
+                    return
+                },
+                event::KeyCode::End => {
+                    let new_selection = self.state.query_sequences_list.len().saturating_sub(1);
+                    self.query_list.select(Some(new_selection));
+                    self.dispatcher_tx
+                        .send(state::Action::SetSelectedQuery(new_selection))
+                        .expect("Unable to send selected query sequence");
+                    return
+                },
+                _ => (),
+            }
+        }
+
+        // Otherwise bubble it to the dispatcher
+        self.dispatcher_tx
+            .send(state::Action::KeyPress(key))
+            .expect("Unable to send key press event");
+        
     }
 
     pub fn handle_click(&mut self, col: u16, row: u16) {
@@ -146,17 +199,15 @@ impl AppDisplay {
                     let para = Paragraph::new(text)
                         .block(
                             Block::default().style(Style::default().bg(screen_bg))
-                        
                         )
                         .alignment(Alignment::Center);
 
                     frame.render_widget(para, left_area);
 
-                    // frame.render_widget(text, left_area);
-
                     self.query_list_rect = left_area;
                 } else {
                     let mut items = vec![];
+                    let selected;
                     for (i, query) in self.state.query_sequences_list.iter().enumerate() {
                         if self.state.selected_query_sequence.is_some()
                             && query.id == self.state.selected_query_sequence.as_ref().unwrap().id
@@ -176,12 +227,15 @@ impl AppDisplay {
                             .expect("Unable to send selected query sequence");
                     }
 
+                    selected = self.query_list.selected().unwrap_or(0);
+
                     let list = List::new(items)
                         .block(
                             Block::bordered()
                                 .title("Query Sequences")
                                 .style(Style::default().bg(screen_bg))
-                                .border_style(query_sequences_border_style),
+                                .border_style(query_sequences_border_style)
+                                .title_bottom(format!("Query Sequences {}/{}", selected, count))
                         )
                         .style(Style::new().white())
                         .highlight_style(Style::new().italic())
@@ -192,6 +246,11 @@ impl AppDisplay {
 
                     frame.render_stateful_widget(list, left_area, &mut self.query_list);
                     self.query_list_rect = left_area;
+
+                    // How many query sequences are shown on a single screen?
+                    let query_list_height = left_area.height as usize - 2;
+                    self.query_list_height = query_list_height;
+
 
                     /*
                     if self.left_area_effect.is_none() {
@@ -329,7 +388,8 @@ impl AppDisplay {
                         .bounds([y_lower_bound as f64, y_upper_bound as f64]);
 
                     let chart = Chart::new(datasets)
-                        .block(Block::new().title("Chart").style(Style::default().bg(screen_bg)))
+                        .block(Block::new().title("Chart").style(Style::default().bg(screen_bg))
+                        .title_bottom(format!("{} Mappings", mappings.len())))
                         .x_axis(x_axis)
                         .y_axis(y_axis)
                         .style(Style::default().bg(screen_bg));
