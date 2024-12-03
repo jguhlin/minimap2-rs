@@ -181,6 +181,7 @@ Minimap2 is tested on x86_64 and aarch64 (arm64). Other platforms may work, plea
 - [HiFiHLA](https://github.com/PacificBiosciences/hifihla) - HLA star-calling tool for PacBio HiFi data
 - [STRdust](https://github.com/wdecoster/STRdust) - Tandem repeat genotyper for long reads
 - [oarfish](https://github.com/COMBINE-lab/oarfish) - transcript quantification from long-read RNA-seq data
+- [lrge](https://github.com/mbhall88/lrge) - Long Read-based Genome size Estimation from overlaps
 
 # Next things todo
 * Iterator interface for map_file
