@@ -129,7 +129,7 @@ impl AppDisplay {
     pub fn handle_click(&mut self, col: u16, row: u16) {
         if self.query_list_rect.contains(Position { x: col, y: row }) {
             // Calculate offset from the top of the list
-            let offset = row.saturating_sub(self.query_list_rect.y.saturating_sub(1));
+            let offset = row.saturating_sub(self.query_list_rect.y).saturating_sub(1);
 
             if offset >= self.state.query_sequences_list.len() as u16 {
                 return;
