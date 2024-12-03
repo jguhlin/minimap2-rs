@@ -223,8 +223,8 @@ thread_local! {
 #[derive(Debug)]
 struct ThreadLocalBuffer {
     buf: *mut mm_tbuf_t,
-    max_uses: usize,
-    uses: usize,
+    // max_uses: usize,
+    // uses: usize,
 }
 
 impl ThreadLocalBuffer {
@@ -232,22 +232,22 @@ impl ThreadLocalBuffer {
         let buf = unsafe { mm_tbuf_init() };
         Self {
             buf,
-            max_uses: 15,
-            uses: 0,
+            // max_uses: 15,
+            // uses: 0,
         }
     }
     /// Return the buffer, checking how many times it has been borrowed.
     /// Free the memory of the old buffer and reinitialise a new one If
     /// num_uses exceeds max_uses.
     pub fn get_buf(&mut self) -> *mut mm_tbuf_t {
-        if self.uses > self.max_uses {
+        /* if self.uses > self.max_uses {
             // println!("renewing threadbuffer");
             self.free_buffer();
             let buf = unsafe { mm_tbuf_init() };
             self.buf = buf;
             self.uses = 0;
         }
-        self.uses += 1;
+        self.uses += 1; */
         self.buf
     }
 
@@ -259,7 +259,8 @@ impl ThreadLocalBuffer {
 /// Handle destruction of thread local buffer properly.
 impl Drop for ThreadLocalBuffer {
     fn drop(&mut self) {
-        unsafe { mm_tbuf_destroy(self.buf) };
+        // unsafe { mm_tbuf_destroy(self.buf) };
+        self.free_buffer();
     }
 }
 
@@ -580,7 +581,7 @@ where
         // Make sure MM_F_CIGAR flag isn't already set
         assert!((self.mapopt.flag & MM_F_CIGAR as i64) == 0);
 
-        self.mapopt.flag |= MM_F_CIGAR as i64;
+        self.mapopt.flag |= MM_F_CIGAR as i64 | MM_F_OUT_CS as i64;
         self
     }
 
@@ -605,12 +606,11 @@ where
         self
     }
 
-
-    /// Sets the gap open penalty for minimap2. 
-    /// 
+    /// Sets the gap open penalty for minimap2.
+    ///
     /// minimap2 -O 4 sets both the short and long gap open penalty to 4.
     /// [minimap2 code](https://github.com/lh3/minimap2/blob/618d33515e5853c4576d5a3d126fdcda28f0e8a4/main.c#L315)
-    /// 
+    ///
     /// To set the long gap open penalty, simply provide a value for `penalty_long`.
     pub fn with_gap_open_penalty(mut self, penalty: i32, penalty_long: Option<i32>) -> Self {
         self.mapopt.q = penalty;
@@ -938,7 +938,7 @@ impl Aligner<Built> {
         &self,
         seq: &[u8],
         cs: bool,
-        md: bool, // TODO
+        md: bool,
         max_frag_len: Option<usize>,
         extra_flags: Option<&[u64]>,
         query_name: Option<&[u8]>,
@@ -995,8 +995,8 @@ impl Aligner<Built> {
             Some(qname) => qname.as_ref().as_ptr() as *const ::std::os::raw::c_char,
         };
 
-        let mappings = BUF.with(|buf| {
-            let km = unsafe { mm_tbuf_get_km(buf.borrow_mut().get_buf()) };
+        let mappings = BUF.with_borrow_mut(|buf| {
+            let km: *mut c_void = unsafe { mm_tbuf_get_km(buf.get_buf()) };
 
             mm_reg = MaybeUninit::new(unsafe {
                 mm_map(
@@ -1004,7 +1004,7 @@ impl Aligner<Built> {
                     seq.len() as i32,
                     seq.as_ptr() as *const ::std::os::raw::c_char,
                     &mut n_regs,
-                    buf.borrow_mut().get_buf(),
+                    buf.get_buf(),
                     &map_opt,
                     qname,
                 )
@@ -1014,9 +1014,9 @@ impl Aligner<Built> {
 
             for i in 0..n_regs {
                 unsafe {
-                    let reg_ptr = (*mm_reg.as_ptr()).offset(i as isize);
-                    let const_ptr = reg_ptr as *const mm_reg1_t;
-                    let reg: mm_reg1_t = *reg_ptr;
+                    let mm_reg1_mut_ptr = (*mm_reg.as_ptr()).offset(i as isize);
+                    let mm_reg1_const_ptr = mm_reg1_mut_ptr as *const mm_reg1_t;
+                    let reg: mm_reg1_t = *mm_reg1_mut_ptr;
 
                     let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
                     let contig =
@@ -1113,46 +1113,64 @@ impl Aligner<Built> {
                         };
 
                         let (cs_str, md_str) = if cs || md {
-                            let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
-                            let mut m_cs_string: libc::c_int = 0i32;
+                            let idx: *const mm_idx_t = *Arc::as_ptr(self.idx.as_ref().unwrap());
 
                             let cs_str = if cs {
+                                let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
+                                let mut m_cs_string: libc::c_int = 0i32;
+
+                                // This solves a weird segfault...
+                                let km = km_init();
+
                                 let _cs_len = mm_gen_cs(
                                     km,
                                     &mut cs_string,
                                     &mut m_cs_string,
-                                    &**self.idx.as_ref().unwrap().as_ref() as *const mm_idx_t,
-                                    const_ptr,
+                                    idx,
+                                    mm_reg1_const_ptr,
                                     seq.as_ptr() as *const libc::c_char,
                                     true.into(),
                                 );
+
                                 let _cs_string = std::ffi::CStr::from_ptr(cs_string)
                                     .to_str()
                                     .unwrap()
                                     .to_string();
+
+                                libc::free(cs_string as *mut c_void);
+                                km_destroy(km);
                                 Some(_cs_string)
                             } else {
                                 None
                             };
 
                             let md_str = if md {
+                                let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
+                                let mut m_cs_string: libc::c_int = 0i32;
+
+                                // This solves a weird segfault...
+                                let km = km_init();
+
                                 let _md_len = mm_gen_MD(
                                     km,
                                     &mut cs_string,
                                     &mut m_cs_string,
-                                    &**self.idx.as_ref().unwrap().as_ref() as *const mm_idx_t,
-                                    const_ptr,
+                                    idx,
+                                    mm_reg1_const_ptr,
                                     seq.as_ptr() as *const libc::c_char,
                                 );
                                 let _md_string = std::ffi::CStr::from_ptr(cs_string)
                                     .to_str()
                                     .unwrap()
                                     .to_string();
+
+                                libc::free(cs_string as *mut c_void);
+                                km_destroy(km);
                                 Some(_md_string)
                             } else {
                                 None
                             };
-                            libc::free(cs_string as *mut c_void);
+
                             (cs_str, md_str)
                         } else {
                             (None, None)
@@ -1207,6 +1225,7 @@ impl Aligner<Built> {
         });
         // free some stuff here
         unsafe {
+            // Free mm_regs
             let ptr: *mut mm_reg1_t = mm_reg.assume_init();
             let c_void_ptr: *mut c_void = ptr as *mut c_void;
             libc::free(c_void_ptr);
