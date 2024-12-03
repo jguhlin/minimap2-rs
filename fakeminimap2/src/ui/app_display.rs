@@ -342,7 +342,8 @@ impl AppDisplay {
                         .block(
                             Block::bordered()
                                 .title("Mappings")
-                                .border_style(mappings_border_style),
+                                .border_style(mappings_border_style)
+                                .title_bottom(format!("{} Mappings", mappings.len())),
                         );
 
                     let vertical = Layout::vertical([Fill(2), Fill(6)]);
@@ -388,8 +389,7 @@ impl AppDisplay {
                         .bounds([y_lower_bound as f64, y_upper_bound as f64]);
 
                     let chart = Chart::new(datasets)
-                        .block(Block::new().title("Chart").style(Style::default().bg(screen_bg))
-                        .title_bottom(format!("{} Mappings", mappings.len())))
+                        .block(Block::new().title("Chart").style(Style::default().bg(screen_bg)))
                         .x_axis(x_axis)
                         .y_axis(y_axis)
                         .style(Style::default().bg(screen_bg));
