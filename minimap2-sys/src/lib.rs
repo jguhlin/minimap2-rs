@@ -35,15 +35,13 @@ macro_rules! add_flag_methods {
         impl $struct_name {
             $(
                 #[inline(always)]
-                pub fn $set_name(mut self) -> Self {
+                pub fn $set_name(&mut self) {
                     self.flag |= $flag as $ty;
-                    self
                 }
 
                 #[inline(always)]
-                pub fn $unset_name(mut self) -> Self {
+                pub fn $unset_name(&mut self) {
                     self.flag &= !$flag as $ty;
-                    self
                 }
             )*
         }
@@ -146,20 +144,20 @@ mod tests {
     #[test]
     fn test_mapopt_flags() {
         let mut opt = mm_mapopt_t::default();
-        opt = opt.set_no_qual();
+        opt.set_no_qual();
         assert_eq!(opt.flag & MM_F_NO_QUAL as i64, MM_F_NO_QUAL as i64);
 
-        opt = opt.unset_no_qual();
+        opt.unset_no_qual();
         assert_eq!(opt.flag & MM_F_NO_QUAL as i64, 0_i64);
     }
 
     #[test]
     fn test_idxopt_flags() {
         let mut opt = mm_idxopt_t::default();
-        opt = opt.set_hpc();
+        opt.set_hpc();
         assert_eq!(opt.flag & MM_I_HPC as i16, MM_I_HPC as i16);
 
-        opt = opt.unset_hpc();
+        opt.unset_hpc();
         assert_eq!(opt.flag & MM_I_HPC as i16, 0_i16);
     }
 }
