@@ -34,6 +34,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [dependencies]
 libz-sys = { version = "1.1", default-features = false, features = ["libc"] }
+paste = "1.0.15"
 
 [build-dependencies]
 pkg-config = "0.3"

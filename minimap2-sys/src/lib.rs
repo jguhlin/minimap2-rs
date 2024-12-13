@@ -12,6 +12,8 @@ unsafe impl Send for mm_idx_t {}
 unsafe impl Send for mm_idx_reader_t {}
 unsafe impl Send for mm_mapopt_t {}
 
+use paste::paste;
+
 impl Drop for mm_idx_t {
     fn drop(&mut self) {
         unsafe { mm_idx_destroy(self) };
@@ -30,18 +32,23 @@ impl Default for mm_mapopt_t {
     }
 }
 
+
 macro_rules! add_flag_methods {
     ($ty:ty, $struct_name:ident, $(($set_name:ident, $unset_name:ident, $flag:expr)),+) => {
         impl $struct_name {
             $(
-                #[inline(always)]
-                pub fn $set_name(&mut self) {
-                    self.flag |= $flag as $ty;
-                }
+                paste! {
+                    #[inline(always)]
+                    #[doc = "Set the " $flag " flag"]
+                    pub fn $set_name(&mut self) {
+                        self.flag |= $flag as $ty;
+                    }
 
-                #[inline(always)]
-                pub fn $unset_name(&mut self) {
-                    self.flag &= !$flag as $ty;
+                    #[inline(always)]
+                    #[doc = "Unset the " $flag " flag"]
+                    pub fn $unset_name(&mut self) {
+                        self.flag &= !$flag as $ty;
+                    }
                 }
             )*
         }
