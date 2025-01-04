@@ -17,7 +17,7 @@ rayon = "1.10.0"
 ratatui = "0.29.0"
 tokio = { version = "1", features = ["full"] }
 crossterm = { version = "0.28.1", features = ["event-stream"] }
-tachyonfx = "0.9.3"
+tachyonfx = "0.10.1"
 tokio-stream = { version = "0.1.16", features = ["sync"] }
 num-format = { version = "0.4.4", features = ["with-system-locale"] }
 dashmap = "6.1.0"
