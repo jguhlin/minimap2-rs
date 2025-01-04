@@ -906,8 +906,9 @@ impl Aligner<Built> {
     /// Remainds valid as long as the aligner is valid
     pub fn get_seq<'aln>(&'aln self, i: usize) -> Option<&'aln mm_idx_seq_t> {
         unsafe {
-            let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
-            let idx: *const mm_idx_t = *idx;
+            // let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
+            // let idx: *const mm_idx_t = *idx;
+            let idx: *const mm_idx_t = &(***self.idx.as_ref().unwrap());
             // todo, should this be > or >=
             if i > self.n_seq() as usize {
                 return None;
@@ -1110,7 +1111,8 @@ impl Aligner<Built> {
                         };
 
                         let (cs_str, md_str) = if cs || md {
-                            let idx: *const mm_idx_t = *Arc::as_ptr(self.idx.as_ref().unwrap());
+                            // let idx: *const mm_idx_t = *Arc::as_ptr(self.idx.as_ref().unwrap());
+                            let idx: *const mm_idx_t = &(***self.idx.as_ref().unwrap());
 
                             let cs_str = if cs {
                                 let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
@@ -2242,5 +2244,19 @@ mod tests {
             aligner_clone.mapopt.flag & MM_F_CIGAR as i64,
             MM_F_CIGAR as i64
         );
+    }
+
+    #[test]
+    fn build_aligner_memory_leak() {
+        for _ in 0..100000 {
+            let aligner = Aligner::builder().map_ont();
+            let aligner = aligner
+                .with_index_threads(1)
+                .with_cigar()
+                .with_sam_out()
+                .with_sam_hit_only()
+                .with_seq_and_id(b"ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA",  b"ref")
+                .unwrap();
+        }
     }
 }
