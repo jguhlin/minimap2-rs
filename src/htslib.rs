@@ -303,9 +303,8 @@ pub struct SeqMetaData {
     pub is_alt: bool,
 }
 
-#[derive(Debug)]
 pub struct MMIndex {
-    pub inner: Arc<*mut mm_ffi::mm_idx_t>,
+    pub inner: Arc<super::MmIdx>,
 }
 
 impl MMIndex {
@@ -345,8 +344,7 @@ impl MMIndex {
 impl From<&Aligner<Built>> for MMIndex {
     fn from(aligner: &Aligner<Built>) -> Self {
         MMIndex {
-            // inner: aligner.idx.unwrap(),
-            inner: std::sync::Arc::clone(&aligner.idx.as_ref().unwrap()),
+            inner: std::sync::Arc::clone(aligner.idx.as_ref().unwrap()),
         }
     }
 }

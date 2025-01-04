@@ -52,7 +52,7 @@ needletail = { version = "0.6", default-features = false}
 
 [features]
 default = ["map-file"]
-map-file = ["needletail"] #, "simdutf8"]
+map-file = ["needletail"]
 htslib = ['rust-htslib']
 simde = ["minimap2-sys/simde"]
 zlib-ng = ["minimap2-sys/zlib-ng"]
