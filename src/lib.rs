@@ -308,7 +308,7 @@ pub struct Aligner<S: BuilderState> {
     pub threads: usize,
 
     /// Index created by minimap2
-    pub idx: Option<Arc<*mut mm_idx_t>>,
+    pub idx: Option<Arc<MmIdx>>,
 
     /// Index reader created by minimap2
     pub idx_reader: Option<Arc<mm_idx_reader_t>>,
@@ -745,9 +745,7 @@ where
         }
 
         let mm_idx = unsafe { idx.assume_init() };
-        self.idx = Some(Arc::new(mm_idx));
-        let mm_idx = unsafe { idx.assume_init() };
-        self.idx = Some(Arc::new(mm_idx));
+        self.idx = Some(Arc::new(mm_idx.into()));
 
         Ok(Aligner {
             idxopt: self.idxopt,
@@ -863,9 +861,8 @@ where
         });
 
         let mm_idx = unsafe { idx.assume_init() };
-        self.idx = Some(Arc::new(mm_idx));
-        let mm_idx = unsafe { idx.assume_init() };
-        self.idx = Some(Arc::new(mm_idx));
+        self.idx = Some(Arc::new(mm_idx.into()));
+
         self.mapopt.mid_occ = 1000;
 
         let aln = Aligner {
@@ -897,8 +894,8 @@ impl Aligner<Built> {
     /// Returns the number of sequences in the index
     pub fn n_seq(&self) -> u32 {
         unsafe {
-            let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
-            let idx: *const mm_idx_t = *idx;
+            // let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
+            let idx: *const mm_idx_t = &(***self.idx.as_ref().unwrap());
             (*idx).n_seq as u32
         }
     }
