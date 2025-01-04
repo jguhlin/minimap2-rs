@@ -8,6 +8,8 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 #[cfg(all(not(feature = "bindgen")))]
 include!("bindings.rs");
 
+use std::{mem::MaybeUninit, ops::{DerefMut, Deref}};
+
 unsafe impl Send for mm_idx_t {}
 unsafe impl Send for mm_idx_reader_t {}
 unsafe impl Send for mm_mapopt_t {}
@@ -18,8 +20,35 @@ impl Drop for mm_idx_t {
     }
 }
 
+pub struct MmIdx {
+    pub idx: *mut mm_idx_t,
+}
 
-use std::mem::MaybeUninit;
+impl From<*mut mm_idx_t> for MmIdx {
+    fn from(idx: *mut mm_idx_t) -> Self {
+        MmIdx { idx }
+    }
+}
+
+impl Drop for MmIdx {
+    fn drop(&mut self) {
+        unsafe { mm_idx_destroy(self.idx) };
+    }
+}
+
+impl Deref for MmIdx {
+    type Target = mm_idx_t;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*self.idx }
+    }
+}
+
+impl DerefMut for MmIdx {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *self.idx }
+    }
+}
 
 impl Default for mm_mapopt_t {
     fn default() -> Self {
