@@ -1499,6 +1499,27 @@ mod tests {
     }
 
     #[test]
+    fn test_mapopt_flags_in_aligner() {
+        let mut aligner = Aligner::builder();
+        aligner.mapopt.set_no_qual();
+        assert_eq!(
+            aligner.mapopt.flag & MM_F_NO_QUAL as i64,
+            MM_F_NO_QUAL as i64
+        );
+        aligner.mapopt.unset_no_qual();
+        assert_eq!(aligner.mapopt.flag & MM_F_NO_QUAL as i64, 0_i64);
+    }
+
+    #[test]
+    fn test_idxopt_flags_in_aligner() {
+        let mut aligner = Aligner::builder();
+        aligner.idxopt.set_hpc();
+        assert_eq!(aligner.idxopt.flag & MM_I_HPC as i16, MM_I_HPC as i16);
+        aligner.idxopt.unset_hpc();
+        assert_eq!(aligner.idxopt.flag & MM_I_HPC as i16, 0_i16);
+    }
+
+    #[test]
     fn aligner_builder() {
         let _result = Aligner::builder();
     }
