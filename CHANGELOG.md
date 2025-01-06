@@ -1,8 +1,8 @@
 ### 0.1.23 minimap2 2.28
++ Functions to set flag opts for MapOpt and IdxOpt @dwpeng
 + Fixed memory leak when not dropping mm_idx_t properly. This is done by adding in syntactic sugar in minimap2-sys @jguhlin
 
 ### 0.1.22 minimap2 2.28
-#### Changes
 + Fixed a memory segfault when re-using a thread local buffer. Not sure why it occurs, but this fix seems to solve it.
 
 ### 0.1.21 minimap2 2.28

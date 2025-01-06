@@ -62,6 +62,15 @@ impl Default for mm_mapopt_t {
     }
 }
 
+impl Default for mm_idxopt_t {
+    fn default() -> Self {
+        unsafe {
+            let mut opt = MaybeUninit::uninit();
+            mm_idxopt_init(opt.as_mut_ptr());
+            opt.assume_init()
+        }
+    }
+}
 
 macro_rules! add_flag_methods {
     ($ty:ty, $struct_name:ident, $(($set_name:ident, $unset_name:ident, $flag:expr)),+) => {
@@ -135,16 +144,6 @@ add_flag_methods!(
     (set_no_seq, unset_no_seq, MM_I_NO_SEQ),
     (set_no_name, unset_no_name, MM_I_NO_NAME)
 );
-
-impl Default for mm_idxopt_t {
-    fn default() -> Self {
-        unsafe {
-            let mut opt = MaybeUninit::uninit();
-            mm_idxopt_init(opt.as_mut_ptr());
-            opt.assume_init()
-        }
-    }
-}
 
 // TODO: Add more tests!
 #[cfg(test)]
