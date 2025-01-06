@@ -11,7 +11,7 @@ minimap2-sys is the raw FFI bindings to minimap2. minimap2 is the more opinionat
 # How to use
 ## Requirements
 ```toml
-minimap2 = "0.1.22+minimap2.2.28"
+minimap2 = "0.1.23+minimap2.2.28"
 ```
 Also see [Features](#features)
 
@@ -274,6 +274,8 @@ See [customization](#customization) for how to use these.
 
 ## Mapping Flags (`MM_F_*`)
 
+These can be set with helper functions. Please see the docs for IdxOpt and MapOpt.
+
 | Flag Constant           | Value          | Description                                                     |
 |-------------------------|----------------|-----------------------------------------------------------------|
 | `MM_F_NO_DIAG`          | `1`            | Skip seed pairs on the same diagonal.                           |
@@ -327,6 +329,8 @@ See [customization](#customization) for how to use these.
 | `batch_size`      | `u64`          | Total batch size for indexing (number of bases).                |
 
 ## Indexing Flags (`MM_I_*`)
+
+These can be set with helper functions. Please see the docs for IdxOpt and MapOpt.
 
 | Flag Constant     | Value  | Description                                              |
 |-------------------|--------|----------------------------------------------------------|

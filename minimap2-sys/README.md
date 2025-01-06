@@ -5,7 +5,7 @@ Use this if you need lower-level bindings for minimap2.
 Minimap2 2.28
 
 ## Breaking Changes
-### 0.0.18
+### 0.1.18
 mm2-fast and minimap2 have diverged. At this point mm2-fast is no longer supported. Please use a previous crate version.
 
 ## Features 
@@ -20,7 +20,8 @@ mm2-fast and minimap2 have diverged. At this point mm2-fast is no longer support
 
 ## Changelog
 ### 0.1.21 minimap2.2.28
-Syntactic sugar for mm_idx_t to support Drop, Deref, and DerefMut
+* Flag functions for IdxOpt and MapOpt @dwpeng
+* Syntactic sugar for mm_idx_t to support Drop, Deref, and DerefMut
 
 ### 0.1.20 minimap2.2.28
 * Move Drop impl to -sys crate
