@@ -10,11 +10,19 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 minimap2 = { version = "0.1.23", features = ["simde"], path = ".." }
 crossbeam = "0.8.4"
-mimalloc = {version = "0.1", default-features = false }
-
-pyo3 = { version = "0.22" }
+pyo3 = { version = "0.22", features = ["abi3-py39", "chrono", "extension-module"] }
 polars = "0.45"
 pyo3-polars = "0.19"
+
+[target.'cfg(all(any(not(target_family = "unix"), target_os = "emscripten", allocator = "mimalloc"), not(allocator = "default")))'.dependencies]
+mimalloc = { version = "0.1", default-features = false }
+
+# Feature background_threads is unsupported on MacOS (https://github.com/jemalloc/jemalloc/issues/843).
+[target.'cfg(all(target_family = "unix", not(target_os = "macos"), not(target_os = "emscripten"), not(allocator = "mimalloc"), not(allocator = "default")))'.dependencies]
+jemallocator = { version = "0.5", features = ["disable_initial_exec_tls", "background_threads"] }
+
+[target.'cfg(all(target_family = "unix", target_os = "macos", not(allocator = "mimalloc"), not(allocator = "default")))'.dependencies]
+jemallocator = { version = "0.5", features = ["disable_initial_exec_tls"] }
 
 [profile.release]
 opt-level = 3
