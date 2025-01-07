@@ -36,10 +36,152 @@ impl Sequence {
     }
 }
 
+#[derive(Clone)]
+#[pyclass]
+pub struct AlignerBuilder {
+    pub builder: minimap2::Aligner<PresetSet>,
+}
+
+impl AlignerBuilder {
+    fn preset(preset: Preset) -> Self {
+        let builder = minimap2::Aligner::builder();
+        let builder = builder.preset(preset);
+        AlignerBuilder { builder }
+    }
+}
+
+#[pymethods]
+impl AlignerBuilder {
+    #[staticmethod]
+    fn lrhq() -> Self {
+        AlignerBuilder::preset(Preset::LrHq)
+    }
+
+    #[staticmethod]
+    fn lrhqae() -> Self {
+        AlignerBuilder::preset(Preset::LrHqae)
+    }
+
+    /// Configure Aligner for Splice
+    #[staticmethod]
+    fn splice() -> Self {
+        AlignerBuilder::preset(Preset::Splice)
+    }
+
+    #[staticmethod]
+    fn splicehq() -> Self {
+        AlignerBuilder::preset(Preset::SpliceHq)
+    }
+    
+    /// Configure aligner for Asm
+    #[staticmethod]
+    fn asm() -> Self {
+        AlignerBuilder::preset(Preset::Asm)
+    }
+
+    /// Configure Aligner for Asm5
+    #[staticmethod]
+    fn asm5() -> Self {
+        AlignerBuilder::preset(Preset::Asm5)
+    }
+
+    /// Configure Aligner for Asm10
+    #[staticmethod]
+    fn asm10() -> Self {
+        AlignerBuilder::preset(Preset::Asm10)
+    }
+
+    /// Configure Aligner for Asm20
+    #[staticmethod]
+    fn asm20() -> Self {
+        AlignerBuilder::preset(Preset::Asm20)
+    }
+
+    // Convenience Functions, at the bottom, because it pollutes the namespace
+    /// Configure Aligner for ONT reads
+    #[staticmethod]
+    fn map_ont() -> Self {
+        AlignerBuilder::preset(Preset::MapOnt)
+    }
+
+    /// Configure Aligner for PacBio HIFI reads
+    #[staticmethod]
+    fn map_hifi() -> Self {
+        AlignerBuilder::preset(Preset::MapHifi)
+    }
+
+    /// Configure aligner for AvaOnt
+    #[staticmethod]
+    fn ava_ont() -> Self {
+        AlignerBuilder::preset(Preset::AvaOnt)
+    }
+
+    /// Configure aligner for Map10k
+    #[staticmethod]
+    fn map_10k() -> Self {
+        AlignerBuilder::preset(Preset::Map10k)
+    }
+
+    /// Configure aligner for AvaPb
+    #[staticmethod]
+    fn ava_pb() -> Self {
+        AlignerBuilder::preset(Preset::AvaPb)
+    }
+
+    /// Configure Aligner for Short
+    #[staticmethod]
+    fn short() -> Self {
+        AlignerBuilder::preset(Preset::Short)
+    }
+
+    /// Configure Aligner for Sr
+    #[staticmethod]
+    fn sr() -> Self {
+        AlignerBuilder::preset(Preset::Sr)
+    }
+
+    /// Configure Aligner for Cdna
+    #[staticmethod]
+    fn cdna() -> Self {
+        AlignerBuilder::preset(Preset::Cdna)
+    }
+
+    // Configuration options
+    /// Set the number of threads for minimap2 to use to build index and perform mapping
+    fn index_threads(&mut self, threads: usize) {
+        self.builder.threads = threads;
+    }
+
+    /// Build the minimap2 index
+    fn index(&self, index: &str) -> PyResult<Aligner> {
+        let aligner = self.clone();
+        let aligner = aligner.builder.set_index(index, None).expect("Unable to build or load index");
+
+        Ok(Aligner { aligner })
+    }
+
+    /// Index and save index for later reuse (pass in as index)
+    /// Minimap2 indices are typically stored with the extension .mmi
+    fn index_and_save(&self, index: &str, output: &str) -> Aligner {
+        let aligner = self.clone();
+        let aligner = aligner.builder.set_index(index, Some(output)).expect("Unable to build or save index");
+        Aligner {
+            aligner
+        }
+    }
+    
+    /// Enable CIGAR strings
+    fn cigar(&mut self) {
+        // Builder pattern doesn't work great with Python, so do it manually here...
+        assert!((self.builder.mapopt.flag & ffi::MM_F_CIGAR as i64) == 0);
+        self.builder.mapopt.flag |= ffi::MM_F_CIGAR as i64 | ffi::MM_F_OUT_CS as i64;
+    }
+}
+
 /// Wrapper around minimap2::Aligner
 #[pyclass]
 pub struct Aligner {
-    pub aligner: minimap2::Aligner,
+    pub aligner: minimap2::Aligner<Built>,
 }
 
 unsafe impl Send for Aligner {}
@@ -53,10 +195,9 @@ impl Aligner {
 
         let results = self
             .aligner
-            .map(&seq.sequence, true, true, None, None)
+            .map(&seq.sequence, true, true, None, None, Some(&seq.id.as_bytes()))
             .unwrap();
-        results.into_iter().for_each(|mut r| {
-            r.query_name = Some(seq.id.clone());
+        results.into_iter().for_each(|r| {
             mappings.push(r)
         });
 
@@ -72,10 +213,9 @@ impl Aligner {
             for seq in seqs {
                 let results = self
                     .aligner
-                    .map(&seq.sequence, true, true, None, None)
+                    .map(&seq.sequence, true, true, None, None, Some(&seq.id.as_bytes()))
                     .unwrap();
-                results.into_iter().for_each(|mut r| {
-                    r.query_name = Some(seq.id.clone());
+                results.into_iter().for_each(|r| {
                     mappings.push(r)
                 });
             }
@@ -88,21 +228,16 @@ impl Aligner {
                 let work_queue = Arc::clone(&work_queue);
                 let results_queue = Arc::clone(&results_queue);
 
-                let mut aligner = self.aligner.clone();
+                let aligner = self.aligner.clone();
 
                 let handle = std::thread::spawn(move || loop {
-                    let backoff = crossbeam::utils::Backoff::new();
                     let work = work_queue.lock().unwrap().pop();
 
                     match work {
                         Some(sequence) => {
                             let mut result = aligner
-                                .map(&sequence.sequence, true, true, None, None)
+                                .map(&sequence.sequence, true, true, None, None, Some(&sequence.id.as_bytes()))
                                 .expect("Unable to align");
-
-                            result.iter_mut().for_each(|mut r| {
-                                r.query_name = Some(sequence.id.clone());
-                            });
 
                             results_queue.push(WorkQueue::Work(result));
                         }
@@ -147,273 +282,18 @@ impl Aligner {
         }
     }
 
-    // Builder functions
-    /// Returns an unconfigured Aligner
-    #[new]
-    fn new() -> Self {
-        Aligner {
-            aligner: minimap2::Aligner::builder(),
-        }
-    }
-
-    /// Set the number of threads for minimap2 to use to build index and perform mapping
-    fn index_threads(&mut self, threads: usize) {
+    fn set_threads(&mut self, threads: usize) {
         self.aligner.threads = threads;
     }
-
-    /// Build the minimap2 index
-    fn index(&mut self, index: &str) {
-        self.aligner.set_index(index, None);
-    }
-
-    /// Index and save index to output
-    fn index_and_save(&mut self, index: &str, output: &str) {
-        self.aligner.set_index(index, Some(output));
-    }
-
-    /// Enable CIGAR strings
-    fn cigar(&mut self) {
-        // todo inefficient
-        let aligner = self.aligner.clone();
-        self.aligner = aligner.with_cigar();
-    }
-
-    fn lrhq(&mut self) {
-        self.preset(Preset::LrHq);
-    }
-
-    fn lrhqae(&mut self) {
-        self.preset(Preset::LrHqae);
-    }
-
-    /// Configure Aligner for Splice
-    fn splice(&mut self) {
-        self.preset(Preset::Splice);
-    }
-
-    /// Configure Aligner for Splice
-    fn splicehq(&mut self) {
-        self.preset(Preset::SpliceHq);
-    }
-    /// Configure aligner for Asm
-    fn asm(&mut self) {
-        self.preset(Preset::Asm);
-    }
-
-    /// Configure Aligner for Asm5
-    fn asm5(&mut self) {
-        self.preset(Preset::Asm5);
-    }
-
-    /// Configure Aligner for Asm10
-    fn asm10(&mut self) {
-        self.preset(Preset::Asm10);
-    }
-
-    /// Configure Aligner for Asm20
-    fn asm20(&mut self) {
-        self.preset(Preset::Asm20);
-    }
-
-    // Convenience Functions, at the bottom, because it pollutes the namespace
-    /// Configure Aligner for ONT reads
-    fn map_ont(&mut self) {
-        self.preset(Preset::MapOnt);
-    }
-
-    /// Configure Aligner for PacBio HIFI reads
-    fn map_hifi(&mut self) {
-        self.preset(Preset::MapHifi);
-    }
-
-    /// Configure aligner for AvaOnt
-    fn ava_ont(&mut self) {
-        self.preset(Preset::AvaOnt);
-    }
-
-    /// Configure aligner for Map10k
-    fn map_10k(&mut self) {
-        self.preset(Preset::Map10k);
-    }
-
-    /// Configure aligner for AvaPb
-    fn ava_pb(&mut self) {
-        self.preset(Preset::AvaPb);
-    }
-
-    /// Configure Aligner for Short
-    fn short(&mut self) {
-        self.preset(Preset::Short);
-    }
-
-    /// Configure Aligner for Sr
-    fn sr(&mut self) {
-        self.preset(Preset::Sr);
-    }
-
-    /// Configure Aligner for Cdna
-    fn cdna(&mut self) {
-        self.preset(Preset::Cdna);
-    }
-}
-
-impl Aligner {
-    /// Create an aligner using a preset.
-    fn preset(&mut self, preset: Preset) {
-        // Set preset
-        let aligner = self.aligner.clone();
-        self.aligner = aligner.preset(preset);
-    }
-}
-
-/*
-TODO - Destroy index when aligner is dropped or when new index is created
-impl Drop for Aligner {
-    fn drop(&mut self) {
-
-  }
-} */
-
-/// Return an LrHq aligner
-#[pyfunction]
-fn lrhq() -> PyResult<Aligner> {
-    let mut aligner = Aligner::new();
-    aligner.lrhq();
-    Ok(aligner)
-}
-
-/// Return an LrHqae aligner
-#[pyfunction]
-fn lrhqae() -> PyResult<Aligner> {
-    let mut aligner = Aligner::new();
-    aligner.lrhqae();
-    Ok(aligner)
-}
-
-/// Return a MapOnt aligner
-#[pyfunction]
-fn map_ont() -> PyResult<Aligner> {
-    let mut aligner = Aligner::new();
-    aligner.map_ont();
-    Ok(aligner)
-}
-
-/// Return a MapHifi aligner
-#[pyfunction]
-fn map_hifi() -> PyResult<Aligner> {
-    let mut aligner = Aligner::new();
-    aligner.map_hifi();
-    Ok(aligner)
-}
-
-/// Return a AvaOnt aligner
-#[pyfunction]
-fn ava_ont() -> PyResult<Aligner> {
-    let mut aligner = Aligner::new();
-    aligner.ava_ont();
-    Ok(aligner)
-}
-
-/// Return a Map10k aligner
-#[pyfunction]
-fn map_10k() -> PyResult<Aligner> {
-    let mut aligner = Aligner::new();
-    aligner.map_10k();
-    Ok(aligner)
-}
-
-/// Return a AvaPb aligner
-#[pyfunction]
-fn ava_pb() -> PyResult<Aligner> {
-    let mut aligner = Aligner::new();
-    aligner.ava_pb();
-    Ok(aligner)
-}
-
-/// Return a Asm aligner
-#[pyfunction]
-fn asm() -> PyResult<Aligner> {
-    let mut aligner = Aligner::new();
-    aligner.asm();
-    Ok(aligner)
-}
-
-/// Return a Asm5 aligner
-#[pyfunction]
-fn asm5() -> PyResult<Aligner> {
-    let mut aligner = Aligner::new();
-    aligner.asm5();
-    Ok(aligner)
-}
-
-/// Return a Asm10 aligner
-#[pyfunction]
-fn asm10() -> PyResult<Aligner> {
-    let mut aligner = Aligner::new();
-    aligner.asm10();
-    Ok(aligner)
-}
-
-/// Return a Asm20 aligner
-#[pyfunction]
-fn asm20() -> PyResult<Aligner> {
-    let mut aligner = Aligner::new();
-    aligner.asm20();
-    Ok(aligner)
-}
-
-/// Return a Short aligner
-#[pyfunction]
-fn short() -> PyResult<Aligner> {
-    let mut aligner = Aligner::new();
-    aligner.short();
-    Ok(aligner)
-}
-
-/// Return a Sr aligner
-#[pyfunction]
-fn sr() -> PyResult<Aligner> {
-    let mut aligner = Aligner::new();
-    aligner.sr();
-    Ok(aligner)
-}
-
-/// Return a Splice aligner
-#[pyfunction]
-fn splice() -> PyResult<Aligner> {
-    let mut aligner = Aligner::new();
-    aligner.splice();
-    Ok(aligner)
-}
-
-/// Return a Cdna aligner
-#[pyfunction]
-fn cdna() -> PyResult<Aligner> {
-    let mut aligner = Aligner::new();
-    aligner.cdna();
-    Ok(aligner)
+    
 }
 
 /// This module is implemented in Rust.
 #[pymodule]
-fn minimappers2(py: Python<'_>, m: &PyModule) -> PyResult<()> {
+fn minimappers2(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Sequence>()?;
     m.add_class::<Aligner>()?;
-    m.add_function(wrap_pyfunction!(lrhq, m)?)?;
-    m.add_function(wrap_pyfunction!(lrhqae, m)?)?;
-    m.add_function(wrap_pyfunction!(map_ont, m)?)?;
-    m.add_function(wrap_pyfunction!(map_hifi, m)?)?;
-    m.add_function(wrap_pyfunction!(ava_ont, m)?)?;
-    m.add_function(wrap_pyfunction!(map_10k, m)?)?;
-    m.add_function(wrap_pyfunction!(ava_pb, m)?)?;
-    m.add_function(wrap_pyfunction!(asm, m)?)?;
-    m.add_function(wrap_pyfunction!(asm5, m)?)?;
-    m.add_function(wrap_pyfunction!(asm10, m)?)?;
-    m.add_function(wrap_pyfunction!(asm20, m)?)?;
-    m.add_function(wrap_pyfunction!(short, m)?)?;
-    m.add_function(wrap_pyfunction!(sr, m)?)?;
-    m.add_function(wrap_pyfunction!(splice, m)?)?;
-    m.add_function(wrap_pyfunction!(cdna, m)?)?;
+    m.add_class::<AlignerBuilder>()?;
     Ok(())
 }
 
@@ -438,12 +318,22 @@ struct Mappings {
 
 impl Mappings {
     pub fn push(&mut self, other: minimap2::Mapping) {
-        self.query_name.push(other.query_name);
+        let query_name = match other.query_name {
+            Some(x) => Some(x.to_string()),
+            None => None,
+        };
+
+        let target_name = match other.target_name {
+            Some(x) => Some(x.to_string()),
+            None => None,
+        };
+
+        self.query_name.push(query_name);
         self.query_len.push(other.query_len);
         self.query_start.push(other.query_start);
         self.query_end.push(other.query_end);
         self.strand.push(other.strand);
-        self.target_name.push(other.target_name);
+        self.target_name.push(target_name);
         self.target_len.push(other.target_len);
         self.target_start.push(other.target_start);
         self.target_end.push(other.target_end);
@@ -527,44 +417,44 @@ impl Mappings {
             })
             .collect();
 
-        let query_name = Series::new("query_name", self.query_name);
-        let query_len = Series::new("query_len", query_len);
-        let query_start = Series::new("query_start", self.query_start);
-        let query_end = Series::new("query_end", self.query_end);
-        let strand = Series::new("strand", strand);
-        let target_name = Series::new("target_name", self.target_name);
-        let target_len = Series::new("target_len", self.target_len);
-        let target_start = Series::new("target_start", self.target_start);
-        let target_end = Series::new("target_end", self.target_end);
-        let match_len = Series::new("match_len", self.match_len);
-        let block_len = Series::new("block_len", self.block_len);
-        let mapq = Series::new("mapq", self.mapq);
-        let is_primary = Series::new("is_primary", self.is_primary);
-        let nm = Series::new("nm", nm);
+        let query_name = Series::new("query_name".into(), self.query_name);
+        let query_len = Series::new("query_len".into(), query_len);
+        let query_start = Series::new("query_start".into(), self.query_start);
+        let query_end = Series::new("query_end".into(), self.query_end);
+        let strand = Series::new("strand".into(), strand);
+        let target_name = Series::new("target_name".into(), self.target_name);
+        let target_len = Series::new("target_len".into(), self.target_len);
+        let target_start = Series::new("target_start".into(), self.target_start);
+        let target_end = Series::new("target_end".into(), self.target_end);
+        let match_len = Series::new("match_len".into(), self.match_len);
+        let block_len = Series::new("block_len".into(), self.block_len);
+        let mapq = Series::new("mapq".into(), self.mapq);
+        let is_primary = Series::new("is_primary".into(), self.is_primary);
+        let nm = Series::new("nm".into(), nm);
         // let cigar = Series::new("cigar", cigar);
-        let cigar_str = Series::new("cigar_str", cigar_str);
-        let md = Series::new("md", md);
-        let cs = Series::new("cs", cs);
+        let cigar_str = Series::new("cigar_str".into(), cigar_str);
+        let md = Series::new("md".into(), md);
+        let cs = Series::new("cs".into(), cs);
 
         DataFrame::new(vec![
-            query_name,
-            query_len,
-            query_start,
-            query_end,
-            strand,
-            target_name,
-            target_len,
-            target_start,
-            target_end,
-            match_len,
-            block_len,
-            mapq,
-            is_primary,
-            nm,
+            query_name.into(),
+            query_len.into(),
+            query_start.into(),
+            query_end.into(),
+            strand.into(),
+            target_name.into(),
+            target_len.into(),
+            target_start.into(),
+            target_end.into(),
+            match_len.into(),
+            block_len.into(),
+            mapq.into(),
+            is_primary.into(),
+            nm.into(),
             // cigar,
-            cigar_str,
-            md,
-            cs,
+            cigar_str.into(),
+            md.into(),
+            cs.into(),
         ])
     }
 }
@@ -572,23 +462,6 @@ impl Mappings {
 #[cfg(test)]
 mod tests {
     use crate::*;
-
-    #[test]
-    fn test_build_aligners() {
-        map_ont().expect("Failed to build minimap2 aligner");
-        map_hifi().expect("Failed to build minimap2 aligner");
-        ava_ont().expect("Failed to build minimap2 aligner");
-        map_10k().expect("Failed to build minimap2 aligner");
-        ava_pb().expect("Failed to build minimap2 aligner");
-        asm().expect("Failed to build minimap2 aligner");
-        asm5().expect("Failed to build minimap2 aligner");
-        asm10().expect("Failed to build minimap2 aligner");
-        asm20().expect("Failed to build minimap2 aligner");
-        short().expect("Failed to build minimap2 aligner");
-        sr().expect("Failed to build minimap2 aligner");
-        splice().expect("Failed to build minimap2 aligner");
-        cdna().expect("Failed to build minimap2 aligner");
-    }
 
     #[test]
     fn test_structs() {
