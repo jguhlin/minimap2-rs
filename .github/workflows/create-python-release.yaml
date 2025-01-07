@@ -55,15 +55,7 @@ jobs:
       - name: Add AArch64 Rust Target
         if: matrix.platform.target == 'aarch64'
         run: rustup target add aarch64-unknown-linux-gnu
-
-      # Set environment variables for cross-compilation
-      - name: Set Environment Variables for AArch64
-        if: matrix.platform.target == 'aarch64'
-        run: |
-          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-          echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-          echo "CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++" >> $GITHUB_ENV
-        
+       
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
