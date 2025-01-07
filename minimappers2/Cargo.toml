@@ -1,6 +1,6 @@
 [package]
 name = "minimappers2"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2021"
 
 [lib]
@@ -8,14 +8,13 @@ name = "minimappers2"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-minimap2 = { version = "0.1.18", features = ["simde"] }
-minimap2-sys = { version = "0.1.19", features = ["simde"] }
+minimap2 = { version = "0.1.23", features = ["simde"], path = ".." }
 crossbeam = "0.8.4"
 mimalloc = {version = "0.1", default-features = false }
 
-pyo3 = { version = "0.21" }
-polars = "0.40"
-pyo3-polars = "0.14"
+pyo3 = { version = "0.22" }
+polars = "0.45"
+pyo3-polars = "0.19"
 
 [profile.release]
 opt-level = 3
