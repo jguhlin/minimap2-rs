@@ -17,7 +17,6 @@ on:
 
 defaults:
   run:
-    working-directory: minimappers2
     shell: bash
 
 permissions:
@@ -43,6 +42,7 @@ jobs:
             target: ppc64le
     steps:
       - uses: actions/checkout@v4
+      - run: cd minimappers2
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
@@ -81,6 +81,7 @@ jobs:
             target: armv7
     steps:
       - uses: actions/checkout@v4
+      - run: cd minimappers2
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
@@ -117,6 +118,7 @@ jobs:
             target: aarch64
     steps:
       - uses: actions/checkout@v4
+      - run: cd minimappers2
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
@@ -142,6 +144,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: cd minimappers2
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
@@ -167,6 +170,7 @@ jobs:
       attestations: write
     steps:
       - uses: actions/download-artifact@v4
+      - run: cd minimappers2
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
@@ -175,7 +179,7 @@ jobs:
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: PyO3/maturin-action@v1
         env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
         with:
           command: upload
           args: --non-interactive --skip-existing wheels-*/*
