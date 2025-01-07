@@ -28,13 +28,14 @@ jobs:
     strategy:
       matrix:
         platform:
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: x86_64
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: x86
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: aarch64
     steps:
+      - run: apt-get update && apt-get install -y build-essential
       - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
@@ -69,13 +70,14 @@ jobs:
     strategy:
       matrix:
         platform:
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: x86_64
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: x86
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: aarch64
     steps:
+      - run: apt-get update && apt-get install -y build-essential musl-tools
       - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
@@ -147,6 +149,7 @@ jobs:
   sdist:
     runs-on: ubuntu-latest
     steps:
+      - run: apt-get update && apt-get install -y build-essential
       - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
@@ -176,6 +179,7 @@ jobs:
       # Used to generate artifact attestation
       attestations: write
     steps:
+      - run: apt-get update && apt-get install -y build-essential
       - uses: actions/download-artifact@v4
       - run: cd minimappers2
       - name: Generate artifact attestation
