@@ -54,14 +54,14 @@ jobs:
           sccache: 'true'
           manylinux: auto
           working-directory: "minimappers2"
-      - name: Build free-threaded wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist -i python3.13t
-          sccache: 'true'
-          manylinux: auto
-          working-directory: "minimappers2"
+#      - name: Build free-threaded wheels
+#        uses: PyO3/maturin-action@v1
+#        with:
+#          target: ${{ matrix.platform.target }}
+#          args: --release --out dist -i python3.13t
+#          sccache: 'true'
+#          manylinux: auto
+#          working-directory: "minimappers2"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -97,14 +97,14 @@ jobs:
           sccache: 'true'
           manylinux: musllinux_1_2
           working-directory: "minimappers2"
-      - name: Build free-threaded wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist -i python3.13t
-          sccache: 'true'
-          manylinux: musllinux_1_2
-          working-directory: "minimappers2"
+#      - name: Build free-threaded wheels
+#        uses: PyO3/maturin-action@v1
+#        with:
+#          target: ${{ matrix.platform.target }}
+#          args: --release --out dist -i python3.13t
+#          sccache: 'true'
+#          manylinux: musllinux_1_2
+#          working-directory: "minimappers2"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -137,13 +137,13 @@ jobs:
           args: --release --out dist
           sccache: 'true'
           working-directory: "minimappers2"
-      - name: Build free-threaded wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist -i python3.13t
-          sccache: 'true'
-          working-directory: "minimappers2"
+#      - name: Build free-threaded wheels
+#        uses: PyO3/maturin-action@v1
+#        with:
+#          target: ${{ matrix.platform.target }}
+#          args: --release --out dist -i python3.13t
+#          sccache: 'true'
+#          working-directory: "minimappers2"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
