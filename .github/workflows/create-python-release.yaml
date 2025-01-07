@@ -48,14 +48,24 @@ jobs:
       - name: Install AArch64 Cross-Compiler and Libraries
         if: matrix.platform.target == 'aarch64'
         run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu libc6-dev-arm64-cross
+          sudo apt-get install -y gcc-13-aarch64-linux-gnu g++-13-aarch64-linux-gnu libc6-dev-arm64-cross
 
       # Add the AArch64 Rust target
       - name: Add AArch64 Rust Target
         if: matrix.platform.target == 'aarch64'
         run: rustup target add aarch64-unknown-linux-gnu
-       
+
+      # Set environment variables for cross-compilation
+      - name: Set Environment Variables for AArch64
+        if: matrix.platform.target == 'aarch64'
+        run: |
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc-13" >> $GITHUB_ENV
+          echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc-13" >> $GITHUB_ENV
+          echo "CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++-13" >> $GITHUB_ENV
+
+        
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
