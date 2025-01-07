@@ -4,41 +4,73 @@ on:
   pull_request:
     branches: [ "main" ]
     paths: 
-      - 'minimappers2/src/'
-      - 'minimappers2/Cargo.toml'
+      - minimappers2/src/
+      - minimappers2/Cargo.toml
+      - minimappers2/**
+      - .github/workflows/build-test-rust-minimappers2.yaml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
+  RUSTFLAGS: -C debuginfo=0  # Do not produce debug symbols to keep memory usage down
+  RUST_BACKTRACE: 1
+  PYTHONUTF8: 1
   CARGO_TERM_COLOR: always
 
+defaults:
+  run:
+    working-directory: minimappers2
+    shell: bash
+
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  test-python:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ['3.9', '3.12', '3.13']
+        include:
+          - os: windows-latest
+            python-version: '3.13'
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: 'recursive'
-    - run: cd minimappers2
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Create virtual environment
+      env:
+        BIN: ${{ matrix.os == 'windows-latest' && 'Scripts' || 'bin' }}
+      run: |
+        python -m venv .venv
+        echo "$GITHUB_WORKSPACE/minimappers2/.venv/$BIN" >> $GITHUB_PATH
+        echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/minimappers2/.venv" >> $GITHUB_ENV
+
+    - name: Set up Rust
+      run: rustup show
+
+    - name: Cache Rust
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: minimappers2
+        save-if: ${{ github.ref_name == 'main' }}
+    
+    - name: Install Python dependencies
+      run: |
+        pip install uv
+        uv pip install maturin
+
+    - name: Install minimappers2
+      run: maturin develop
+
     - name: Build
       run: cargo build --verbose
+
     - name: Run tests
       run: cargo test --verbose
-      
-  build-manylinux-x64_64:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: 'recursive'
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-
-      - name: Test build
-        uses: messense/maturin-action@v1
-        env:
-          RUSTFLAGS: -C target-feature=+fxsr,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+fma
-        with:
-          rust-toolchain: nightly-2025-01-08
-          maturin-version: '1.8.0'
-          command: build
-          args: -m minimappers2/Cargo.toml
