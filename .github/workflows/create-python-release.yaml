@@ -35,7 +35,7 @@ jobs:
           - runner: ubuntu-24.04
             target: aarch64
     steps:
-      - run: apt-get update && apt-get install -y build-essential
+      - run: sudo apt-get update && sudo apt-get install -y build-essential
       - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
@@ -77,7 +77,7 @@ jobs:
           - runner: ubuntu-24.04
             target: aarch64
     steps:
-      - run: apt-get update && apt-get install -y build-essential musl-tools
+      - run: sudo apt-get update && sudo apt-get install -y build-essential musl-tools
       - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
@@ -149,7 +149,7 @@ jobs:
   sdist:
     runs-on: ubuntu-latest
     steps:
-      - run: apt-get update && apt-get install -y build-essential
+      - run: sudo apt-get update && sudo apt-get install -y build-essential
       - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
@@ -179,7 +179,7 @@ jobs:
       # Used to generate artifact attestation
       attestations: write
     steps:
-      - run: apt-get update && apt-get install -y build-essential
+      - run: sudo apt-get update && sudo apt-get install -y build-essential
       - uses: actions/download-artifact@v4
       - run: cd minimappers2
       - name: Generate artifact attestation
