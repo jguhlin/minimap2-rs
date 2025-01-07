@@ -31,14 +31,14 @@ jobs:
           submodules: 'recursive'
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.7'
+          python-version: '3.9'
 
       - name: Test build
         uses: messense/maturin-action@v1
         env:
           RUSTFLAGS: -C target-feature=+fxsr,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx,+fma
         with:
-          rust-toolchain: nightly-2023-10-15
-          maturin-version: '1.4.0'
+          rust-toolchain: nightly-2025-01-08
+          maturin-version: '1.8.0'
           command: build
           args: -m minimappers2/Cargo.toml
