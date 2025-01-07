@@ -204,7 +204,6 @@ jobs:
     steps:
       - run: sudo apt-get update && sudo apt-get install -y build-essential
       - uses: actions/download-artifact@v4
-      - run: cd minimappers2
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
