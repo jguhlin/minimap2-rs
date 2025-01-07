@@ -2,15 +2,52 @@ use std::num::NonZeroI32;
 use std::sync::{Arc, Mutex};
 
 use crossbeam::queue::ArrayQueue;
-use mimalloc::MiMalloc;
 use minimap2::*;
 
 use polars::{df, prelude::*};
 use pyo3::prelude::*;
 use pyo3_polars::{error::PyPolarsErr, PyDataFrame};
 
+#[cfg(all(
+    target_family = "unix",
+    not(target_os = "emscripten"),
+    not(allocator = "default"),
+    not(allocator = "mimalloc"),
+))]
+use jemallocator::Jemalloc;
+#[cfg(all(
+    not(debug_assertions),
+    not(allocator = "default"),
+    any(
+        not(target_family = "unix"),
+        target_os = "emscripten",
+        allocator = "mimalloc"
+    ),
+))]
+use mimalloc::MiMalloc;
+
 #[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
+#[cfg(all(
+    not(debug_assertions),
+    not(allocator = "mimalloc"),
+    not(allocator = "default"),
+    target_family = "unix",
+    not(target_os = "emscripten"),
+))]
+static ALLOC: Jemalloc = Jemalloc;
+
+#[global_allocator]
+#[cfg(all(
+    not(debug_assertions),
+    not(allocator = "default"),
+    any(
+        not(target_family = "unix"),
+        target_os = "emscripten",
+        allocator = "mimalloc"
+    ),
+))]
+static ALLOC: MiMalloc = MiMalloc;
+
 
 mod multithreading;
 

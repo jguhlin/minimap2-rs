@@ -28,24 +28,44 @@ jobs:
     strategy:
       matrix:
         platform:
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: x86_64
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: x86
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: aarch64
-          - runner: ubuntu-22.04
-            target: armv7
-          - runner: ubuntu-22.04
-            target: s390x
-          - runner: ubuntu-22.04
-            target: ppc64le
     steps:
+      - run: sudo apt-get update && sudo apt-get install -y build-essential
       - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
       - run: cd minimappers2
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
+          
+      # Conditionally install AArch64 cross-compiler and libraries
+      - name: Install AArch64 Cross-Compiler and Libraries
+        if: matrix.platform.target == 'aarch64'
+        run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+          sudo apt-get update
+          sudo apt-get install -y gcc-13-aarch64-linux-gnu gcc-13-aarch64-linux-gnu g++-13-aarch64-linux-gnu libc6-dev-arm64-cross
+
+      # Add the AArch64 Rust target
+      - name: Add AArch64 Rust Target
+        if: matrix.platform.target == 'aarch64'
+        run: rustup target add aarch64-unknown-linux-gnu
+
+      # Set environment variables for cross-compilation
+#      - name: Set Environment Variables for AArch64
+#        if: matrix.platform.target == 'aarch64'
+#        run: |
+#          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc-13" >> $GITHUB_ENV
+#          echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc-13" >> $GITHUB_ENV
+#          echo "CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++-13" >> $GITHUB_ENV
+
+        
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -53,13 +73,15 @@ jobs:
           args: --release --out dist
           sccache: 'true'
           manylinux: auto
-      - name: Build free-threaded wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist -i python3.13t
-          sccache: 'true'
-          manylinux: auto
+          working-directory: "minimappers2"
+#      - name: Build free-threaded wheels
+#        uses: PyO3/maturin-action@v1
+#        with:
+#          target: ${{ matrix.platform.target }}
+#          args: --release --out dist -i python3.13t
+#          sccache: 'true'
+#          manylinux: auto
+#          working-directory: "minimappers2"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -71,16 +93,17 @@ jobs:
     strategy:
       matrix:
         platform:
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: x86_64
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: x86
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: aarch64
-          - runner: ubuntu-22.04
-            target: armv7
     steps:
+      - run: sudo apt-get update && sudo apt-get install -y build-essential musl-tools
       - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
       - run: cd minimappers2
       - uses: actions/setup-python@v5
         with:
@@ -92,13 +115,15 @@ jobs:
           args: --release --out dist
           sccache: 'true'
           manylinux: musllinux_1_2
-      - name: Build free-threaded wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist -i python3.13t
-          sccache: 'true'
-          manylinux: musllinux_1_2
+          working-directory: "minimappers2"
+#      - name: Build free-threaded wheels
+#        uses: PyO3/maturin-action@v1
+#        with:
+#          target: ${{ matrix.platform.target }}
+#          args: --release --out dist -i python3.13t
+#          sccache: 'true'
+#          manylinux: musllinux_1_2
+#          working-directory: "minimappers2"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -118,6 +143,8 @@ jobs:
             target: aarch64
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
       - run: cd minimappers2
       - uses: actions/setup-python@v5
         with:
@@ -128,12 +155,14 @@ jobs:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
           sccache: 'true'
-      - name: Build free-threaded wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist -i python3.13t
-          sccache: 'true'
+          working-directory: "minimappers2"
+#      - name: Build free-threaded wheels
+#        uses: PyO3/maturin-action@v1
+#        with:
+#          target: ${{ matrix.platform.target }}
+#          args: --release --out dist -i python3.13t
+#          sccache: 'true'
+#          working-directory: "minimappers2"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -143,12 +172,16 @@ jobs:
   sdist:
     runs-on: ubuntu-latest
     steps:
+      - run: sudo apt-get update && sudo apt-get install -y build-essential
       - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
       - run: cd minimappers2
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
           command: sdist
+          working-directory: "minimappers2"
           args: --out dist
       - name: Upload sdist
         uses: actions/upload-artifact@v4
@@ -169,6 +202,7 @@ jobs:
       # Used to generate artifact attestation
       attestations: write
     steps:
+      - run: sudo apt-get update && sudo apt-get install -y build-essential
       - uses: actions/download-artifact@v4
       - run: cd minimappers2
       - name: Generate artifact attestation
@@ -181,5 +215,6 @@ jobs:
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
         with:
+          working-directory: "minimappers2"
           command: upload
           args: --non-interactive --skip-existing wheels-*/*

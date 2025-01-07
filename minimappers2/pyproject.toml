@@ -9,7 +9,7 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Rust"
 ]
-license = { file = "LICENSE" }
+# license = { file = "LICENSE" }
 description = "A Python wrapper for minimap2-rs"
 keywords = ["minimap2", "bioinformatics", "alignment", "mapping"]
 dependencies = [
