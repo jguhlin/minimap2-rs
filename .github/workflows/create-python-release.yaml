@@ -42,6 +42,8 @@ jobs:
             target: ppc64le
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
       - run: cd minimappers2
       - uses: actions/setup-python@v5
         with:
@@ -83,6 +85,8 @@ jobs:
             target: armv7
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
       - run: cd minimappers2
       - uses: actions/setup-python@v5
         with:
@@ -122,6 +126,8 @@ jobs:
             target: aarch64
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
       - run: cd minimappers2
       - uses: actions/setup-python@v5
         with:
@@ -150,6 +156,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
       - run: cd minimappers2
       - name: Build sdist
         uses: PyO3/maturin-action@v1
