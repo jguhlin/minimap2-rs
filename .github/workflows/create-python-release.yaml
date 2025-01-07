@@ -53,6 +53,7 @@ jobs:
           args: --release --out dist
           sccache: 'true'
           manylinux: auto
+          working-directory: "minimappers2"
       - name: Build free-threaded wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -60,6 +61,7 @@ jobs:
           args: --release --out dist -i python3.13t
           sccache: 'true'
           manylinux: auto
+          working-directory: "minimappers2"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -92,6 +94,7 @@ jobs:
           args: --release --out dist
           sccache: 'true'
           manylinux: musllinux_1_2
+          working-directory: "minimappers2"
       - name: Build free-threaded wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -99,6 +102,7 @@ jobs:
           args: --release --out dist -i python3.13t
           sccache: 'true'
           manylinux: musllinux_1_2
+          working-directory: "minimappers2"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -128,12 +132,14 @@ jobs:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
           sccache: 'true'
+          working-directory: "minimappers2"
       - name: Build free-threaded wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i python3.13t
           sccache: 'true'
+          working-directory: "minimappers2"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -149,6 +155,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: sdist
+          working-directory: "minimappers2"
           args: --out dist
       - name: Upload sdist
         uses: actions/upload-artifact@v4
@@ -181,5 +188,6 @@ jobs:
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
         with:
+          working-directory: "minimappers2"
           command: upload
           args: --non-interactive --skip-existing wheels-*/*
