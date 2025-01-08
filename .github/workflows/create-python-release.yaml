@@ -169,26 +169,6 @@ jobs:
           name: wheels-macos-${{ matrix.platform.target }}
           path: dist
 
-  sdist:
-    runs-on: ubuntu-latest
-    steps:
-      - run: sudo apt-get update && sudo apt-get install -y build-essential
-      - uses: actions/checkout@v4
-        with:
-          submodules: 'recursive'
-      - run: cd minimappers2
-      - name: Build sdist
-        uses: PyO3/maturin-action@v1
-        with:
-          command: sdist
-          working-directory: "minimappers2"
-          args: --out dist
-      - name: Upload sdist
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-sdist
-          path: dist
-
   release:
     name: Release
     runs-on: ubuntu-latest
