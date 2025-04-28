@@ -206,6 +206,8 @@ fn gen_bindings() {
     let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
     let mut bindgen = bindgen::Builder::default()
+        .derive_copy(false)
+        .derive_debug(true)
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .rustfmt_bindings(true);
 

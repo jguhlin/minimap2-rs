@@ -5,6 +5,9 @@ Use this if you need lower-level bindings for minimap2.
 Minimap2 2.28
 
 ## Breaking Changes
+### 0.1.29
+Potentially an issue, derive(copy) is no longer valid for structs where we have implemented a Drop trait. Thus derive_copy is now false for all structs. This is (potentially) a breaking change.
+
 ### 0.1.18
 mm2-fast and minimap2 have diverged. At this point mm2-fast is no longer supported. Please use a previous crate version.
 
@@ -19,6 +22,10 @@ mm2-fast and minimap2 have diverged. At this point mm2-fast is no longer support
 * Can we decouple from pthread? This would allow Windows and (possibly) WASM compilation.
 
 ## Changelog
+### 0.1.29 minimap2.2.29
+* Update to minimap2 2.29
+* derive_copy is now false for bindgen
+
 ### 0.1.21 minimap2.2.28
 * Flag functions for IdxOpt and MapOpt @dwpeng
 * Syntactic sugar for mm_idx_t to support Drop, Deref, and DerefMut

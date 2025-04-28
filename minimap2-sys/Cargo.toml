@@ -26,7 +26,6 @@ exclude = [
 	"/mm2-fast/test",
 	"/minimap2/test",
 	"/mm2-fast/test_bench/",
-
 ]
 
 [lib]
