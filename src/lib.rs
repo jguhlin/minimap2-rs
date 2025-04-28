@@ -134,6 +134,7 @@ pub enum Preset {
     LrHq,
     Splice,
     SpliceHq,
+    SpliceSr,
     Asm,
     Asm5,
     Asm10,
@@ -157,6 +158,7 @@ impl From<Preset> for *const libc::c_char {
             Preset::LrHq => LRHQ.as_ptr(),
             Preset::Splice => SPLICE.as_ptr(),
             Preset::SpliceHq => SPLICEHQ.as_ptr(),
+            Preset::SpliceSr => SPLICESR.as_ptr(),
             Preset::Asm => ASM.as_ptr(),
             Preset::Asm5 => ASM5.as_ptr(),
             Preset::Asm10 => ASM10.as_ptr(),
@@ -387,6 +389,19 @@ impl Aligner<Unset> {
     /// ```
     pub fn splice_hq(self) -> Aligner<PresetSet> {
         self.preset(Preset::SpliceHq)
+    }
+
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to splice:sr
+    /// 
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
+    /// 
+    /// ```rust
+    /// # use minimap2::*;
+    /// Aligner::builder().splice_sr();
+    /// ```
+    pub fn splice_sr(self) -> Aligner<PresetSet> {
+        self.preset(Preset::SpliceSr)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm
@@ -892,11 +907,108 @@ where
 }
 
 impl Aligner<Built> {
+    /// Load splice/junc data from `bed_path` into the underlying `mm_idx_t`.
+    /// Equivalent to -j <bed_path> in minimap2.
+    pub fn read_junction(
+        &self,
+        bed_path: &str,
+    ) -> Result<(), i32> {
+
+        let idx: *mut mm_idx_t = self
+                        .idx
+                        .as_ref()
+                        .unwrap()
+                        .idx
+                        as *mut _;
+
+        let c_bed = CString::new(bed_path)
+            .map_err(|_| -1)?;
+        // call into C
+        let ret = unsafe {
+            mm_idx_jjump_read(
+                idx,
+                c_bed.as_ptr(),
+                MM_JUNC_ANNO as libc::c_int,
+                -1 as libc::c_int,
+            )
+        };
+        if ret == 0 {
+            Ok(())
+        } else {
+            println!("Failed to load the jump BED file");
+            Err(ret)
+        }
+    }
+
+    ///
+    pub fn read_pass1(
+        &self,
+        bed_path: &str,
+    ) -> Result<(), i32> {
+
+        let idx: *mut mm_idx_t = self
+                        .idx
+                        .as_ref()
+                        .unwrap()
+                        .idx
+                        as *mut _;
+
+        let c_bed = CString::new(bed_path)
+            .map_err(|_| -1)?;
+        // call into C
+        let ret = unsafe {
+            mm_idx_jjump_read(
+                idx,
+                c_bed.as_ptr(),
+                MM_JUNC_MISC as libc::c_int,
+                5 as libc::c_int,
+            )
+        };
+        if ret == 0 {
+            Ok(())
+        } else {
+            println!("Failed to load the pass-1 jump BED file");
+            Err(ret)
+        }
+    }
+
+    pub fn read_splice_scores(
+        &self,
+        file_path: &str,
+    ) -> Result<(), i32> {
+
+        let idx: *mut mm_idx_t = self
+                        .idx
+                        .as_ref()
+                        .unwrap()
+                        .idx
+                        as *mut _;
+
+        let c_filepath = CString::new(file_path)
+            .map_err(|_| -1)?;
+        unsafe {
+            mm_idx_spsc_read(idx, c_filepath.as_ptr(), mm_max_spsc_bonus(&self.mapopt));
+        };
+
+        if unsafe { (*idx).spsc == std::ptr::null_mut() } {
+            println!("Failed to load the splice score file");
+            Err(-1)
+        } else {
+            Ok(())
+        }
+        
+    }
+
+
     /// Returns the number of sequences in the index
     pub fn n_seq(&self) -> u32 {
         unsafe {
-            // let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
-            let idx: *const mm_idx_t = &(***self.idx.as_ref().unwrap());
+            let idx: *const mm_idx_t = self
+                        .idx
+                        .as_ref()
+                        .unwrap()
+                        .idx
+                        as *const _;
             (*idx).n_seq as u32
         }
     }
@@ -907,9 +1019,13 @@ impl Aligner<Built> {
     /// Remainds valid as long as the aligner is valid
     pub fn get_seq<'aln>(&'aln self, i: usize) -> Option<&'aln mm_idx_seq_t> {
         unsafe {
-            // let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
-            // let idx: *const mm_idx_t = *idx;
-            let idx: *const mm_idx_t = &(***self.idx.as_ref().unwrap());
+            let idx: *const mm_idx_t = self
+                        .idx
+                        .as_ref()
+                        .unwrap()
+                        .idx
+                        as *const _;
+
             // todo, should this be > or >=
             if i > self.n_seq() as usize {
                 return None;
@@ -1024,14 +1140,14 @@ impl Aligner<Built> {
                         .idx
                         as *const _;
                     
-                        let contig = unsafe {
+                        let contig = {
                             let seqs = (*idx).seq;
                             let entry = seqs.offset(reg.rid as isize);
                             let name_ptr: *const libc::c_char = (*entry).name;
                             std::ffi::CStr::from_ptr(name_ptr)
                         };
 
-                    let target_len = unsafe {
+                    let target_len = {
                         let seqs = (*idx).seq;
                         let entry = seqs.offset(reg.rid as isize);
                         (*entry).len as i32

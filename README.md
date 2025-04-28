@@ -11,7 +11,7 @@ minimap2-sys is the raw FFI bindings to minimap2. minimap2 is the more opinionat
 # How to use
 ## Requirements
 ```toml
-minimap2 = "0.1.23+minimap2.2.28"
+minimap2 = "0.1.24+minimap2.2.29"
 ```
 Also see [Features](#features)
 

@@ -2,6 +2,7 @@
 + Update minimap2-sys to 2.29
 + Rust 2024 edition 
 + Remove best_n setting to 1, it should be determined by minimap2
++ Helper functions for read_junction, read_pass1, read_splice_scores
 
 ### 0.1.23 minimap2 2.28
 + Functions to set flag opts for MapOpt and IdxOpt @dwpeng
