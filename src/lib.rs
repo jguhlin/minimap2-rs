@@ -341,7 +341,7 @@ impl Aligner<()> {
         let mut aligner = Aligner {
             mapopt: MapOpt {
                 seed: 11,
-                best_n: 1,
+                // best_n: 1,
                 ..Default::default()
             },
             ..Default::default()
@@ -2265,6 +2265,15 @@ mod tests {
             aligner_clone.mapopt.flag & MM_F_CIGAR as i64,
             MM_F_CIGAR as i64
         );
+    }
+
+    #[test]
+    fn mapopt_defaults() {
+        let aligner = Aligner::builder().map_ont();
+        println!("{:#?}", aligner.mapopt);       
+
+        let aligner = Aligner::builder();
+        println!("{:#?}", aligner.mapopt);
     }
 
     #[test]
