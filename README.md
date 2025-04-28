@@ -181,6 +181,18 @@ Minimap2 is tested on x86_64 and aarch64 (arm64). Other platforms may work, plea
 - [oarfish](https://github.com/COMBINE-lab/oarfish) - transcript quantification from long-read RNA-seq data
 - [lrge](https://github.com/mbhall88/lrge) - Long Read-based Genome size Estimation from overlaps
 
+# Notes
+## Memory management
+Minimap2 sets cap_kalloc to ~500Mb, so for 32 threads this can be ~16Gb. You can set this manually with `aligner.mapopt.cap_kalloc`. This is a good idea if you are using a lot of threads, or have very long running jobs.
+
+```
+    let per_thread_cap_kalloc = (1_000_000_000_f64 / (args.threads as f64)).ceil() as i64;
+    aligner.mapopt.cap_kalloc = per_thread_cap_kalloc;
+```
+
+## best_n
+* Minimap2 outputs and results are sensitive to the best_n parameter. Set it manually or be prepared for it to be changed upstream (potentially!)
+
 # Next things todo
 * Iterator interface for map_file
 * -sys Possible to decouple from pthread?
