@@ -1,3 +1,8 @@
+### 0.1.24 minimap2 2.29
++ Update minimap2-sys to 2.29
++ Rust 2024 edition 
++ Remove best_n setting to 1, it should be determined by minimap2
+
 ### 0.1.23 minimap2 2.28
 + Functions to set flag opts for MapOpt and IdxOpt @dwpeng
 + Fixed memory leak when not dropping mm_idx_t properly. This is done by adding in syntactic sugar in minimap2-sys @jguhlin

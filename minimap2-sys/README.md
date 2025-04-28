@@ -6,7 +6,8 @@ Minimap2 2.28
 
 ## Breaking Changes
 ### 0.1.29
-Potentially an issue, derive(copy) is no longer valid for structs where we have implemented a Drop trait. Thus derive_copy is now false for all structs. This is (potentially) a breaking change.
+Potentially an issue, derive(copy) is no longer valid for structs where we have implemented a Drop trait. So I've added some newtypes where appropriate. Hopefully it's an invisible change.
+This is primarily for mm_idx_t. If you use it directly (instead of MmIdx newtype), you need to call mm_idx_destroy() manually.
 
 ### 0.1.18
 mm2-fast and minimap2 have diverged. At this point mm2-fast is no longer supported. Please use a previous crate version.
@@ -24,7 +25,9 @@ mm2-fast and minimap2 have diverged. At this point mm2-fast is no longer support
 ## Changelog
 ### 0.1.29 minimap2.2.29
 * Update to minimap2 2.29
-* derive_copy is now false for bindgen
+* Update to 2024 edition
+* Remove some noise from the build system
+* Remove Drop impl for mm_idx_t. If you use it directly (instead of MmIdx newtype), you need to call mm_idx_destroy() manually.
 
 ### 0.1.21 minimap2.2.28
 * Flag functions for IdxOpt and MapOpt @dwpeng

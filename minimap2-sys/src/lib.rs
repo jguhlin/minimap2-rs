@@ -1,3 +1,5 @@
+#![allow(improper_ctypes)]
+#![allow(unsafe_op_in_unsafe_fn)]
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
@@ -16,12 +18,20 @@ unsafe impl Send for mm_mapopt_t {}
 
 use paste::paste;
 
+// This is no longer good behavior.
+/*
 impl Drop for mm_idx_t {
     fn drop(&mut self) {
         unsafe { mm_idx_destroy(self) };
     }
-}
+} 
+*/
 
+
+/// A wrapper around `mm_idx_t` to ensure proper memory management.
+/// 
+/// If you use mm_idx_t directly, you must call `mm_idx_destroy` manually.
+/// Warning UB, there be dragons, etc...
 pub struct MmIdx {
     pub idx: *mut mm_idx_t,
 }

@@ -1,3 +1,4 @@
+
 use std::env;
 use std::path::{Path, PathBuf};
 
@@ -124,6 +125,8 @@ fn simde(cc: &mut cc::Build) {
 
 fn compile() {
     let mut cc = cc::Build::new();
+    cc.warnings(false);
+    cc.flag_if_supported("-Wno-unused-result");
 
     let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
@@ -148,7 +151,8 @@ fn compile() {
     cc.flag("-lz");
 
     let mut cc = cc::Build::new();
-
+    
+    cc.flag_if_supported("-Wno-unused-result");
     cc.warnings(false);
     cc.flag("-Wc++-compat");
     cc.out_dir(&out_path);
@@ -206,7 +210,6 @@ fn gen_bindings() {
     let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
     let mut bindgen = bindgen::Builder::default()
-        .derive_copy(false)
         .derive_debug(true)
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .rustfmt_bindings(true);

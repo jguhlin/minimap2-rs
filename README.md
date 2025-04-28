@@ -18,16 +18,12 @@ Also see [Features](#features)
 Tested with rustc 1.82.0 and nightly. So probably a good idea to upgrade before running. But let me know if you run into pain points with older versions and will try to fix.
 
 ## Minimap2 Version Table
-| minimap2-rs | minimap2 |
-|-------------|----------|
-| 0.1.23      | 2.28     |
-| 0.1.22      | 2.28     |
-| 0.1.21      | 2.28     |
-| 0.1.20      | 2.28     |
-| 0.1.19      | 2.28     |
-| 0.1.18      | 2.28     |
-| 0.1.17      | 2.27     |
-| 0.1.16      | 2.26     |
+| minimap2-rs     | minimap2 |
+|-----------------|----------|
+| 0.1.24          | 2.29     |
+| 0.1.18 - 0.1.23 | 2.28     |
+| 0.1.17          | 2.27     |
+| 0.1.16          | 2.26     |
 
 ## Usage
 Create an Aligner 
