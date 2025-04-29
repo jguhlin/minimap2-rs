@@ -180,6 +180,7 @@ Minimap2 is tested on x86_64 and aarch64 (arm64). Other platforms may work, plea
 - [STRdust](https://github.com/wdecoster/STRdust) - Tandem repeat genotyper for long reads
 - [oarfish](https://github.com/COMBINE-lab/oarfish) - transcript quantification from long-read RNA-seq data
 - [lrge](https://github.com/mbhall88/lrge) - Long Read-based Genome size Estimation from overlaps
+- [mmr](https://github.com/arcInstitute/mmr) - A minimap2-based aligner with BINSEQ file format support
 
 # Notes
 ## Memory management
