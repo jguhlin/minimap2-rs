@@ -43,7 +43,7 @@
 //! ```
 
 use super::ffi as mm_ffi;
-use crate::{Aligner, Built, Mapping, Strand, BUF};
+use crate::{Aligner, BUF, Built, Mapping, Strand};
 use rust_htslib::bam::header::HeaderRecord;
 use rust_htslib::bam::record::{Cigar, CigarString};
 use rust_htslib::bam::{Header, HeaderView, Record};
@@ -355,7 +355,7 @@ mod tests {
     use super::*;
     use crate::Aligner;
     use rust_htslib::bam::ext::BamRecordExtensions;
-    use rust_htslib::bam::{header::Header, record::Aux, Read, Reader, Record};
+    use rust_htslib::bam::{Read, Reader, Record, header::Header, record::Aux};
 
     #[test]
     fn test_index() {

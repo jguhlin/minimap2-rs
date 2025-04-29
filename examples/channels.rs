@@ -1,6 +1,6 @@
 use crossbeam::queue::ArrayQueue;
 use minimap2::*;
-use needletail::{parse_fastx_file, FastxReader};
+use needletail::{FastxReader, parse_fastx_file};
 
 use std::path::PathBuf;
 use std::{error::Error, path::Path, sync::Arc, time::Duration};
@@ -99,8 +99,8 @@ fn map(
 
         let handle = std::thread::spawn(move || {
             // Now that the threads are running, read the input file and push the work to the queue
-            let mut reader: Box<dyn FastxReader> =
-                parse_fastx_file(query_file).unwrap_or_else(|_| panic!("Can't find query FASTA file"));
+            let mut reader: Box<dyn FastxReader> = parse_fastx_file(query_file)
+                .unwrap_or_else(|_| panic!("Can't find query FASTA file"));
 
             // I just do this in the main thread, but you can split threads
             let backoff = crossbeam::utils::Backoff::new();
@@ -108,7 +108,7 @@ fn map(
                 let mut work = WorkQueue::Work((record.id().to_vec(), record.seq().to_vec()));
                 while let Err(work_packet) = work_queue.push(work) {
                     work = work_packet; // Simple way to maintain ownership
-                                        // If we have an error, it's 99% because the queue is full
+                    // If we have an error, it's 99% because the queue is full
                     backoff.snooze();
                 }
             }
@@ -128,7 +128,6 @@ fn map(
             // This is where we processs mapping results as they come in...
             Some(WorkQueue::Result((record, alignments))) => {
                 num_alignments += alignments.len();
-
             }
             Some(_) => unimplemented!("Unexpected result type"),
             None => {
@@ -178,7 +177,7 @@ fn worker(
                 let mut result = WorkQueue::Result((sequence, alignment));
                 while let Err(result_packet) = results_queue.push(result) {
                     result = result_packet; // Simple way to maintain ownership
-                                            // If we have an error, it's 99% because the queue is full
+                    // If we have an error, it's 99% because the queue is full
                     backoff.snooze();
                 }
             }
