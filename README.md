@@ -11,23 +11,19 @@ minimap2-sys is the raw FFI bindings to minimap2. minimap2 is the more opinionat
 # How to use
 ## Requirements
 ```toml
-minimap2 = "0.1.23+minimap2.2.28"
+minimap2 = "0.1.24+minimap2.2.29"
 ```
 Also see [Features](#features)
 
 Tested with rustc 1.82.0 and nightly. So probably a good idea to upgrade before running. But let me know if you run into pain points with older versions and will try to fix.
 
 ## Minimap2 Version Table
-| minimap2-rs | minimap2 |
-|-------------|----------|
-| 0.1.23      | 2.28     |
-| 0.1.22      | 2.28     |
-| 0.1.21      | 2.28     |
-| 0.1.20      | 2.28     |
-| 0.1.19      | 2.28     |
-| 0.1.18      | 2.28     |
-| 0.1.17      | 2.27     |
-| 0.1.16      | 2.26     |
+| minimap2-rs     | minimap2 |
+|-----------------|----------|
+| 0.1.24          | 2.29     |
+| 0.1.18 - 0.1.23 | 2.28     |
+| 0.1.17          | 2.27     |
+| 0.1.16          | 2.26     |
 
 ## Usage
 Create an Aligner 
@@ -184,6 +180,19 @@ Minimap2 is tested on x86_64 and aarch64 (arm64). Other platforms may work, plea
 - [STRdust](https://github.com/wdecoster/STRdust) - Tandem repeat genotyper for long reads
 - [oarfish](https://github.com/COMBINE-lab/oarfish) - transcript quantification from long-read RNA-seq data
 - [lrge](https://github.com/mbhall88/lrge) - Long Read-based Genome size Estimation from overlaps
+- [mmr](https://github.com/arcInstitute/mmr) - A minimap2-based aligner with BINSEQ file format support
+
+# Notes
+## Memory management
+Minimap2 sets cap_kalloc to ~500Mb, so for 32 threads this can be ~16Gb. You can set this manually with `aligner.mapopt.cap_kalloc`. This is a good idea if you are using a lot of threads, or have very long running jobs.
+
+```
+    let per_thread_cap_kalloc = (1_000_000_000_f64 / (args.threads as f64)).ceil() as i64;
+    aligner.mapopt.cap_kalloc = per_thread_cap_kalloc;
+```
+
+## best_n
+* Minimap2 outputs and results are sensitive to the best_n parameter. Set it manually or be prepared for it to be changed upstream (potentially!)
 
 # Next things todo
 * Iterator interface for map_file
