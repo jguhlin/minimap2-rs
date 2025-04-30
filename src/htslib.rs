@@ -43,7 +43,8 @@
 //! ```
 
 use super::ffi as mm_ffi;
-use crate::{Aligner, BUF, Built, Mapping, Strand};
+use crate::{Aligner, Built, Mapping, Strand, BUF};
+use minimap2_sys::{km_destroy, km_init};
 use rust_htslib::bam::header::HeaderRecord;
 use rust_htslib::bam::record::{Cigar, CigarString};
 use rust_htslib::bam::{Header, HeaderView, Record};
@@ -137,10 +138,18 @@ impl Aligner<Built> {
             return Err("No index");
         }
 
+        // Make sure sequence is not empty
+        if seq.is_empty() {
+            return Err("Sequence is empty");
+        }
+
         let query = Query::new(seq, qual, name);
         // Number of results
         let mut n_regs: i32 = 0;
         let mut map_opt = self.mapopt.clone();
+
+        // immutable raw pointer to the index
+        let mi = &**self.idx.as_ref().unwrap().as_ref() as *const mm_ffi::mm_idx_t;
 
         // TODO: other flags to consider:
         // MM_F_NO_PRINT_2ND
@@ -161,11 +170,9 @@ impl Aligner<Built> {
         }
 
         let mappings = BUF.with(|buf| {
-            //let km = unsafe { mm_ffi::mm_tbuf_get_km(buf.borrow_mut().buf) };
-
             let mm_reg = MaybeUninit::new(unsafe {
                 mm_ffi::mm_map(
-                    &**self.idx.as_ref().unwrap().as_ref() as *const mm_ffi::mm_idx_t,
+                    mi,
                     query.inner.l_seq,
                     query.inner.seq as *const libc::c_char,
                     &mut n_regs,
@@ -186,31 +193,21 @@ impl Aligner<Built> {
             for i in 0..n_regs {
                 let sam_str = unsafe {
                     let mut result: MaybeUninit<mm_ffi::kstring_t> = MaybeUninit::zeroed();
-                    let reg_ptr = (*mm_reg.as_ptr()).offset(i as isize);
-                    //    // println!("{:#?}", *reg_ptr);
-                    let const_ptr = reg_ptr as *const mm_ffi::mm_reg1_t;
-                    // TODO: use mm_write_sam3 t do the writing so that we can pass the map_opt flags
-                    mm_ffi::mm_write_sam(
+                    let const_ptr = *mm_reg.as_ptr() as *const mm_ffi::mm_reg1_t;
+                    let km = km_init();
+                    mm_ffi::mm_write_sam2(
                         result.as_mut_ptr(),
-                        &**self.idx.as_ref().unwrap().as_ref() as *const mm_ffi::mm_idx_t,
+                        mi,
                         &query.inner as *const mm_ffi::mm_bseq1_t,
-                        const_ptr,
-                        n_regs,
-                        *mm_reg.as_ptr() as *const mm_ffi::mm_reg1_t,
+                        0,
+                        i,
+                        1,
+                        &n_regs,
+                        &const_ptr,
+                        km,
+                        map_opt.flag,
                     );
-                    //mm_ffi::mm_write_sam3(
-                    //    result.as_mut_ptr(),
-                    //    self.idx.as_ref().unwrap() as *const mm_ffi::mm_idx_t,
-                    //    &read  as *const mm_ffi::mm_bseq1_t,
-                    //    0, // seg_idx doesn't apply here (think it's a batch index)
-                    //    i,
-                    //    1, // only 1 segment
-                    //    n_regs as *const i32,
-                    //    &const_ptr,
-                    //    km,
-                    //    map_opt.flag,
-                    //    0
-                    //);
+                    km_destroy(km);
                     CStr::from_ptr((*result.as_ptr()).s)
                 };
                 let record = Record::from_sam(header, sam_str.to_bytes()).unwrap();
@@ -471,7 +468,11 @@ mod tests {
         (aligner, idx, header_view, expected_recs, seq, qual)
     }
 
-    fn map_test_case(query_name: &str, spliced: bool) -> (Vec<Record>, Vec<Record>) {
+    fn map_test_case(
+        query_name: &str,
+        spliced: bool,
+        extra_flags: Option<Vec<u64>>,
+    ) -> (Vec<Record>, Vec<Record>) {
         let (aligner, _, header_view, expected, seq, qual) = get_test_case(query_name, spliced);
         let observed = aligner
             .map_to_sam(
@@ -480,7 +481,7 @@ mod tests {
                 Some(query_name.as_bytes()),
                 &header_view,
                 None,
-                None,
+                extra_flags,
             )
             .unwrap();
         (observed, expected)
@@ -489,21 +490,21 @@ mod tests {
     #[test]
     fn test_fwd() {
         let query_name = "perfect_read.fwd";
-        let (o, e) = map_test_case(query_name, false);
+        let (o, e) = map_test_case(query_name, false, None);
         check_single_mapper(&e, &o);
     }
 
     #[test]
     fn test_rev() {
         let query_name = "perfect_read.rev";
-        let (o, e) = map_test_case(query_name, false);
+        let (o, e) = map_test_case(query_name, false, None);
         check_single_mapper(&e, &o);
     }
 
     #[test]
     fn test_mismatch() {
         let query_name = "imperfect_read.fwd";
-        let (o, e) = map_test_case(query_name, false);
+        let (o, e) = map_test_case(query_name, false, None);
         check_single_mapper(&e, &o);
 
         let rec = o.first().unwrap();
@@ -512,9 +513,25 @@ mod tests {
     }
 
     #[test]
+    fn test_aux_tag() {
+        let query_name = "imperfect_read.fwd";
+        let xtra_flags = vec![mm_ffi::MM_F_OUT_MD as u64];
+        let (o, e) = map_test_case(query_name, false, Some(xtra_flags));
+        let expected = e.first().unwrap();
+        let observed = o.first().unwrap();
+        if let (Ok(Aux::String(e_md)), Ok(Aux::String(o_md))) =
+            (expected.aux(b"MD"), observed.aux(b"MD"))
+        {
+            assert_eq!(o_md.as_bytes(), e_md.as_bytes())
+        } else {
+            panic!("Could not read MD tag");
+        }
+    }
+
+    #[test]
     fn test_unmapped() {
         let query_name = "unmappable_read";
-        let (o, e) = map_test_case(query_name, false);
+        let (o, e) = map_test_case(query_name, false, None);
         check_single_mapper(&e, &o);
         let rec = o.first().unwrap();
         assert!(rec.is_unmapped());
@@ -523,7 +540,7 @@ mod tests {
     #[test]
     fn test_secondary() {
         let query_name = "perfect_inv_duplicate";
-        let (o, e) = map_test_case(query_name, false);
+        let (o, e) = map_test_case(query_name, false, None);
 
         assert_eq!(o.len(), 2); // expect a primary and secondary mapping
         let o_fields: Vec<_> = o
@@ -544,7 +561,7 @@ mod tests {
     #[test]
     fn test_supplementary() {
         let query_name = "split_read";
-        let (o, e) = map_test_case(query_name, false);
+        let (o, e) = map_test_case(query_name, false, None);
 
         assert_eq!(o.len(), 2); // expect a primary and supplementary mapping
         let o_fields: Vec<_> = o
@@ -562,7 +579,7 @@ mod tests {
     #[test]
     fn test_spliced() {
         let query_name = "cdna.fwd";
-        let (o, e) = map_test_case(query_name, true);
+        let (o, e) = map_test_case(query_name, true, None);
         check_single_mapper(&e, &o);
 
         let record = o.first().unwrap();
@@ -585,7 +602,7 @@ mod tests {
     #[test]
     fn test_spliced_rev() {
         let query_name = "cdna.rev";
-        let (o, e) = map_test_case(query_name, true);
+        let (o, e) = map_test_case(query_name, true, None);
         check_single_mapper(&e, &o);
     }
 
