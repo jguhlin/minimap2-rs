@@ -214,6 +214,7 @@ pub struct Mapping {
     pub mapq: u32,
     pub is_primary: bool,
     pub is_supplementary: bool,
+    pub is_spliced: bool,
     pub alignment: Option<Alignment>,
 }
 
@@ -1108,6 +1109,7 @@ impl Aligner<Built> {
 
                     let is_primary = reg.parent == reg.id && (reg.sam_pri() > 0);
                     let is_supplementary = (reg.parent == reg.id) && (reg.sam_pri() == 0);
+                    let is_spliced = reg.is_spliced() != 0;
 
                     // todo holy heck this code is ugly
                     let alignment = if !reg.p.is_null() {
@@ -1326,6 +1328,7 @@ impl Aligner<Built> {
                         mapq: reg.mapq(),
                         is_primary,
                         is_supplementary,
+                        is_spliced,
                         alignment,
                     });
                     libc::free(reg.p as *mut c_void);
