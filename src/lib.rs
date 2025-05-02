@@ -215,6 +215,7 @@ pub struct Mapping {
     pub is_primary: bool,
     pub is_supplementary: bool,
     pub is_spliced: bool,
+    pub trans_strand: Option<Strand>,
     pub alignment: Option<Alignment>,
 }
 
@@ -1110,6 +1111,15 @@ impl Aligner<Built> {
                     let is_primary = reg.parent == reg.id && (reg.sam_pri() > 0);
                     let is_supplementary = (reg.parent == reg.id) && (reg.sam_pri() == 0);
                     let is_spliced = reg.is_spliced() != 0;
+                    let trans_strand = if let Some(extra) = reg.p.as_ref() {
+                        match extra.trans_strand() {
+                            1 => Some(Strand::Forward),
+                            2 => Some(Strand::Reverse),
+                            _ => None,
+                        }
+                    } else {
+                        None
+                    };
 
                     // todo holy heck this code is ugly
                     let alignment = if !reg.p.is_null() {
@@ -1329,6 +1339,7 @@ impl Aligner<Built> {
                         is_primary,
                         is_supplementary,
                         is_spliced,
+                        trans_strand,
                         alignment,
                     });
                     libc::free(reg.p as *mut c_void);
