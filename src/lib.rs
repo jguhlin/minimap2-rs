@@ -1102,7 +1102,8 @@ impl Aligner<Built> {
                         std::ffi::CStr::from_ptr(name_ptr)
                     };
 
-                    let target_len = {
+                    // TODO: deprecate?
+                    let _target_len = {
                         let seqs = (*idx).seq;
                         let entry = seqs.offset(reg.rid as isize);
                         (*entry).len as i32
@@ -2330,7 +2331,7 @@ mod tests {
                 // Sleep 100ms
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 assert!(Arc::strong_count(&aligner1.idx.as_ref().unwrap()) == 1);
-                println!("Second thread done");                
+                println!("Second thread done");
             });
 
             jh1.join().unwrap();
