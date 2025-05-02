@@ -322,7 +322,7 @@ pub struct Aligner<S: BuilderState> {
     pub cigar_clipping: bool,
 
     // State of the builder
-    state: S,
+    _state: S,
 }
 
 /// Create a default aligner
@@ -335,7 +335,7 @@ impl Default for Aligner<Unset> {
             idx: None,
             idx_reader: None,
             cigar_clipping: false,
-            state: Unset,
+            _state: Unset,
         }
     }
 }
@@ -577,7 +577,7 @@ impl Aligner<Unset> {
             idx: self.idx,
             idx_reader: self.idx_reader,
             cigar_clipping: self.cigar_clipping,
-            state: PresetSet,
+            _state: PresetSet,
         }
     }
 
@@ -772,7 +772,7 @@ where
             idx: self.idx,
             idx_reader: Some(Arc::new(unsafe { *idx_reader })),
             cigar_clipping: self.cigar_clipping,
-            state: Built,
+            _state: Built,
         })
     }
 
@@ -890,7 +890,7 @@ where
             idx: self.idx,
             idx_reader: None,
             cigar_clipping: self.cigar_clipping,
-            state: Built,
+            _state: Built,
         };
 
         Ok(aln)
@@ -1619,7 +1619,7 @@ mod tests {
             idx,
             idx_reader,
             cigar_clipping: false,
-            state: Unset,
+            _state: Unset,
         };
     }
 
