@@ -2408,6 +2408,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(unused_variables)]
     fn build_aligner_memory_leak() {
         for _ in 0..100000 {
             let aligner = Aligner::builder().map_ont();
