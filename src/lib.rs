@@ -176,6 +176,35 @@ impl From<Preset> for *const libc::c_char {
     }
 }
 
+/// Represents a splice junction and its associated score
+pub struct Junction {
+    pub target_name: Option<Arc<String>>,
+    pub start: u32,
+    pub end: u32,
+    pub query_name: Option<Arc<String>>,
+    pub score: u32,
+    pub strand: Strand,
+}
+impl Junction {
+    pub fn new(
+        target_name: Option<Arc<String>>,
+        start: u32,
+        end: u32,
+        query_name: Option<Arc<String>>,
+        score: u32,
+        strand: Strand,
+    ) -> Self {
+        Self {
+            target_name,
+            start,
+            end,
+            query_name,
+            score,
+            strand,
+        }
+    }
+}
+
 /// Alignment type
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AlignmentType {
@@ -209,6 +238,7 @@ pub struct Mapping {
     pub target_len: i32,
     pub target_start: i32,
     pub target_end: i32,
+    pub target_id: i32,
     pub match_len: i32,
     pub block_len: i32,
     pub mapq: u32,
@@ -997,6 +1027,13 @@ impl Aligner<Built> {
         }
     }
 
+    /// Returns a reference to the index associated with this aligner
+    ///
+    /// Safe to use as long as the aligner is valid (and should be since it's `Built`)
+    fn get_idx(&self) -> *const mm_idx_t {
+        self.idx.as_ref().unwrap().idx as *const _
+    }
+
     // https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L164
     // TODO: I doubt extra_flags is working properly...
     // TODO: Python allows for paired-end mapping with seq2: Option<&[u8]>, but more work to implement
@@ -1093,7 +1130,7 @@ impl Aligner<Built> {
                     let mm_reg1_const_ptr = mm_reg1_mut_ptr as *const mm_reg1_t;
                     let reg: mm_reg1_t = *mm_reg1_mut_ptr;
 
-                    let idx: *const mm_idx_t = self.idx.as_ref().unwrap().idx as *const _;
+                    let idx = self.get_idx();
 
                     let contig = {
                         let seqs = (*idx).seq;
@@ -1325,6 +1362,7 @@ impl Aligner<Built> {
                         target_len,
                         target_start: reg.rs,
                         target_end: reg.re,
+                        target_id: reg.rid,
                         query_name: query_name_arc.clone(),
                         query_len: NonZeroI32::new(seq.len() as i32),
                         query_start: reg.qs,
@@ -1421,6 +1459,135 @@ impl Aligner<Built> {
     pub fn has_index(&self) -> bool {
         self.idx.is_some()
     }
+
+    /// Provides a mapping with a splice score
+    ///
+    /// User must provide a junctions vector to store the junctions and their associated scores.
+    ///
+    /// The junctions vector will be cleared and then populated with one entry per junction.
+    ///
+    /// Adapted from https://github.com/lh3/minimap2/blob/1fd85be6e2515c9194740e1d2e6a2625be36f508/format.c#L263
+    pub fn score_junctions(&self, mapping: &Mapping, junctions: &mut Vec<Junction>) {
+        // clear the junctions vector
+        junctions.clear();
+
+        // Return early if:
+        // 1. The mapping is not spliced
+        // 2. The transcript strand is not defined
+        // 3. The alignment is not defined
+        // 4. The alignment cigar is not defined
+        if !mapping.is_spliced {
+            return;
+        }
+
+        let Some(trans_strand) = mapping.trans_strand else {
+            return;
+        };
+
+        let Some(cigar) = mapping
+            .alignment
+            .as_ref()
+            .and_then(|alignment| alignment.cigar.as_ref())
+        else {
+            return;
+        };
+
+        // Determine reverse status
+        let rev = (trans_strand == Strand::Reverse) ^ (mapping.strand == Strand::Reverse);
+
+        let mut target_offset = mapping.target_start as u32;
+        let idx = self.get_idx();
+        let mut donor = [0; 2];
+        let mut acceptor = [0; 2];
+        for (len, op) in cigar {
+            match op {
+                // For skips (introns) (N::3) build a junction score
+                3 => {
+                    assert!(*len >= 2, "Intron length must be at least 2");
+
+                    unsafe {
+                        if rev {
+                            // process reverse complement
+                            mm_idx_getseq(
+                                idx,
+                                mapping.target_id as u32,
+                                target_offset,
+                                target_offset + 2,
+                                acceptor.as_ptr() as *mut u8,
+                            );
+                            mm_idx_getseq(
+                                idx,
+                                mapping.target_id as u32,
+                                target_offset + len - 2,
+                                target_offset + len,
+                                donor.as_ptr() as *mut u8,
+                            );
+                            revcomp_splice(&mut acceptor);
+                            revcomp_splice(&mut donor);
+                        } else {
+                            // process standard
+                            mm_idx_getseq(
+                                idx,
+                                mapping.target_id as u32,
+                                target_offset,
+                                target_offset + 2,
+                                donor.as_ptr() as *mut u8,
+                            );
+                            mm_idx_getseq(
+                                idx,
+                                mapping.target_id as u32,
+                                target_offset + len - 2,
+                                target_offset + len,
+                                acceptor.as_ptr() as *mut u8,
+                            );
+                        }
+                    }
+
+                    let score1 = match (donor[0], donor[1]) {
+                        (2, 3) => 3,
+                        (2, 1) => 2,
+                        (0, 3) => 1,
+                        (_, _) => 0,
+                    };
+
+                    let score2 = match (acceptor[0], acceptor[1]) {
+                        (0, 2) => 3,
+                        (0, 1) => 1,
+                        (_, _) => 0,
+                    };
+
+                    let junction = Junction::new(
+                        mapping.target_name.clone(),
+                        target_offset,
+                        target_offset + len,
+                        mapping.query_name.clone(),
+                        score1 + score2,
+                        if rev {
+                            Strand::Reverse
+                        } else {
+                            Strand::Forward
+                        },
+                    );
+
+                    junctions.push(junction);
+                }
+                // Advance target offset by size for other operations
+                _ => {
+                    target_offset += len;
+                }
+            }
+        }
+    }
+}
+
+/// Utility function to reverse complement a splice junction
+///
+/// Adapted from https://github.com/lh3/minimap2/blob/1fd85be6e2515c9194740e1d2e6a2625be36f508/format.c#L256
+#[inline]
+fn revcomp_splice(s: &mut [u8; 2]) {
+    let c = if s[1] < 4 { 3 - s[1] } else { 4 };
+    s[1] = if s[0] < 4 { 3 - s[0] } else { 4 };
+    s[0] = c;
 }
 
 mod send {
