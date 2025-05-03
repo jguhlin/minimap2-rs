@@ -2286,6 +2286,7 @@ mod tests {
         let _aligner = Aligner::builder().sr();
         let _aligner = Aligner::builder().splice();
         let _aligner = Aligner::builder().cdna();
+        let _aligner = Aligner::builder().splice_sr();
 
         #[cfg(feature = "map-file")]
         {
