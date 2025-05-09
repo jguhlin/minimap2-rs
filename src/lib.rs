@@ -1468,19 +1468,26 @@ impl Aligner<Built> {
     /// The junctions vector will *NOT* be cleared and is extended with one entry per junction.
     ///
     /// Adapted from https://github.com/lh3/minimap2/blob/1fd85be6e2515c9194740e1d2e6a2625be36f508/format.c#L263
+    ///
+    /// *Note*: to score junctions `.with_cigar()` must called.
     pub fn score_junctions(&self, mapping: &Mapping, junctions: &mut Vec<Junction>) {
+        assert!(
+            (self.mapopt.flag & MM_F_CIGAR as i64) != 0,
+            "CIGAR must be set to score junctions."
+        );
+
         // Return early if:
         // 1. The mapping is not spliced
         // 2. The transcript strand is not defined
         // 3. The alignment is not defined
         // 4. The alignment cigar is not defined
         if !mapping.is_spliced {
-            dbg!("Mapping is not spliced");
-            // return;
+            // dbg!("Mapping is not spliced");
+            return;
         }
 
         let Some(trans_strand) = mapping.trans_strand else {
-            dbg!("Transcript strand is not defined");
+            // dbg!("Transcript strand is not defined");
             return;
         };
 
@@ -2276,7 +2283,7 @@ mod tests {
 
         // ENST00000352203.8 -> ENSG00000042753.12
         let query = "CGGGGGTCGCCATGATCCGCTTTATCCTCATCCAGAACCGGGCAGGCAAGACGCGCCTGGCCAAGTGGTACATGCAGTTTGATGATGATGAGAAACAGAAGCTGATCGAGGAGGTGCATGCCGTGGTCACCGTCCGAGACGCCAAACACACCAACTTTGTGGAGGTCCTGGCAATCTCCGTTGCTGACAGCCTCTCTGTTCTGCAGTTCCGGAACTTTAAGATCATTTACCGCCGCTATGCTGGCCTCTACTTCTGCATCTGTGTGGATGTCAATGACAACAACCTGGCTTACCTGGAGGCCATTCACAACTTCGTGGAGGTCTTAAACGAATATTTCCACAATGTCTGTGAACTGGACCTGGTGTTCAACTTCTACAAGGTTTACACGGTCGTGGACGAGATGTTCCTGGCTGGCGAAATCCGAGAGACCAGCCAGACGAAGGTGCTGAAACAGCTGCTGATGCTACAGTCCCTGGAGTGAGGGCAGGCGAGCCCCACCCCGGCCCCGGCCCCTCCTGGACTCGCCTGCTCGCTTCCCCTTCCCAGGCCCGTGGCCAACCCAGCAGTCCTTCCCTCAGCTGCCTAGGAGGAAGGGACCCAGCTGGGTCTGGGCCACAAGGGAGGAGACTGCACCCCACTGCCTCTGGGCCCTGGCTGTGGGCAGAGGCCACCGTGTGTGTCCCGAGTAACCGTGCCGTTGTCGTGTGATGCCATAAGCGTCTGTGCGTGGAGTCCCCAATAAACCTGTGGTCCTGCCTGGCCTTGCCGTCTTTGAGCCC";
-        let aligner = Aligner::builder().splice_sr();
+        let aligner = Aligner::builder().splice_sr().with_cigar();
 
         let aligner = aligner.with_seq(seq.as_bytes()).unwrap();
 
