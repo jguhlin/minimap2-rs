@@ -43,7 +43,7 @@
 //! ```
 
 use super::ffi as mm_ffi;
-use crate::{Aligner, Built, Mapping, Strand, BUF};
+use crate::{Aligner, BUF, Built, Mapping, Strand};
 use minimap2_sys::{km_destroy, km_init};
 use rust_htslib::bam::header::HeaderRecord;
 use rust_htslib::bam::record::{Cigar, CigarString};
