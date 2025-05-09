@@ -2306,12 +2306,28 @@ mod tests {
             aligner.score_junctions(mapping, &mut junctions);
         }
 
-        for junction in junctions.iter() {
-            println!("Junction: {:?}", junction);
-        }
-        assert!(false);
+        /* MINIMAP2 Output
+        ENSG 413 604 ENST 6 -
+        ENSG 664 1329 ENST 6 -
+        ENSG 1485 7857 ENST 6 -
+        */
 
-        assert_eq!(alignments.len(), 2);
+        assert_eq!(junctions.len(), 3, "expecting 3 junctions for this.");
+
+        assert_eq!(junctions[0].start, 413);
+        assert_eq!(junctions[0].end, 604);
+        assert_eq!(junctions[0].score, 6);
+        assert_eq!(junctions[0].strand, Strand::Reverse);
+
+        assert_eq!(junctions[1].start, 664);
+        assert_eq!(junctions[1].end, 1329);
+        assert_eq!(junctions[1].score, 6);
+        assert_eq!(junctions[1].strand, Strand::Reverse);
+
+        assert_eq!(junctions[2].start, 1485);
+        assert_eq!(junctions[2].end, 7857);
+        assert_eq!(junctions[2].score, 6);
+        assert_eq!(junctions[2].strand, Strand::Reverse);
     }
 
     #[test]
