@@ -1576,8 +1576,10 @@ impl Aligner<Built> {
                             Strand::Forward
                         },
                     );
-
                     junctions.push(junction);
+
+                    // Increment the offset by the junction len
+                    target_offset += len;
                 }
                 // Advance target offset by size for other operations
                 _ => {
