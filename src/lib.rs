@@ -708,8 +708,8 @@ where
             return Err("Index File does not exist");
         }
 
-        // Confirm file is not empty
-        if path.as_ref().metadata().unwrap().len() == 0 {
+        // Confirm file is not empty if it is a regular file
+        if path.as_ref().is_file() && path.as_ref().metadata().unwrap().len() == 0 {
             return Err("Index File is empty");
         }
 
@@ -2270,7 +2270,7 @@ mod tests {
     #[test]
     fn mapopt_defaults() {
         let aligner = Aligner::builder().map_ont();
-        println!("{:#?}", aligner.mapopt);       
+        println!("{:#?}", aligner.mapopt);
 
         let aligner = Aligner::builder();
         println!("{:#?}", aligner.mapopt);
