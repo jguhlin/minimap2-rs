@@ -352,7 +352,7 @@ mod tests {
     use super::*;
     use crate::Aligner;
     use rust_htslib::bam::ext::BamRecordExtensions;
-    use rust_htslib::bam::{header::Header, record::Aux, Read, Reader, Record};
+    use rust_htslib::bam::{Read, Reader, Record, header::Header, record::Aux};
 
     #[test]
     fn test_index() {

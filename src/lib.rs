@@ -93,6 +93,7 @@ static LRHQAE: &CStr = c"lr:hqae";
 static LRHQ: &CStr = c"lr:hq";
 static SPLICE: &CStr = c"splice";
 static SPLICEHQ: &CStr = c"splice:hq";
+static SPLICESR: &CStr = c"splice:sr";
 static ASM: &CStr = c"asm";
 static ASM5: &CStr = c"asm5";
 static ASM10: &CStr = c"asm10";
@@ -133,6 +134,7 @@ pub enum Preset {
     LrHq,
     Splice,
     SpliceHq,
+    SpliceSr,
     Asm,
     Asm5,
     Asm10,
@@ -156,6 +158,7 @@ impl From<Preset> for *const libc::c_char {
             Preset::LrHq => LRHQ.as_ptr(),
             Preset::Splice => SPLICE.as_ptr(),
             Preset::SpliceHq => SPLICEHQ.as_ptr(),
+            Preset::SpliceSr => SPLICESR.as_ptr(),
             Preset::Asm => ASM.as_ptr(),
             Preset::Asm5 => ASM5.as_ptr(),
             Preset::Asm10 => ASM10.as_ptr(),
@@ -386,6 +389,19 @@ impl Aligner<Unset> {
     /// ```
     pub fn splice_hq(self) -> Aligner<PresetSet> {
         self.preset(Preset::SpliceHq)
+    }
+
+    /// Ergonomic function for Aligner. Sets the minimap2 preset to splice:sr
+    ///
+    /// Presets should be called before any other options are set, as they change multiple
+    /// options at once.
+    ///
+    /// ```rust
+    /// # use minimap2::*;
+    /// Aligner::builder().splice_sr();
+    /// ```
+    pub fn splice_sr(self) -> Aligner<PresetSet> {
+        self.preset(Preset::SpliceSr)
     }
 
     /// Ergonomic function for Aligner. Sets the minimap2 preset to Asm
@@ -891,11 +907,71 @@ where
 }
 
 impl Aligner<Built> {
+    /// Load splice/junc data from `bed_path` into the underlying `mm_idx_t`.
+    /// Equivalent to -j <bed_path> in minimap2.
+    pub fn read_junction(&self, bed_path: &str) -> Result<(), i32> {
+        let idx: *mut mm_idx_t = self.idx.as_ref().unwrap().idx as *mut _;
+
+        let c_bed = CString::new(bed_path).map_err(|_| -1)?;
+        // call into C
+        let ret = unsafe {
+            mm_idx_jjump_read(
+                idx,
+                c_bed.as_ptr(),
+                MM_JUNC_ANNO as libc::c_int,
+                -1 as libc::c_int,
+            )
+        };
+        if ret == 0 {
+            Ok(())
+        } else {
+            println!("Failed to load the jump BED file");
+            Err(ret)
+        }
+    }
+
+    ///
+    pub fn read_pass1(&self, bed_path: &str) -> Result<(), i32> {
+        let idx: *mut mm_idx_t = self.idx.as_ref().unwrap().idx as *mut _;
+
+        let c_bed = CString::new(bed_path).map_err(|_| -1)?;
+        // call into C
+        let ret = unsafe {
+            mm_idx_jjump_read(
+                idx,
+                c_bed.as_ptr(),
+                MM_JUNC_MISC as libc::c_int,
+                5 as libc::c_int,
+            )
+        };
+        if ret == 0 {
+            Ok(())
+        } else {
+            println!("Failed to load the pass-1 jump BED file");
+            Err(ret)
+        }
+    }
+
+    pub fn read_splice_scores(&self, file_path: &str) -> Result<(), i32> {
+        let idx: *mut mm_idx_t = self.idx.as_ref().unwrap().idx as *mut _;
+
+        let c_filepath = CString::new(file_path).map_err(|_| -1)?;
+        unsafe {
+            mm_idx_spsc_read(idx, c_filepath.as_ptr(), mm_max_spsc_bonus(&self.mapopt));
+        };
+
+        if unsafe { (*idx).spsc == std::ptr::null_mut() } {
+            println!("Failed to load the splice score file");
+            Err(-1)
+        } else {
+            Ok(())
+        }
+    }
+
     /// Returns the number of sequences in the index
     pub fn n_seq(&self) -> u32 {
         unsafe {
-            // let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
-            let idx: *const mm_idx_t = &(***self.idx.as_ref().unwrap());
+            let idx: *const mm_idx_t = self.idx.as_ref().unwrap().idx as *const _;
             (*idx).n_seq as u32
         }
     }
@@ -906,9 +982,8 @@ impl Aligner<Built> {
     /// Remainds valid as long as the aligner is valid
     pub fn get_seq<'aln>(&'aln self, i: usize) -> Option<&'aln mm_idx_seq_t> {
         unsafe {
-            // let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
-            // let idx: *const mm_idx_t = *idx;
-            let idx: *const mm_idx_t = &(***self.idx.as_ref().unwrap());
+            let idx: *const mm_idx_t = self.idx.as_ref().unwrap().idx as *const _;
+
             // todo, should this be > or >=
             if i > self.n_seq() as usize {
                 return None;
@@ -994,7 +1069,7 @@ impl Aligner<Built> {
         };
 
         let mappings = BUF.with_borrow_mut(|buf| {
-            let km: *mut c_void = unsafe { mm_tbuf_get_km(buf.get_buf()) };
+            let km: *mut libc::c_void = unsafe { mm_tbuf_get_km(buf.get_buf()) };
 
             mm_reg = MaybeUninit::new(unsafe {
                 mm_map(
@@ -1016,9 +1091,20 @@ impl Aligner<Built> {
                     let mm_reg1_const_ptr = mm_reg1_mut_ptr as *const mm_reg1_t;
                     let reg: mm_reg1_t = *mm_reg1_mut_ptr;
 
-                    let idx = Arc::as_ptr(self.idx.as_ref().unwrap());
-                    let contig =
-                        std::ffi::CStr::from_ptr((*(**idx).seq.offset(reg.rid as isize)).name);
+                    let idx: *const mm_idx_t = self.idx.as_ref().unwrap().idx as *const _;
+
+                    let contig = {
+                        let seqs = (*idx).seq;
+                        let entry = seqs.offset(reg.rid as isize);
+                        let name_ptr: *const libc::c_char = (*entry).name;
+                        std::ffi::CStr::from_ptr(name_ptr)
+                    };
+
+                    let target_len = {
+                        let seqs = (*idx).seq;
+                        let entry = seqs.offset(reg.rid as isize);
+                        (*entry).len as i32
+                    };
 
                     let is_primary = reg.parent == reg.id && (reg.sam_pri() > 0);
                     let is_supplementary = (reg.parent == reg.id) && (reg.sam_pri() == 0);
@@ -1111,16 +1197,14 @@ impl Aligner<Built> {
                         };
 
                         let (cs_str, md_str) = if cs || md {
-                            // let idx: *const mm_idx_t = *Arc::as_ptr(self.idx.as_ref().unwrap());
-                            let idx: *const mm_idx_t = &(***self.idx.as_ref().unwrap());
-
                             let cs_str = if cs {
                                 let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
                                 let mut m_cs_string: libc::c_int = 0i32;
 
                                 // This solves a weird segfault...
-                                let km = km_init();
+                                // let km = km_init();
 
+                                /*
                                 let _cs_len = mm_gen_cs(
                                     km,
                                     &mut cs_string,
@@ -1135,37 +1219,60 @@ impl Aligner<Built> {
                                     .to_str()
                                     .unwrap()
                                     .to_string();
+                                */
 
-                                libc::free(cs_string as *mut c_void);
-                                km_destroy(km);
-                                Some(_cs_string)
+                                let _cs_len = {
+                                    mm_gen_cs(
+                                        km,
+                                        &mut cs_string,
+                                        &mut m_cs_string,
+                                        idx,
+                                        mm_reg1_const_ptr,
+                                        seq.as_ptr() as *const _,
+                                        1,
+                                    )
+                                };
+                                let _cs = {
+                                    let s =
+                                        CStr::from_ptr(cs_string).to_string_lossy().into_owned();
+                                    libc::free(cs_string as *mut _);
+                                    s
+                                };
+
+                                // libc::free(cs_string as *mut c_void);
+                                // km_destroy(km);
+                                Some(_cs)
                             } else {
                                 None
                             };
 
                             let md_str = if md {
-                                let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
-                                let mut m_cs_string: libc::c_int = 0i32;
+                                // scratch-space pointers & lengths
+                                let mut md_buf: *mut libc::c_char = std::ptr::null_mut();
+                                let mut md_len: libc::c_int = 0;
 
-                                // This solves a weird segfault...
-                                let km = km_init();
+                                // generate the MD tag into our ThreadBuffer’s km pool
+                                let _written = {
+                                    mm_gen_MD(
+                                        km,
+                                        &mut md_buf,
+                                        &mut md_len,
+                                        idx,
+                                        mm_reg1_const_ptr,
+                                        seq.as_ptr() as *const _,
+                                    )
+                                };
 
-                                let _md_len = mm_gen_MD(
-                                    km,
-                                    &mut cs_string,
-                                    &mut m_cs_string,
-                                    idx,
-                                    mm_reg1_const_ptr,
-                                    seq.as_ptr() as *const libc::c_char,
-                                );
-                                let _md_string = std::ffi::CStr::from_ptr(cs_string)
-                                    .to_str()
-                                    .unwrap()
-                                    .to_string();
+                                // turn it into a Rust String and free the C buffer
+                                let md_string = {
+                                    let s = std::ffi::CStr::from_ptr(md_buf)
+                                        .to_string_lossy()
+                                        .into_owned();
+                                    libc::free(md_buf as *mut libc::c_void);
+                                    s
+                                };
 
-                                libc::free(cs_string as *mut c_void);
-                                km_destroy(km);
-                                Some(_md_string)
+                                Some(md_string)
                             } else {
                                 None
                             };
@@ -1194,7 +1301,11 @@ impl Aligner<Built> {
                             .to_string(),
                     );
 
-                    let target_len = (*(**idx).seq.offset(reg.rid as isize)).len as i32;
+                    let target_len = {
+                        let seqs = (*idx).seq;
+                        let entry = seqs.offset(reg.rid as isize);
+                        (*entry).len as i32
+                    };
 
                     mappings.push(Mapping {
                         target_name: Some(Arc::clone(&target_name_arc)),
@@ -1267,7 +1378,7 @@ impl Aligner<Built> {
             let record = match record {
                 Ok(record) => record,
                 Err(_) => {
-                    return Err("Error reading record in FASTA/X files. Please confirm integrity.")
+                    return Err("Error reading record in FASTA/X files. Please confirm integrity.");
                 }
             };
 
@@ -1718,7 +1829,12 @@ mod tests {
                 "14^CC1C11A12T1A7T4^T1A48A2A21T0T8^T2A5T2A4C0A0C2T0C2A4A17"
             ))
         );
-        assert_eq!(align.cs, Some(String::from(":14-cc:1*ct:2+atc:9*ag:12*tc:1*ac:7*tc:4-t:1*ag:48*ag:2*ag:21*tc*tc:8-t:2*ag:5*tc:2*ag:4*ct*ac*ct:2*tc*ct:2*ag:4*ag:17")));
+        assert_eq!(
+            align.cs,
+            Some(String::from(
+                ":14-cc:1*ct:2+atc:9*ag:12*tc:1*ac:7*tc:4-t:1*ag:48*ag:2*ag:21*tc*tc:8-t:2*ag:5*tc:2*ag:4*ct*ac*ct:2*tc*ct:2*ag:4*ag:17"
+            ))
+        );
 
         let aligner = Aligner::builder()
             .preset(Preset::MapOnt)

@@ -1,7 +1,7 @@
-use minimap2::*;
-use needletail::{parse_fastx_file, FastxReader};
-use rayon::prelude::*;
 use clap::Parser;
+use minimap2::*;
+use needletail::{FastxReader, parse_fastx_file};
+use rayon::prelude::*;
 
 use std::path::PathBuf;
 use std::{error::Error, path::Path};
