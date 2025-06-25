@@ -1,6 +1,6 @@
 [package]
 name = "minimap2-sys"
-version = "0.1.22+minimap2.2.29"
+version = "0.1.23+minimap2.2.30"
 edition = "2024"
 links = "libminimap2"
 authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
@@ -40,9 +40,9 @@ pkg-config = "0.3"
 
 [build-dependencies.bindgen]
 optional = true
-version = "0.71"
+version = "0.72"
 default-features = false
-features = ["which-rustfmt", "runtime"]
+features = ["runtime"]
 
 [build-dependencies.cc]
 version = "1.2"
