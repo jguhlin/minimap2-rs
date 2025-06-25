@@ -1,6 +1,6 @@
 [package]
 name = "minimap2"
-version = "0.1.24+minimap2.2.29"
+version = "0.1.25+minimap2.2.30"
 edition = "2024"
 authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
 license = "MIT OR Apache-2.0"
@@ -35,7 +35,7 @@ rust-htslib = { version = "0.49", default-features = false, optional = true }
 [dev-dependencies]
 rayon = "1.10"
 crossbeam = "0.8.4"
-clap = { version = "4.5.23", features = ["derive"] }
+clap = { version = "4.5.40", features = ["derive"] }
 needletail = { version = "0.6", default-features = false}
 
 # The end-user should decide this...

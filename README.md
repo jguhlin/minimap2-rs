@@ -1,25 +1,24 @@
-A rust FFI library for [minimap2](https://github.com/lh3/minimap2/). In development! Feedback appreciated!
-
 [![https://crates.io/crates/minimap2](https://img.shields.io/crates/v/minimap2.svg)](https://crates.io/crates/minimap2)
 [![https://docs.rs/minimap2/latest/minimap2/](https://img.shields.io/docsrs/minimap2)](https://docs.rs/minimap2/latest/minimap2/)
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/jguhlin/minimap2-rs/tree/main.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/jguhlin/minimap2-rs/tree/main)
 [![codecov](https://codecov.io/gh/jguhlin/minimap2-rs/branch/main/graph/badge.svg?token=huw27ZC6Qy)](https://codecov.io/gh/jguhlin/minimap2-rs)
 
-# Structure
-minimap2-sys is the raw FFI bindings to minimap2. minimap2 is the more opinionated, rusty version.
+# Introduction
+A rust FFI wrapper library for [minimap2](https://github.com/lh3/minimap2/) with support for SIMDe, htslib, zlib-ng, and curl.
 
 # How to use
 ## Requirements
 ```toml
-minimap2 = "0.1.24+minimap2.2.29"
+minimap2 = "0.1.25+minimap2.2.30"
 ```
 Also see [Features](#features)
 
-Tested with rustc 1.82.0 and nightly. So probably a good idea to upgrade before running. But let me know if you run into pain points with older versions and will try to fix.
+Tested with rustc 1.86.0. Recommended to use the latest stable version of rust, but if you need support for an older version, please open an issue.
 
 ## Minimap2 Version Table
 | minimap2-rs     | minimap2 |
 |-----------------|----------|
+| 0.1.25          | 2.30     |
 | 0.1.24          | 2.29     |
 | 0.1.18 - 0.1.23 | 2.28     |
 | 0.1.17          | 2.27     |
