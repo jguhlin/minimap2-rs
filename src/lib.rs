@@ -1109,8 +1109,6 @@ impl Aligner<Built> {
         };
 
         let mappings = BUF.with_borrow_mut(|buf| {
-            let km: *mut libc::c_void = unsafe { mm_tbuf_get_km(buf.get_buf()) };
-
             mm_reg = MaybeUninit::new(unsafe {
                 mm_map(
                     &**self.idx.as_ref().unwrap().as_ref() as *const mm_idx_t,
@@ -1124,6 +1122,8 @@ impl Aligner<Built> {
             });
 
             let mut mappings = Vec::with_capacity(n_regs as usize);
+
+            let km: *mut libc::c_void = unsafe { mm_tbuf_get_km(buf.get_buf()) };
 
             for i in 0..n_regs {
                 unsafe {
