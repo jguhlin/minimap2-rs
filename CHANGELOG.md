@@ -1,3 +1,6 @@
+### 0.1.27 minimap2 2.30
++ Re-release because some older code snuck in
+
 ### 0.1.26 minimap2 2.30
 + Fix segfault related to #128, with_cigar usage @rob-p
 
