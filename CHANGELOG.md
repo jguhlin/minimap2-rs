@@ -1,3 +1,6 @@
+### 0.1.26 minimap2 2.30
++ Fix segfault related to #128, with_cigar usage @rob-p
+
 ### 0.1.25 minimap2 2.30
 + Update minimap2-sys to 2.30
 
