@@ -5,15 +5,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    commit-message:
-      # Prefix all commit messages with "deps: "
-      prefix: "deps"
 
   # Update dependabot
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
-    commit-message:
-      # Prefix all commit messages with "deps: "
-      prefix: "deps"
