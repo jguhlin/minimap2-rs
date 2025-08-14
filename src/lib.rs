@@ -941,6 +941,28 @@ where
 
 impl Aligner<Built> {
     /// Load splice/junc data from `bed_path` into the underlying `mm_idx_t`.
+    /// Equivalent to --junc-bed <bed_path> in minimap2.
+    pub fn read_junction_lr(&self, bed_path: &str) -> Result<(), i32> {
+        let idx: *mut mm_idx_t = self.idx.as_ref().unwrap().idx as *mut _;
+
+        let c_bed = CString::new(bed_path).map_err(|_| -1)?;
+        // call into C
+        let ret = unsafe {
+            mm_idx_bed_read(
+                idx,
+                c_bed.as_ptr(),
+                1 as libc::c_int,
+            )
+        };
+        if ret == 0 {
+            Ok(())
+        } else {
+            println!("Failed to load the junction BED file");
+            Err(ret)
+        }
+    }
+
+    /// Load splice/junc data from `bed_path` into the underlying `mm_idx_t`.
     /// Equivalent to -j <bed_path> in minimap2.
     pub fn read_junction(&self, bed_path: &str) -> Result<(), i32> {
         let idx: *mut mm_idx_t = self.idx.as_ref().unwrap().idx as *mut _;
