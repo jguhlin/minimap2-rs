@@ -1,3 +1,6 @@
+### 0.1.28 minimap2 2.30 (UNRELEASED)
++ Add fn to implement --junc-bed option @shamoni
+
 ### 0.1.27 minimap2 2.30
 + Re-release because some older code snuck in
 
