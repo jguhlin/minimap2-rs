@@ -821,7 +821,7 @@ where
                         .to_str()
                         .expect("index should encode valid reference names");
                     let name_len = name.len();
-                    if name_len >= (u8::MAX as usize) {
+                    if name_len > (u8::MAX as usize) {
                         let s = format!(
                             "Refusing to build an dump the index, since it will be incorrect. The reference {name} has a name length of {name_len}, but minimap2 does not permit reference names longer than 255 characters."
                         );
