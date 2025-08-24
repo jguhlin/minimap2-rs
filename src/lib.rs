@@ -762,6 +762,7 @@ where
             return Err("Index File is empty");
         }
 
+        let will_serialize = output.is_some();
         let output = match output {
             Some(output) => match std::ffi::CString::new(output) {
                 Ok(output) => output,
@@ -777,6 +778,9 @@ where
         let idx;
 
         let idx_reader = unsafe { idx_reader.assume_init() };
+        // the call that populates this returns 0 if the opened file is not a pre-existing index
+        // and the file size (so a strictly positive number of bytes) otherwise
+        let is_pre_existing_index = unsafe { (*idx_reader).is_idx > 0 };
 
         unsafe {
             // Just a test read? Just following: https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L147
@@ -796,7 +800,7 @@ where
         let mm_idx = unsafe { idx.assume_init() };
         self.idx = Some(Arc::new(mm_idx.into()));
 
-        Ok(Aligner {
+        let aln = Aligner {
             idxopt: self.idxopt,
             mapopt: self.mapopt,
             threads: self.threads,
@@ -804,7 +808,32 @@ where
             idx_reader: Some(Arc::new(unsafe { *idx_reader })),
             cigar_clipping: self.cigar_clipping,
             _state: Built,
-        })
+        };
+        // make sure that the names of the references are all short enough to fit in
+        // minimap2's serialized index format
+        // Note: Also, we only care about this if we are serializing the index to file
+        if !is_pre_existing_index && will_serialize {
+            let n_seq = aln.n_seq() as usize;
+            for i in 0..n_seq {
+                if let Some(ref_seq) = aln.get_seq(i) {
+                    let c_str = unsafe { CStr::from_ptr(ref_seq.name) };
+                    let name = c_str
+                        .to_str()
+                        .expect("index should encode valid reference names");
+                    let name_len = name.len();
+                    if name_len >= (u8::MAX as usize) {
+                        let s = format!(
+                            "Refusing to build an dump the index, since it will be incorrect. The reference {name} has a name length of {name_len}, but minimap2 does not permit reference names longer than 255 characters."
+                        );
+                        return Err(s.leak());
+                    }
+                } else {
+                    return Err("could not properly obtain reference sequence record from index");
+                }
+            }
+        }
+
+        Ok(aln)
     }
 
     /// Use a single sequence as the index. Sets the sequence ID to "N/A".
@@ -947,13 +976,7 @@ impl Aligner<Built> {
 
         let c_bed = CString::new(bed_path).map_err(|_| -1)?;
         // call into C
-        let ret = unsafe {
-            mm_idx_bed_read(
-                idx,
-                c_bed.as_ptr(),
-                1 as libc::c_int,
-            )
-        };
+        let ret = unsafe { mm_idx_bed_read(idx, c_bed.as_ptr(), 1 as libc::c_int) };
         if ret == 0 {
             Ok(())
         } else {
@@ -2671,6 +2694,29 @@ mod tests {
                 .with_sam_hit_only()
                 .with_seq_and_id(b"ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA",  b"ref")
                 .unwrap();
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn bail_on_long_ref_names() {
+        let aligner = Aligner::builder().map_ont();
+        let aligner = aligner
+            .with_index_threads(1)
+            .with_index("test_data/problematic.fasta", Some("problematic.mmi"));
+        if let Err(e) = aligner {
+            panic!("{e:#?}");
+        }
+    }
+
+    #[test]
+    fn only_bail_on_long_ref_names_if_dumping() {
+        let aligner = Aligner::builder().map_ont();
+        let aligner = aligner
+            .with_index_threads(1)
+            .with_index("test_data/problematic.fasta", None);
+        if let Err(e) = aligner {
+            panic!("{e:#?}");
         }
     }
 }
