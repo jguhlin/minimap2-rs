@@ -5,10 +5,6 @@
 //! # Implementation
 //! This is a wrapper library around `minimap2-sys`, which are lower level bindings for minimap2.
 //!
-//! # Caveats
-//! Setting threads with the builder pattern applies only to building the index, not the mapping.
-//! For an example of using multiple threads with mapping, see: [fakeminimap2](https://github.com/jguhlin/minimap2-rs/blob/main/fakeminimap2/src/main.rs)
-//!
 //! # Crate Features
 //! This crate has multiple create features available.
 //! * map-file - Enables the ability to map a file directly to a reference. Enabled by deafult
@@ -344,7 +340,13 @@ pub struct Aligner<S: BuilderState> {
     pub threads: usize,
 
     /// Index created by minimap2
+    /// For multi-part indexes (large reference genomes), this contains all parts
     pub idx: Option<Arc<MmIdx>>,
+
+    /// Index parts for multi-part indexes (large reference genomes)
+    /// When a reference exceeds batch_size, minimap2 splits it into multiple parts.
+    /// Each part is processed independently during mapping.
+    pub idx_parts: Vec<Arc<MmIdx>>,
 
     /// Index reader created by minimap2
     pub idx_reader: Option<Arc<mm_idx_reader_t>>,
@@ -364,6 +366,7 @@ impl Default for Aligner<Unset> {
             mapopt: Default::default(),
             threads: 1,
             idx: None,
+            idx_parts: Vec::new(),
             idx_reader: None,
             cigar_clipping: false,
             _state: Unset,
@@ -606,6 +609,7 @@ impl Aligner<Unset> {
             mapopt: self.mapopt,
             threads: self.threads,
             idx: self.idx,
+            idx_parts: self.idx_parts,
             idx_reader: self.idx_reader,
             cigar_clipping: self.cigar_clipping,
             _state: PresetSet,
@@ -775,36 +779,62 @@ where
             mm_idx_reader_open(path_str.as_ptr(), &self.idxopt, output.as_ptr())
         });
 
-        let idx;
-
         let idx_reader = unsafe { idx_reader.assume_init() };
         // the call that populates this returns 0 if the opened file is not a pre-existing index
         // and the file size (so a strictly positive number of bytes) otherwise
         let is_pre_existing_index = unsafe { (*idx_reader).is_idx > 0 };
 
+        // Multi-part index reading following C minimap2 pattern
+        // Transparently handle both single-part and multi-part indexes
+        // Large reference genomes are automatically split into parts based on batch_size
+        let mut idx_parts = Vec::new();
+        let mut first_idx = None;
+        
         unsafe {
-            // Just a test read? Just following: https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L147
-            idx = MaybeUninit::new(mm_idx_reader_read(
-                // self.idx_reader.as_mut().unwrap() as *mut mm_idx_reader_t,
-                &mut *idx_reader as *mut mm_idx_reader_t,
-                self.threads as libc::c_int,
-            ));
-            // Close the reader
+            // Read all index parts in a loop, just like C minimap2 does
+            // This handles both single-part and multi-part indexes transparently
+            loop {
+                let idx_part = mm_idx_reader_read(
+                    &mut *idx_reader as *mut mm_idx_reader_t,
+                    self.threads as libc::c_int,
+                );
+                
+                if idx_part.is_null() {
+                    break; // No more parts to read
+                }
+                
+                if first_idx.is_none() {
+                    // Use the first part for mapping option updates and API compatibility
+                    mm_mapopt_update(&mut self.mapopt, idx_part);
+                    mm_idx_index_name(idx_part);
+                    // Store the first part - don't duplicate it in both places
+                    let first_part = Arc::new(idx_part.into());
+                    first_idx = Some(Arc::clone(&first_part));
+                    idx_parts.push(first_part);
+                } else {
+                    // Store additional parts for mapping
+                    idx_parts.push(Arc::new(idx_part.into()));
+                }
+            }
+            
+            // Close the reader after reading all parts
             mm_idx_reader_close(idx_reader);
-            // Set index opts
-            mm_mapopt_update(&mut self.mapopt, *idx.as_ptr());
-            // Idx index name
-            mm_idx_index_name(idx.assume_init());
         }
-
-        let mm_idx = unsafe { idx.assume_init() };
-        self.idx = Some(Arc::new(mm_idx.into()));
+        
+        // Ensure we got at least one index part
+        if first_idx.is_none() {
+            return Err("Failed to read index - no parts found");
+        }
+        
+        self.idx = first_idx;
+        self.idx_parts = idx_parts;
 
         let aln = Aligner {
             idxopt: self.idxopt,
             mapopt: self.mapopt,
             threads: self.threads,
             idx: self.idx,
+            idx_parts: self.idx_parts,
             idx_reader: Some(Arc::new(unsafe { *idx_reader })),
             cigar_clipping: self.cigar_clipping,
             _state: Built,
@@ -939,7 +969,9 @@ where
         });
 
         let mm_idx = unsafe { idx.assume_init() };
-        self.idx = Some(Arc::new(mm_idx.into()));
+        let idx_arc = Arc::new(mm_idx.into());
+        self.idx = Some(Arc::clone(&idx_arc));
+        self.idx_parts = vec![idx_arc]; // Sequence-based indexes are always single-part
 
         self.mapopt.mid_occ = 1000;
 
@@ -948,6 +980,7 @@ where
             mapopt: self.mapopt,
             threads: self.threads,
             idx: self.idx,
+            idx_parts: self.idx_parts,
             idx_reader: None,
             cigar_clipping: self.cigar_clipping,
             _state: Built,
@@ -1154,19 +1187,25 @@ impl Aligner<Built> {
         };
 
         let mappings = BUF.with_borrow_mut(|buf| {
-            mm_reg = MaybeUninit::new(unsafe {
-                mm_map(
-                    &**self.idx.as_ref().unwrap().as_ref() as *const mm_idx_t,
-                    seq.len() as i32,
-                    seq.as_ptr() as *const ::std::os::raw::c_char,
-                    &mut n_regs,
-                    buf.get_buf(),
-                    &map_opt,
-                    qname,
-                )
-            });
+            let mut all_mappings = Vec::new();
+            
+            // Map against all index parts transparently
+            // For single-part indexes, this will iterate once
+            // For multi-part indexes, this will iterate over all parts
+            for idx_part in &self.idx_parts {
+                mm_reg = MaybeUninit::new(unsafe {
+                    mm_map(
+                        &**idx_part.as_ref() as *const mm_idx_t,
+                        seq.len() as i32,
+                        seq.as_ptr() as *const ::std::os::raw::c_char,
+                        &mut n_regs,
+                        buf.get_buf(),
+                        &map_opt,
+                        qname,
+                    )
+                });
 
-            let mut mappings = Vec::with_capacity(n_regs as usize);
+                let mut mappings = Vec::with_capacity(n_regs as usize);
 
             let km: *mut libc::c_void = unsafe { mm_tbuf_get_km(buf.get_buf()) };
 
@@ -1176,7 +1215,7 @@ impl Aligner<Built> {
                     let mm_reg1_const_ptr = mm_reg1_mut_ptr as *const mm_reg1_t;
                     let reg: mm_reg1_t = *mm_reg1_mut_ptr;
 
-                    let idx = self.get_idx();
+                    let idx = &**idx_part.as_ref();
 
                     let contig = {
                         let seqs = (*idx).seq;
@@ -1430,15 +1469,21 @@ impl Aligner<Built> {
                     libc::free(reg.p as *mut c_void);
                 }
             }
-            mappings
-        });
-        // free some stuff here
-        unsafe {
-            // Free mm_regs
-            let ptr: *mut mm_reg1_t = mm_reg.assume_init();
-            let c_void_ptr: *mut c_void = ptr as *mut c_void;
-            libc::free(c_void_ptr);
+            
+            // Add mappings from this part to the overall result
+            all_mappings.extend(mappings);
+            
+            // Free the mm_regs for this part
+            unsafe {
+                let ptr: *mut mm_reg1_t = mm_reg.assume_init();
+                let c_void_ptr: *mut c_void = ptr as *mut c_void;
+                libc::free(c_void_ptr);
+            }
         }
+        
+        all_mappings
+    });
+        
         Ok(mappings)
     }
 
@@ -1840,6 +1885,7 @@ mod tests {
             mapopt,
             threads,
             idx,
+            idx_parts: Vec::new(),
             idx_reader,
             cigar_clipping: false,
             _state: Unset,
@@ -2543,8 +2589,8 @@ mod tests {
                 Arc::as_ptr(aligner_.idx.as_ref().unwrap())
             );
 
-            // Confirm we have a strong count of 2
-            assert_eq!(Arc::strong_count(&aligner.idx.as_ref().unwrap()), 2);
+            // Confirm we have a strong count of 4 (2 clones × 2 storage locations: idx and idx_parts[0])
+            assert_eq!(Arc::strong_count(&aligner.idx.as_ref().unwrap()), 4);
 
             let jh0 = s.spawn(move || {
                 let mappings = aligner_.map("ACGGTAGAGAGGAAGAAGAAGGAATAGCGGACTTGTGTATTTTATCGTCATTCGTGGTTATCATATAGTTTATTGATTTGAAGACTACGTAAGTAATTTGAGGACTGATTAAAATTTTCTTTTTTAGCTTAGAGTCAATTAAAGAGGGCAAAATTTTCTCAAAAGACCATGGTGCATATGACGATAGCTTTAGTAGTATGGATTGGGCTCTTCTTTCATGGATGTTATTCAGAAGGAGTGATATATCGAGGTGTTTGAAACACCAGCGACACCAGAAGGCTGTGGATGTTAAATCGTAGAACCTATAGACGAGTTCTAAAATATACTTTGGGGTTTTCAGCGATGCAAAA".as_bytes(), false, false, None, None, Some(b"Sample Query")).unwrap();
@@ -2605,7 +2651,7 @@ mod tests {
                 assert!(mappings.len() > 0);
                 // Sleep 100ms
                 std::thread::sleep(std::time::Duration::from_millis(100));
-                assert!(Arc::strong_count(&aligner1.idx.as_ref().unwrap()) == 1);
+                assert!(Arc::strong_count(&aligner1.idx.as_ref().unwrap()) == 2); // idx and idx_parts[0]
                 println!("Second thread done");
             });
 

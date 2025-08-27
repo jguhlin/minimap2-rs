@@ -1,5 +1,9 @@
-### 0.1.28 minimap2 2.30 (UNRELEASED)
+### 0.1.29 minimap2 2.30 (UNRELEASED)
++ Experimental rust threads (and possible windows support)
+
+### 0.1.28 minimap2 2.30
 + Add fn to implement --junc-bed option @shamoni
++ Warn of long reference ID names properly @rob-p
 
 ### 0.1.27 minimap2 2.30
 + Re-release because some older code snuck in

@@ -8,3 +8,7 @@ test_data/*.mmi
 .ipynb_checkpoints
 .vscode/
 .quarto
+*/Cargo.lock
+*.log
+*.svg
+**/benchmark_results
