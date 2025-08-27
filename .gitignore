@@ -12,3 +12,5 @@ test_data/*.mmi
 *.log
 *.svg
 **/benchmark_results
+**/Cargo.lock
+*/Cargo.lock

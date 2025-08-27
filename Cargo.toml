@@ -1,6 +1,6 @@
 [package]
 name = "minimap2"
-version = "0.1.27+minimap2.2.30"
+version = "0.1.28+minimap2.2.30"
 edition = "2024"
 authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
 license = "MIT OR Apache-2.0"
@@ -29,7 +29,7 @@ exclude = ["minimappers2", "fakeminimap2", "minimap2-sys"]
 libc = "0.2"
 needletail = { version = "0.6", optional = true, default-features = false}
 
-minimap2-sys = { path = "./minimap2-sys", version = "0.1.23+minimap2.2.30" }
+minimap2-sys = { path = "./minimap2-sys", version = "0.1.24+minimap2.2.30" }
 rust-htslib = { version = "0.50", default-features = false, optional = true }
 
 [dev-dependencies]
