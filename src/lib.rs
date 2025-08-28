@@ -853,7 +853,7 @@ where
                     let name_len = name.len();
                     if name_len > (u8::MAX as usize) {
                         let s = format!(
-                            "Refusing to build an dump the index, since it will be incorrect. The reference {name} has a name length of {name_len}, but minimap2 does not permit reference names longer than 255 characters."
+                            "Refusing to build and dump the index, since it will be incorrect. The reference {name} has a name length of {name_len}, but serialized minimap2 indexes do not permit reference names longer than 255 characters."
                         );
                         return Err(s.leak());
                     }
