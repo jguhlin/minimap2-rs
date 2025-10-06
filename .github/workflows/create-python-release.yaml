@@ -185,7 +185,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y build-essential
       - uses: actions/download-artifact@v5
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v3
         with:
           subject-path: 'wheels-*/*'
       - name: Publish to PyPI
