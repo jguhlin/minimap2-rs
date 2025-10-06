@@ -14,3 +14,4 @@ test_data/*.mmi
 **/benchmark_results
 **/Cargo.lock
 */Cargo.lock
+Cargo.lock
