@@ -183,7 +183,7 @@ jobs:
       attestations: write
     steps:
       - run: sudo apt-get update && sudo apt-get install -y build-essential
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v7
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v3
         with:
