@@ -52,17 +52,7 @@ jobs:
     - name: Run minimap2-sys tests on Android x86_64
       run: cross test --target x86_64-linux-android
 
-  test-macos-13:
-    runs-on: macos-13
-    steps:
-    - uses: actions/checkout@v6
-      with:
-        submodules: 'recursive'
-    - run: cd minimap2-sys
-    - name: Run minimap2-sys tests
-      run: cargo test
-    - name: Run minimap2-sys simde tests
-      run: cargo test --features simde
+
       
   test-macos-14:
     runs-on: macos-14
