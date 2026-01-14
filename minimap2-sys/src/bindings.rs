@@ -705,15 +705,6 @@ pub struct max_align_t {
     pub __bindgen_padding_0: u64,
     pub __clang_max_align_nonce2: u128,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of max_align_t"][::std::mem::size_of::<max_align_t>() - 32usize];
-    ["Alignment of max_align_t"][::std::mem::align_of::<max_align_t>() - 16usize];
-    ["Offset of field: max_align_t::__clang_max_align_nonce1"]
-        [::std::mem::offset_of!(max_align_t, __clang_max_align_nonce1) - 0usize];
-    ["Offset of field: max_align_t::__clang_max_align_nonce2"]
-        [::std::mem::offset_of!(max_align_t, __clang_max_align_nonce2) - 16usize];
-};
 pub type z_size_t = usize;
 pub type Byte = ::std::os::raw::c_uchar;
 pub type uInt = ::std::os::raw::c_uint;
@@ -766,12 +757,6 @@ pub type __pid_t = ::std::os::raw::c_int;
 pub struct __fsid_t {
     pub __val: [::std::os::raw::c_int; 2usize],
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of __fsid_t"][::std::mem::size_of::<__fsid_t>() - 8usize];
-    ["Alignment of __fsid_t"][::std::mem::align_of::<__fsid_t>() - 4usize];
-    ["Offset of field: __fsid_t::__val"][::std::mem::offset_of!(__fsid_t, __val) - 0usize];
-};
 pub type __clock_t = ::std::os::raw::c_long;
 pub type __rlim_t = ::std::os::raw::c_ulong;
 pub type __rlim64_t = ::std::os::raw::c_ulong;
@@ -837,12 +822,6 @@ pub type register_t = ::std::os::raw::c_long;
 pub struct __sigset_t {
     pub __val: [::std::os::raw::c_ulong; 16usize],
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of __sigset_t"][::std::mem::size_of::<__sigset_t>() - 128usize];
-    ["Alignment of __sigset_t"][::std::mem::align_of::<__sigset_t>() - 8usize];
-    ["Offset of field: __sigset_t::__val"][::std::mem::offset_of!(__sigset_t, __val) - 0usize];
-};
 pub type sigset_t = __sigset_t;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -850,26 +829,12 @@ pub struct timeval {
     pub tv_sec: __time_t,
     pub tv_usec: __suseconds_t,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of timeval"][::std::mem::size_of::<timeval>() - 16usize];
-    ["Alignment of timeval"][::std::mem::align_of::<timeval>() - 8usize];
-    ["Offset of field: timeval::tv_sec"][::std::mem::offset_of!(timeval, tv_sec) - 0usize];
-    ["Offset of field: timeval::tv_usec"][::std::mem::offset_of!(timeval, tv_usec) - 8usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct timespec {
     pub tv_sec: __time_t,
     pub tv_nsec: __syscall_slong_t,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of timespec"][::std::mem::size_of::<timespec>() - 16usize];
-    ["Alignment of timespec"][::std::mem::align_of::<timespec>() - 8usize];
-    ["Offset of field: timespec::tv_sec"][::std::mem::offset_of!(timespec, tv_sec) - 0usize];
-    ["Offset of field: timespec::tv_nsec"][::std::mem::offset_of!(timespec, tv_nsec) - 8usize];
-};
 pub type suseconds_t = __suseconds_t;
 pub type __fd_mask = ::std::os::raw::c_long;
 #[repr(C)]
@@ -877,12 +842,6 @@ pub type __fd_mask = ::std::os::raw::c_long;
 pub struct fd_set {
     pub __fds_bits: [__fd_mask; 16usize],
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of fd_set"][::std::mem::size_of::<fd_set>() - 128usize];
-    ["Alignment of fd_set"][::std::mem::align_of::<fd_set>() - 8usize];
-    ["Offset of field: fd_set::__fds_bits"][::std::mem::offset_of!(fd_set, __fds_bits) - 0usize];
-};
 pub type fd_mask = __fd_mask;
 unsafe extern "C" {
     pub fn select(
@@ -919,58 +878,18 @@ pub struct __atomic_wide_counter__bindgen_ty_1 {
     pub __low: ::std::os::raw::c_uint,
     pub __high: ::std::os::raw::c_uint,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of __atomic_wide_counter__bindgen_ty_1"]
-        [::std::mem::size_of::<__atomic_wide_counter__bindgen_ty_1>() - 8usize];
-    ["Alignment of __atomic_wide_counter__bindgen_ty_1"]
-        [::std::mem::align_of::<__atomic_wide_counter__bindgen_ty_1>() - 4usize];
-    ["Offset of field: __atomic_wide_counter__bindgen_ty_1::__low"]
-        [::std::mem::offset_of!(__atomic_wide_counter__bindgen_ty_1, __low) - 0usize];
-    ["Offset of field: __atomic_wide_counter__bindgen_ty_1::__high"]
-        [::std::mem::offset_of!(__atomic_wide_counter__bindgen_ty_1, __high) - 4usize];
-};
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of __atomic_wide_counter"][::std::mem::size_of::<__atomic_wide_counter>() - 8usize];
-    ["Alignment of __atomic_wide_counter"]
-        [::std::mem::align_of::<__atomic_wide_counter>() - 8usize];
-    ["Offset of field: __atomic_wide_counter::__value64"]
-        [::std::mem::offset_of!(__atomic_wide_counter, __value64) - 0usize];
-    ["Offset of field: __atomic_wide_counter::__value32"]
-        [::std::mem::offset_of!(__atomic_wide_counter, __value32) - 0usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct __pthread_internal_list {
     pub __prev: *mut __pthread_internal_list,
     pub __next: *mut __pthread_internal_list,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of __pthread_internal_list"][::std::mem::size_of::<__pthread_internal_list>() - 16usize];
-    ["Alignment of __pthread_internal_list"]
-        [::std::mem::align_of::<__pthread_internal_list>() - 8usize];
-    ["Offset of field: __pthread_internal_list::__prev"]
-        [::std::mem::offset_of!(__pthread_internal_list, __prev) - 0usize];
-    ["Offset of field: __pthread_internal_list::__next"]
-        [::std::mem::offset_of!(__pthread_internal_list, __next) - 8usize];
-};
 pub type __pthread_list_t = __pthread_internal_list;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct __pthread_internal_slist {
     pub __next: *mut __pthread_internal_slist,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of __pthread_internal_slist"]
-        [::std::mem::size_of::<__pthread_internal_slist>() - 8usize];
-    ["Alignment of __pthread_internal_slist"]
-        [::std::mem::align_of::<__pthread_internal_slist>() - 8usize];
-    ["Offset of field: __pthread_internal_slist::__next"]
-        [::std::mem::offset_of!(__pthread_internal_slist, __next) - 0usize];
-};
 pub type __pthread_slist_t = __pthread_internal_slist;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -984,27 +903,6 @@ pub struct __pthread_mutex_s {
     pub __elision: ::std::os::raw::c_short,
     pub __list: __pthread_list_t,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of __pthread_mutex_s"][::std::mem::size_of::<__pthread_mutex_s>() - 40usize];
-    ["Alignment of __pthread_mutex_s"][::std::mem::align_of::<__pthread_mutex_s>() - 8usize];
-    ["Offset of field: __pthread_mutex_s::__lock"]
-        [::std::mem::offset_of!(__pthread_mutex_s, __lock) - 0usize];
-    ["Offset of field: __pthread_mutex_s::__count"]
-        [::std::mem::offset_of!(__pthread_mutex_s, __count) - 4usize];
-    ["Offset of field: __pthread_mutex_s::__owner"]
-        [::std::mem::offset_of!(__pthread_mutex_s, __owner) - 8usize];
-    ["Offset of field: __pthread_mutex_s::__nusers"]
-        [::std::mem::offset_of!(__pthread_mutex_s, __nusers) - 12usize];
-    ["Offset of field: __pthread_mutex_s::__kind"]
-        [::std::mem::offset_of!(__pthread_mutex_s, __kind) - 16usize];
-    ["Offset of field: __pthread_mutex_s::__spins"]
-        [::std::mem::offset_of!(__pthread_mutex_s, __spins) - 20usize];
-    ["Offset of field: __pthread_mutex_s::__elision"]
-        [::std::mem::offset_of!(__pthread_mutex_s, __elision) - 22usize];
-    ["Offset of field: __pthread_mutex_s::__list"]
-        [::std::mem::offset_of!(__pthread_mutex_s, __list) - 24usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct __pthread_rwlock_arch_t {
@@ -1021,36 +919,6 @@ pub struct __pthread_rwlock_arch_t {
     pub __pad2: ::std::os::raw::c_ulong,
     pub __flags: ::std::os::raw::c_uint,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of __pthread_rwlock_arch_t"][::std::mem::size_of::<__pthread_rwlock_arch_t>() - 56usize];
-    ["Alignment of __pthread_rwlock_arch_t"]
-        [::std::mem::align_of::<__pthread_rwlock_arch_t>() - 8usize];
-    ["Offset of field: __pthread_rwlock_arch_t::__readers"]
-        [::std::mem::offset_of!(__pthread_rwlock_arch_t, __readers) - 0usize];
-    ["Offset of field: __pthread_rwlock_arch_t::__writers"]
-        [::std::mem::offset_of!(__pthread_rwlock_arch_t, __writers) - 4usize];
-    ["Offset of field: __pthread_rwlock_arch_t::__wrphase_futex"]
-        [::std::mem::offset_of!(__pthread_rwlock_arch_t, __wrphase_futex) - 8usize];
-    ["Offset of field: __pthread_rwlock_arch_t::__writers_futex"]
-        [::std::mem::offset_of!(__pthread_rwlock_arch_t, __writers_futex) - 12usize];
-    ["Offset of field: __pthread_rwlock_arch_t::__pad3"]
-        [::std::mem::offset_of!(__pthread_rwlock_arch_t, __pad3) - 16usize];
-    ["Offset of field: __pthread_rwlock_arch_t::__pad4"]
-        [::std::mem::offset_of!(__pthread_rwlock_arch_t, __pad4) - 20usize];
-    ["Offset of field: __pthread_rwlock_arch_t::__cur_writer"]
-        [::std::mem::offset_of!(__pthread_rwlock_arch_t, __cur_writer) - 24usize];
-    ["Offset of field: __pthread_rwlock_arch_t::__shared"]
-        [::std::mem::offset_of!(__pthread_rwlock_arch_t, __shared) - 28usize];
-    ["Offset of field: __pthread_rwlock_arch_t::__rwelision"]
-        [::std::mem::offset_of!(__pthread_rwlock_arch_t, __rwelision) - 32usize];
-    ["Offset of field: __pthread_rwlock_arch_t::__pad1"]
-        [::std::mem::offset_of!(__pthread_rwlock_arch_t, __pad1) - 33usize];
-    ["Offset of field: __pthread_rwlock_arch_t::__pad2"]
-        [::std::mem::offset_of!(__pthread_rwlock_arch_t, __pad2) - 40usize];
-    ["Offset of field: __pthread_rwlock_arch_t::__flags"]
-        [::std::mem::offset_of!(__pthread_rwlock_arch_t, __flags) - 48usize];
-};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct __pthread_cond_s {
@@ -1062,25 +930,6 @@ pub struct __pthread_cond_s {
     pub __wrefs: ::std::os::raw::c_uint,
     pub __g_signals: [::std::os::raw::c_uint; 2usize],
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of __pthread_cond_s"][::std::mem::size_of::<__pthread_cond_s>() - 48usize];
-    ["Alignment of __pthread_cond_s"][::std::mem::align_of::<__pthread_cond_s>() - 8usize];
-    ["Offset of field: __pthread_cond_s::__wseq"]
-        [::std::mem::offset_of!(__pthread_cond_s, __wseq) - 0usize];
-    ["Offset of field: __pthread_cond_s::__g1_start"]
-        [::std::mem::offset_of!(__pthread_cond_s, __g1_start) - 8usize];
-    ["Offset of field: __pthread_cond_s::__g_refs"]
-        [::std::mem::offset_of!(__pthread_cond_s, __g_refs) - 16usize];
-    ["Offset of field: __pthread_cond_s::__g_size"]
-        [::std::mem::offset_of!(__pthread_cond_s, __g_size) - 24usize];
-    ["Offset of field: __pthread_cond_s::__g1_orig_size"]
-        [::std::mem::offset_of!(__pthread_cond_s, __g1_orig_size) - 32usize];
-    ["Offset of field: __pthread_cond_s::__wrefs"]
-        [::std::mem::offset_of!(__pthread_cond_s, __wrefs) - 36usize];
-    ["Offset of field: __pthread_cond_s::__g_signals"]
-        [::std::mem::offset_of!(__pthread_cond_s, __g_signals) - 40usize];
-};
 pub type __tss_t = ::std::os::raw::c_uint;
 pub type __thrd_t = ::std::os::raw::c_ulong;
 #[repr(C)]
@@ -1088,12 +937,6 @@ pub type __thrd_t = ::std::os::raw::c_ulong;
 pub struct __once_flag {
     pub __data: ::std::os::raw::c_int,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of __once_flag"][::std::mem::size_of::<__once_flag>() - 4usize];
-    ["Alignment of __once_flag"][::std::mem::align_of::<__once_flag>() - 4usize];
-    ["Offset of field: __once_flag::__data"][::std::mem::offset_of!(__once_flag, __data) - 0usize];
-};
 pub type pthread_t = ::std::os::raw::c_ulong;
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -1101,30 +944,12 @@ pub union pthread_mutexattr_t {
     pub __size: [::std::os::raw::c_char; 4usize],
     pub __align: ::std::os::raw::c_int,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pthread_mutexattr_t"][::std::mem::size_of::<pthread_mutexattr_t>() - 4usize];
-    ["Alignment of pthread_mutexattr_t"][::std::mem::align_of::<pthread_mutexattr_t>() - 4usize];
-    ["Offset of field: pthread_mutexattr_t::__size"]
-        [::std::mem::offset_of!(pthread_mutexattr_t, __size) - 0usize];
-    ["Offset of field: pthread_mutexattr_t::__align"]
-        [::std::mem::offset_of!(pthread_mutexattr_t, __align) - 0usize];
-};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union pthread_condattr_t {
     pub __size: [::std::os::raw::c_char; 4usize],
     pub __align: ::std::os::raw::c_int,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pthread_condattr_t"][::std::mem::size_of::<pthread_condattr_t>() - 4usize];
-    ["Alignment of pthread_condattr_t"][::std::mem::align_of::<pthread_condattr_t>() - 4usize];
-    ["Offset of field: pthread_condattr_t::__size"]
-        [::std::mem::offset_of!(pthread_condattr_t, __size) - 0usize];
-    ["Offset of field: pthread_condattr_t::__align"]
-        [::std::mem::offset_of!(pthread_condattr_t, __align) - 0usize];
-};
 pub type pthread_key_t = ::std::os::raw::c_uint;
 pub type pthread_once_t = ::std::os::raw::c_int;
 #[repr(C)]
@@ -1133,15 +958,6 @@ pub union pthread_attr_t {
     pub __size: [::std::os::raw::c_char; 56usize],
     pub __align: ::std::os::raw::c_long,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pthread_attr_t"][::std::mem::size_of::<pthread_attr_t>() - 56usize];
-    ["Alignment of pthread_attr_t"][::std::mem::align_of::<pthread_attr_t>() - 8usize];
-    ["Offset of field: pthread_attr_t::__size"]
-        [::std::mem::offset_of!(pthread_attr_t, __size) - 0usize];
-    ["Offset of field: pthread_attr_t::__align"]
-        [::std::mem::offset_of!(pthread_attr_t, __align) - 0usize];
-};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union pthread_mutex_t {
@@ -1149,17 +965,6 @@ pub union pthread_mutex_t {
     pub __size: [::std::os::raw::c_char; 40usize],
     pub __align: ::std::os::raw::c_long,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pthread_mutex_t"][::std::mem::size_of::<pthread_mutex_t>() - 40usize];
-    ["Alignment of pthread_mutex_t"][::std::mem::align_of::<pthread_mutex_t>() - 8usize];
-    ["Offset of field: pthread_mutex_t::__data"]
-        [::std::mem::offset_of!(pthread_mutex_t, __data) - 0usize];
-    ["Offset of field: pthread_mutex_t::__size"]
-        [::std::mem::offset_of!(pthread_mutex_t, __size) - 0usize];
-    ["Offset of field: pthread_mutex_t::__align"]
-        [::std::mem::offset_of!(pthread_mutex_t, __align) - 0usize];
-};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union pthread_cond_t {
@@ -1167,17 +972,6 @@ pub union pthread_cond_t {
     pub __size: [::std::os::raw::c_char; 48usize],
     pub __align: ::std::os::raw::c_longlong,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pthread_cond_t"][::std::mem::size_of::<pthread_cond_t>() - 48usize];
-    ["Alignment of pthread_cond_t"][::std::mem::align_of::<pthread_cond_t>() - 8usize];
-    ["Offset of field: pthread_cond_t::__data"]
-        [::std::mem::offset_of!(pthread_cond_t, __data) - 0usize];
-    ["Offset of field: pthread_cond_t::__size"]
-        [::std::mem::offset_of!(pthread_cond_t, __size) - 0usize];
-    ["Offset of field: pthread_cond_t::__align"]
-        [::std::mem::offset_of!(pthread_cond_t, __align) - 0usize];
-};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union pthread_rwlock_t {
@@ -1185,32 +979,12 @@ pub union pthread_rwlock_t {
     pub __size: [::std::os::raw::c_char; 56usize],
     pub __align: ::std::os::raw::c_long,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pthread_rwlock_t"][::std::mem::size_of::<pthread_rwlock_t>() - 56usize];
-    ["Alignment of pthread_rwlock_t"][::std::mem::align_of::<pthread_rwlock_t>() - 8usize];
-    ["Offset of field: pthread_rwlock_t::__data"]
-        [::std::mem::offset_of!(pthread_rwlock_t, __data) - 0usize];
-    ["Offset of field: pthread_rwlock_t::__size"]
-        [::std::mem::offset_of!(pthread_rwlock_t, __size) - 0usize];
-    ["Offset of field: pthread_rwlock_t::__align"]
-        [::std::mem::offset_of!(pthread_rwlock_t, __align) - 0usize];
-};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union pthread_rwlockattr_t {
     pub __size: [::std::os::raw::c_char; 8usize],
     pub __align: ::std::os::raw::c_long,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pthread_rwlockattr_t"][::std::mem::size_of::<pthread_rwlockattr_t>() - 8usize];
-    ["Alignment of pthread_rwlockattr_t"][::std::mem::align_of::<pthread_rwlockattr_t>() - 8usize];
-    ["Offset of field: pthread_rwlockattr_t::__size"]
-        [::std::mem::offset_of!(pthread_rwlockattr_t, __size) - 0usize];
-    ["Offset of field: pthread_rwlockattr_t::__align"]
-        [::std::mem::offset_of!(pthread_rwlockattr_t, __align) - 0usize];
-};
 pub type pthread_spinlock_t = ::std::os::raw::c_int;
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -1218,31 +992,12 @@ pub union pthread_barrier_t {
     pub __size: [::std::os::raw::c_char; 32usize],
     pub __align: ::std::os::raw::c_long,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pthread_barrier_t"][::std::mem::size_of::<pthread_barrier_t>() - 32usize];
-    ["Alignment of pthread_barrier_t"][::std::mem::align_of::<pthread_barrier_t>() - 8usize];
-    ["Offset of field: pthread_barrier_t::__size"]
-        [::std::mem::offset_of!(pthread_barrier_t, __size) - 0usize];
-    ["Offset of field: pthread_barrier_t::__align"]
-        [::std::mem::offset_of!(pthread_barrier_t, __align) - 0usize];
-};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union pthread_barrierattr_t {
     pub __size: [::std::os::raw::c_char; 4usize],
     pub __align: ::std::os::raw::c_int,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pthread_barrierattr_t"][::std::mem::size_of::<pthread_barrierattr_t>() - 4usize];
-    ["Alignment of pthread_barrierattr_t"]
-        [::std::mem::align_of::<pthread_barrierattr_t>() - 4usize];
-    ["Offset of field: pthread_barrierattr_t::__size"]
-        [::std::mem::offset_of!(pthread_barrierattr_t, __size) - 0usize];
-    ["Offset of field: pthread_barrierattr_t::__align"]
-        [::std::mem::offset_of!(pthread_barrierattr_t, __align) - 0usize];
-};
 pub type __gnuc_va_list = __builtin_va_list;
 pub type va_list = __builtin_va_list;
 pub type useconds_t = __useconds_t;
@@ -2073,32 +1828,6 @@ pub struct z_stream_s {
     pub adler: uLong,
     pub reserved: uLong,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of z_stream_s"][::std::mem::size_of::<z_stream_s>() - 112usize];
-    ["Alignment of z_stream_s"][::std::mem::align_of::<z_stream_s>() - 8usize];
-    ["Offset of field: z_stream_s::next_in"][::std::mem::offset_of!(z_stream_s, next_in) - 0usize];
-    ["Offset of field: z_stream_s::avail_in"]
-        [::std::mem::offset_of!(z_stream_s, avail_in) - 8usize];
-    ["Offset of field: z_stream_s::total_in"]
-        [::std::mem::offset_of!(z_stream_s, total_in) - 16usize];
-    ["Offset of field: z_stream_s::next_out"]
-        [::std::mem::offset_of!(z_stream_s, next_out) - 24usize];
-    ["Offset of field: z_stream_s::avail_out"]
-        [::std::mem::offset_of!(z_stream_s, avail_out) - 32usize];
-    ["Offset of field: z_stream_s::total_out"]
-        [::std::mem::offset_of!(z_stream_s, total_out) - 40usize];
-    ["Offset of field: z_stream_s::msg"][::std::mem::offset_of!(z_stream_s, msg) - 48usize];
-    ["Offset of field: z_stream_s::state"][::std::mem::offset_of!(z_stream_s, state) - 56usize];
-    ["Offset of field: z_stream_s::zalloc"][::std::mem::offset_of!(z_stream_s, zalloc) - 64usize];
-    ["Offset of field: z_stream_s::zfree"][::std::mem::offset_of!(z_stream_s, zfree) - 72usize];
-    ["Offset of field: z_stream_s::opaque"][::std::mem::offset_of!(z_stream_s, opaque) - 80usize];
-    ["Offset of field: z_stream_s::data_type"]
-        [::std::mem::offset_of!(z_stream_s, data_type) - 88usize];
-    ["Offset of field: z_stream_s::adler"][::std::mem::offset_of!(z_stream_s, adler) - 96usize];
-    ["Offset of field: z_stream_s::reserved"]
-        [::std::mem::offset_of!(z_stream_s, reserved) - 104usize];
-};
 pub type z_stream = z_stream_s;
 pub type z_streamp = *mut z_stream;
 #[repr(C)]
@@ -2118,29 +1847,6 @@ pub struct gz_header_s {
     pub hcrc: ::std::os::raw::c_int,
     pub done: ::std::os::raw::c_int,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of gz_header_s"][::std::mem::size_of::<gz_header_s>() - 80usize];
-    ["Alignment of gz_header_s"][::std::mem::align_of::<gz_header_s>() - 8usize];
-    ["Offset of field: gz_header_s::text"][::std::mem::offset_of!(gz_header_s, text) - 0usize];
-    ["Offset of field: gz_header_s::time"][::std::mem::offset_of!(gz_header_s, time) - 8usize];
-    ["Offset of field: gz_header_s::xflags"][::std::mem::offset_of!(gz_header_s, xflags) - 16usize];
-    ["Offset of field: gz_header_s::os"][::std::mem::offset_of!(gz_header_s, os) - 20usize];
-    ["Offset of field: gz_header_s::extra"][::std::mem::offset_of!(gz_header_s, extra) - 24usize];
-    ["Offset of field: gz_header_s::extra_len"]
-        [::std::mem::offset_of!(gz_header_s, extra_len) - 32usize];
-    ["Offset of field: gz_header_s::extra_max"]
-        [::std::mem::offset_of!(gz_header_s, extra_max) - 36usize];
-    ["Offset of field: gz_header_s::name"][::std::mem::offset_of!(gz_header_s, name) - 40usize];
-    ["Offset of field: gz_header_s::name_max"]
-        [::std::mem::offset_of!(gz_header_s, name_max) - 48usize];
-    ["Offset of field: gz_header_s::comment"]
-        [::std::mem::offset_of!(gz_header_s, comment) - 56usize];
-    ["Offset of field: gz_header_s::comm_max"]
-        [::std::mem::offset_of!(gz_header_s, comm_max) - 64usize];
-    ["Offset of field: gz_header_s::hcrc"][::std::mem::offset_of!(gz_header_s, hcrc) - 68usize];
-    ["Offset of field: gz_header_s::done"][::std::mem::offset_of!(gz_header_s, done) - 72usize];
-};
 pub type gz_header = gz_header_s;
 pub type gz_headerp = *mut gz_header;
 unsafe extern "C" {
@@ -2469,14 +2175,6 @@ pub struct gzFile_s {
     pub next: *mut ::std::os::raw::c_uchar,
     pub pos: off_t,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of gzFile_s"][::std::mem::size_of::<gzFile_s>() - 24usize];
-    ["Alignment of gzFile_s"][::std::mem::align_of::<gzFile_s>() - 8usize];
-    ["Offset of field: gzFile_s::have"][::std::mem::offset_of!(gzFile_s, have) - 0usize];
-    ["Offset of field: gzFile_s::next"][::std::mem::offset_of!(gzFile_s, next) - 8usize];
-    ["Offset of field: gzFile_s::pos"][::std::mem::offset_of!(gzFile_s, pos) - 16usize];
-};
 unsafe extern "C" {
     pub fn gzgetc_(file: gzFile) -> ::std::os::raw::c_int;
 }
@@ -2565,39 +2263,12 @@ pub union __mbstate_t__bindgen_ty_1 {
     pub __wch: ::std::os::raw::c_uint,
     pub __wchb: [::std::os::raw::c_char; 4usize],
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of __mbstate_t__bindgen_ty_1"]
-        [::std::mem::size_of::<__mbstate_t__bindgen_ty_1>() - 4usize];
-    ["Alignment of __mbstate_t__bindgen_ty_1"]
-        [::std::mem::align_of::<__mbstate_t__bindgen_ty_1>() - 4usize];
-    ["Offset of field: __mbstate_t__bindgen_ty_1::__wch"]
-        [::std::mem::offset_of!(__mbstate_t__bindgen_ty_1, __wch) - 0usize];
-    ["Offset of field: __mbstate_t__bindgen_ty_1::__wchb"]
-        [::std::mem::offset_of!(__mbstate_t__bindgen_ty_1, __wchb) - 0usize];
-};
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of __mbstate_t"][::std::mem::size_of::<__mbstate_t>() - 8usize];
-    ["Alignment of __mbstate_t"][::std::mem::align_of::<__mbstate_t>() - 4usize];
-    ["Offset of field: __mbstate_t::__count"]
-        [::std::mem::offset_of!(__mbstate_t, __count) - 0usize];
-    ["Offset of field: __mbstate_t::__value"]
-        [::std::mem::offset_of!(__mbstate_t, __value) - 4usize];
-};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct _G_fpos_t {
     pub __pos: __off_t,
     pub __state: __mbstate_t,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of _G_fpos_t"][::std::mem::size_of::<_G_fpos_t>() - 16usize];
-    ["Alignment of _G_fpos_t"][::std::mem::align_of::<_G_fpos_t>() - 8usize];
-    ["Offset of field: _G_fpos_t::__pos"][::std::mem::offset_of!(_G_fpos_t, __pos) - 0usize];
-    ["Offset of field: _G_fpos_t::__state"][::std::mem::offset_of!(_G_fpos_t, __state) - 8usize];
-};
 pub type __fpos_t = _G_fpos_t;
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -2605,14 +2276,6 @@ pub struct _G_fpos64_t {
     pub __pos: __off64_t,
     pub __state: __mbstate_t,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of _G_fpos64_t"][::std::mem::size_of::<_G_fpos64_t>() - 16usize];
-    ["Alignment of _G_fpos64_t"][::std::mem::align_of::<_G_fpos64_t>() - 8usize];
-    ["Offset of field: _G_fpos64_t::__pos"][::std::mem::offset_of!(_G_fpos64_t, __pos) - 0usize];
-    ["Offset of field: _G_fpos64_t::__state"]
-        [::std::mem::offset_of!(_G_fpos64_t, __state) - 8usize];
-};
 pub type __fpos64_t = _G_fpos64_t;
 pub type __FILE = _IO_FILE;
 pub type FILE = _IO_FILE;
@@ -2665,58 +2328,6 @@ pub struct _IO_FILE {
     pub _mode: ::std::os::raw::c_int,
     pub _unused2: [::std::os::raw::c_char; 20usize],
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of _IO_FILE"][::std::mem::size_of::<_IO_FILE>() - 216usize];
-    ["Alignment of _IO_FILE"][::std::mem::align_of::<_IO_FILE>() - 8usize];
-    ["Offset of field: _IO_FILE::_flags"][::std::mem::offset_of!(_IO_FILE, _flags) - 0usize];
-    ["Offset of field: _IO_FILE::_IO_read_ptr"]
-        [::std::mem::offset_of!(_IO_FILE, _IO_read_ptr) - 8usize];
-    ["Offset of field: _IO_FILE::_IO_read_end"]
-        [::std::mem::offset_of!(_IO_FILE, _IO_read_end) - 16usize];
-    ["Offset of field: _IO_FILE::_IO_read_base"]
-        [::std::mem::offset_of!(_IO_FILE, _IO_read_base) - 24usize];
-    ["Offset of field: _IO_FILE::_IO_write_base"]
-        [::std::mem::offset_of!(_IO_FILE, _IO_write_base) - 32usize];
-    ["Offset of field: _IO_FILE::_IO_write_ptr"]
-        [::std::mem::offset_of!(_IO_FILE, _IO_write_ptr) - 40usize];
-    ["Offset of field: _IO_FILE::_IO_write_end"]
-        [::std::mem::offset_of!(_IO_FILE, _IO_write_end) - 48usize];
-    ["Offset of field: _IO_FILE::_IO_buf_base"]
-        [::std::mem::offset_of!(_IO_FILE, _IO_buf_base) - 56usize];
-    ["Offset of field: _IO_FILE::_IO_buf_end"]
-        [::std::mem::offset_of!(_IO_FILE, _IO_buf_end) - 64usize];
-    ["Offset of field: _IO_FILE::_IO_save_base"]
-        [::std::mem::offset_of!(_IO_FILE, _IO_save_base) - 72usize];
-    ["Offset of field: _IO_FILE::_IO_backup_base"]
-        [::std::mem::offset_of!(_IO_FILE, _IO_backup_base) - 80usize];
-    ["Offset of field: _IO_FILE::_IO_save_end"]
-        [::std::mem::offset_of!(_IO_FILE, _IO_save_end) - 88usize];
-    ["Offset of field: _IO_FILE::_markers"][::std::mem::offset_of!(_IO_FILE, _markers) - 96usize];
-    ["Offset of field: _IO_FILE::_chain"][::std::mem::offset_of!(_IO_FILE, _chain) - 104usize];
-    ["Offset of field: _IO_FILE::_fileno"][::std::mem::offset_of!(_IO_FILE, _fileno) - 112usize];
-    ["Offset of field: _IO_FILE::_flags2"][::std::mem::offset_of!(_IO_FILE, _flags2) - 116usize];
-    ["Offset of field: _IO_FILE::_old_offset"]
-        [::std::mem::offset_of!(_IO_FILE, _old_offset) - 120usize];
-    ["Offset of field: _IO_FILE::_cur_column"]
-        [::std::mem::offset_of!(_IO_FILE, _cur_column) - 128usize];
-    ["Offset of field: _IO_FILE::_vtable_offset"]
-        [::std::mem::offset_of!(_IO_FILE, _vtable_offset) - 130usize];
-    ["Offset of field: _IO_FILE::_shortbuf"]
-        [::std::mem::offset_of!(_IO_FILE, _shortbuf) - 131usize];
-    ["Offset of field: _IO_FILE::_lock"][::std::mem::offset_of!(_IO_FILE, _lock) - 136usize];
-    ["Offset of field: _IO_FILE::_offset"][::std::mem::offset_of!(_IO_FILE, _offset) - 144usize];
-    ["Offset of field: _IO_FILE::_codecvt"][::std::mem::offset_of!(_IO_FILE, _codecvt) - 152usize];
-    ["Offset of field: _IO_FILE::_wide_data"]
-        [::std::mem::offset_of!(_IO_FILE, _wide_data) - 160usize];
-    ["Offset of field: _IO_FILE::_freeres_list"]
-        [::std::mem::offset_of!(_IO_FILE, _freeres_list) - 168usize];
-    ["Offset of field: _IO_FILE::_freeres_buf"]
-        [::std::mem::offset_of!(_IO_FILE, _freeres_buf) - 176usize];
-    ["Offset of field: _IO_FILE::__pad5"][::std::mem::offset_of!(_IO_FILE, __pad5) - 184usize];
-    ["Offset of field: _IO_FILE::_mode"][::std::mem::offset_of!(_IO_FILE, _mode) - 192usize];
-    ["Offset of field: _IO_FILE::_unused2"][::std::mem::offset_of!(_IO_FILE, _unused2) - 196usize];
-};
 pub type cookie_read_function_t = ::std::option::Option<
     unsafe extern "C" fn(
         __cookie: *mut ::std::os::raw::c_void,
@@ -2749,21 +2360,6 @@ pub struct _IO_cookie_io_functions_t {
     pub seek: cookie_seek_function_t,
     pub close: cookie_close_function_t,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of _IO_cookie_io_functions_t"]
-        [::std::mem::size_of::<_IO_cookie_io_functions_t>() - 32usize];
-    ["Alignment of _IO_cookie_io_functions_t"]
-        [::std::mem::align_of::<_IO_cookie_io_functions_t>() - 8usize];
-    ["Offset of field: _IO_cookie_io_functions_t::read"]
-        [::std::mem::offset_of!(_IO_cookie_io_functions_t, read) - 0usize];
-    ["Offset of field: _IO_cookie_io_functions_t::write"]
-        [::std::mem::offset_of!(_IO_cookie_io_functions_t, write) - 8usize];
-    ["Offset of field: _IO_cookie_io_functions_t::seek"]
-        [::std::mem::offset_of!(_IO_cookie_io_functions_t, seek) - 16usize];
-    ["Offset of field: _IO_cookie_io_functions_t::close"]
-        [::std::mem::offset_of!(_IO_cookie_io_functions_t, close) - 24usize];
-};
 pub type cookie_io_functions_t = _IO_cookie_io_functions_t;
 pub type fpos_t = __fpos_t;
 unsafe extern "C" {
@@ -3245,13 +2841,6 @@ pub struct mm128_t {
     pub x: u64,
     pub y: u64,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of mm128_t"][::std::mem::size_of::<mm128_t>() - 16usize];
-    ["Alignment of mm128_t"][::std::mem::align_of::<mm128_t>() - 8usize];
-    ["Offset of field: mm128_t::x"][::std::mem::offset_of!(mm128_t, x) - 0usize];
-    ["Offset of field: mm128_t::y"][::std::mem::offset_of!(mm128_t, y) - 8usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct mm128_v {
@@ -3259,14 +2848,6 @@ pub struct mm128_v {
     pub m: usize,
     pub a: *mut mm128_t,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of mm128_v"][::std::mem::size_of::<mm128_v>() - 24usize];
-    ["Alignment of mm128_v"][::std::mem::align_of::<mm128_v>() - 8usize];
-    ["Offset of field: mm128_v::n"][::std::mem::offset_of!(mm128_v, n) - 0usize];
-    ["Offset of field: mm128_v::m"][::std::mem::offset_of!(mm128_v, m) - 8usize];
-    ["Offset of field: mm128_v::a"][::std::mem::offset_of!(mm128_v, a) - 16usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct mm_idx_seq_t {
@@ -3275,17 +2856,6 @@ pub struct mm_idx_seq_t {
     pub len: u32,
     pub is_alt: u32,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of mm_idx_seq_t"][::std::mem::size_of::<mm_idx_seq_t>() - 24usize];
-    ["Alignment of mm_idx_seq_t"][::std::mem::align_of::<mm_idx_seq_t>() - 8usize];
-    ["Offset of field: mm_idx_seq_t::name"][::std::mem::offset_of!(mm_idx_seq_t, name) - 0usize];
-    ["Offset of field: mm_idx_seq_t::offset"]
-        [::std::mem::offset_of!(mm_idx_seq_t, offset) - 8usize];
-    ["Offset of field: mm_idx_seq_t::len"][::std::mem::offset_of!(mm_idx_seq_t, len) - 16usize];
-    ["Offset of field: mm_idx_seq_t::is_alt"]
-        [::std::mem::offset_of!(mm_idx_seq_t, is_alt) - 20usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct mm_idx_t {
@@ -3305,26 +2875,6 @@ pub struct mm_idx_t {
     pub km: *mut ::std::os::raw::c_void,
     pub h: *mut ::std::os::raw::c_void,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of mm_idx_t"][::std::mem::size_of::<mm_idx_t>() - 96usize];
-    ["Alignment of mm_idx_t"][::std::mem::align_of::<mm_idx_t>() - 8usize];
-    ["Offset of field: mm_idx_t::b"][::std::mem::offset_of!(mm_idx_t, b) - 0usize];
-    ["Offset of field: mm_idx_t::w"][::std::mem::offset_of!(mm_idx_t, w) - 4usize];
-    ["Offset of field: mm_idx_t::k"][::std::mem::offset_of!(mm_idx_t, k) - 8usize];
-    ["Offset of field: mm_idx_t::flag"][::std::mem::offset_of!(mm_idx_t, flag) - 12usize];
-    ["Offset of field: mm_idx_t::n_seq"][::std::mem::offset_of!(mm_idx_t, n_seq) - 16usize];
-    ["Offset of field: mm_idx_t::index"][::std::mem::offset_of!(mm_idx_t, index) - 20usize];
-    ["Offset of field: mm_idx_t::n_alt"][::std::mem::offset_of!(mm_idx_t, n_alt) - 24usize];
-    ["Offset of field: mm_idx_t::seq"][::std::mem::offset_of!(mm_idx_t, seq) - 32usize];
-    ["Offset of field: mm_idx_t::S"][::std::mem::offset_of!(mm_idx_t, S) - 40usize];
-    ["Offset of field: mm_idx_t::B"][::std::mem::offset_of!(mm_idx_t, B) - 48usize];
-    ["Offset of field: mm_idx_t::I"][::std::mem::offset_of!(mm_idx_t, I) - 56usize];
-    ["Offset of field: mm_idx_t::spsc"][::std::mem::offset_of!(mm_idx_t, spsc) - 64usize];
-    ["Offset of field: mm_idx_t::J"][::std::mem::offset_of!(mm_idx_t, J) - 72usize];
-    ["Offset of field: mm_idx_t::km"][::std::mem::offset_of!(mm_idx_t, km) - 80usize];
-    ["Offset of field: mm_idx_t::h"][::std::mem::offset_of!(mm_idx_t, h) - 88usize];
-};
 #[repr(C)]
 #[derive(Debug)]
 pub struct mm_extra_t {
@@ -3338,20 +2888,6 @@ pub struct mm_extra_t {
     pub n_cigar: u32,
     pub cigar: __IncompleteArrayField<u32>,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of mm_extra_t"][::std::mem::size_of::<mm_extra_t>() - 28usize];
-    ["Alignment of mm_extra_t"][::std::mem::align_of::<mm_extra_t>() - 4usize];
-    ["Offset of field: mm_extra_t::capacity"]
-        [::std::mem::offset_of!(mm_extra_t, capacity) - 0usize];
-    ["Offset of field: mm_extra_t::dp_score"]
-        [::std::mem::offset_of!(mm_extra_t, dp_score) - 4usize];
-    ["Offset of field: mm_extra_t::dp_max"][::std::mem::offset_of!(mm_extra_t, dp_max) - 8usize];
-    ["Offset of field: mm_extra_t::dp_max2"][::std::mem::offset_of!(mm_extra_t, dp_max2) - 12usize];
-    ["Offset of field: mm_extra_t::dp_max0"][::std::mem::offset_of!(mm_extra_t, dp_max0) - 16usize];
-    ["Offset of field: mm_extra_t::n_cigar"][::std::mem::offset_of!(mm_extra_t, n_cigar) - 24usize];
-    ["Offset of field: mm_extra_t::cigar"][::std::mem::offset_of!(mm_extra_t, cigar) - 28usize];
-};
 impl mm_extra_t {
     #[inline]
     pub fn n_ambi(&self) -> u32 {
@@ -3457,29 +2993,6 @@ pub struct mm_reg1_t {
     pub div: f32,
     pub p: *mut mm_extra_t,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of mm_reg1_t"][::std::mem::size_of::<mm_reg1_t>() - 80usize];
-    ["Alignment of mm_reg1_t"][::std::mem::align_of::<mm_reg1_t>() - 8usize];
-    ["Offset of field: mm_reg1_t::id"][::std::mem::offset_of!(mm_reg1_t, id) - 0usize];
-    ["Offset of field: mm_reg1_t::cnt"][::std::mem::offset_of!(mm_reg1_t, cnt) - 4usize];
-    ["Offset of field: mm_reg1_t::rid"][::std::mem::offset_of!(mm_reg1_t, rid) - 8usize];
-    ["Offset of field: mm_reg1_t::score"][::std::mem::offset_of!(mm_reg1_t, score) - 12usize];
-    ["Offset of field: mm_reg1_t::qs"][::std::mem::offset_of!(mm_reg1_t, qs) - 16usize];
-    ["Offset of field: mm_reg1_t::qe"][::std::mem::offset_of!(mm_reg1_t, qe) - 20usize];
-    ["Offset of field: mm_reg1_t::rs"][::std::mem::offset_of!(mm_reg1_t, rs) - 24usize];
-    ["Offset of field: mm_reg1_t::re"][::std::mem::offset_of!(mm_reg1_t, re) - 28usize];
-    ["Offset of field: mm_reg1_t::parent"][::std::mem::offset_of!(mm_reg1_t, parent) - 32usize];
-    ["Offset of field: mm_reg1_t::subsc"][::std::mem::offset_of!(mm_reg1_t, subsc) - 36usize];
-    ["Offset of field: mm_reg1_t::as_"][::std::mem::offset_of!(mm_reg1_t, as_) - 40usize];
-    ["Offset of field: mm_reg1_t::mlen"][::std::mem::offset_of!(mm_reg1_t, mlen) - 44usize];
-    ["Offset of field: mm_reg1_t::blen"][::std::mem::offset_of!(mm_reg1_t, blen) - 48usize];
-    ["Offset of field: mm_reg1_t::n_sub"][::std::mem::offset_of!(mm_reg1_t, n_sub) - 52usize];
-    ["Offset of field: mm_reg1_t::score0"][::std::mem::offset_of!(mm_reg1_t, score0) - 56usize];
-    ["Offset of field: mm_reg1_t::hash"][::std::mem::offset_of!(mm_reg1_t, hash) - 64usize];
-    ["Offset of field: mm_reg1_t::div"][::std::mem::offset_of!(mm_reg1_t, div) - 68usize];
-    ["Offset of field: mm_reg1_t::p"][::std::mem::offset_of!(mm_reg1_t, p) - 72usize];
-};
 impl mm_reg1_t {
     #[inline]
     pub fn mapq(&self) -> u32 {
@@ -4030,20 +3543,6 @@ pub struct mm_idxopt_t {
     pub mini_batch_size: i64,
     pub batch_size: u64,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of mm_idxopt_t"][::std::mem::size_of::<mm_idxopt_t>() - 24usize];
-    ["Alignment of mm_idxopt_t"][::std::mem::align_of::<mm_idxopt_t>() - 8usize];
-    ["Offset of field: mm_idxopt_t::k"][::std::mem::offset_of!(mm_idxopt_t, k) - 0usize];
-    ["Offset of field: mm_idxopt_t::w"][::std::mem::offset_of!(mm_idxopt_t, w) - 2usize];
-    ["Offset of field: mm_idxopt_t::flag"][::std::mem::offset_of!(mm_idxopt_t, flag) - 4usize];
-    ["Offset of field: mm_idxopt_t::bucket_bits"]
-        [::std::mem::offset_of!(mm_idxopt_t, bucket_bits) - 6usize];
-    ["Offset of field: mm_idxopt_t::mini_batch_size"]
-        [::std::mem::offset_of!(mm_idxopt_t, mini_batch_size) - 8usize];
-    ["Offset of field: mm_idxopt_t::batch_size"]
-        [::std::mem::offset_of!(mm_idxopt_t, batch_size) - 16usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct mm_mapopt_t {
@@ -4108,120 +3607,6 @@ pub struct mm_mapopt_t {
     pub cap_kalloc: i64,
     pub split_prefix: *const ::std::os::raw::c_char,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of mm_mapopt_t"][::std::mem::size_of::<mm_mapopt_t>() - 264usize];
-    ["Alignment of mm_mapopt_t"][::std::mem::align_of::<mm_mapopt_t>() - 8usize];
-    ["Offset of field: mm_mapopt_t::flag"][::std::mem::offset_of!(mm_mapopt_t, flag) - 0usize];
-    ["Offset of field: mm_mapopt_t::seed"][::std::mem::offset_of!(mm_mapopt_t, seed) - 8usize];
-    ["Offset of field: mm_mapopt_t::sdust_thres"]
-        [::std::mem::offset_of!(mm_mapopt_t, sdust_thres) - 12usize];
-    ["Offset of field: mm_mapopt_t::max_qlen"]
-        [::std::mem::offset_of!(mm_mapopt_t, max_qlen) - 16usize];
-    ["Offset of field: mm_mapopt_t::bw"][::std::mem::offset_of!(mm_mapopt_t, bw) - 20usize];
-    ["Offset of field: mm_mapopt_t::bw_long"]
-        [::std::mem::offset_of!(mm_mapopt_t, bw_long) - 24usize];
-    ["Offset of field: mm_mapopt_t::max_gap"]
-        [::std::mem::offset_of!(mm_mapopt_t, max_gap) - 28usize];
-    ["Offset of field: mm_mapopt_t::max_gap_ref"]
-        [::std::mem::offset_of!(mm_mapopt_t, max_gap_ref) - 32usize];
-    ["Offset of field: mm_mapopt_t::max_frag_len"]
-        [::std::mem::offset_of!(mm_mapopt_t, max_frag_len) - 36usize];
-    ["Offset of field: mm_mapopt_t::max_chain_skip"]
-        [::std::mem::offset_of!(mm_mapopt_t, max_chain_skip) - 40usize];
-    ["Offset of field: mm_mapopt_t::max_chain_iter"]
-        [::std::mem::offset_of!(mm_mapopt_t, max_chain_iter) - 44usize];
-    ["Offset of field: mm_mapopt_t::min_cnt"]
-        [::std::mem::offset_of!(mm_mapopt_t, min_cnt) - 48usize];
-    ["Offset of field: mm_mapopt_t::min_chain_score"]
-        [::std::mem::offset_of!(mm_mapopt_t, min_chain_score) - 52usize];
-    ["Offset of field: mm_mapopt_t::chain_gap_scale"]
-        [::std::mem::offset_of!(mm_mapopt_t, chain_gap_scale) - 56usize];
-    ["Offset of field: mm_mapopt_t::chain_skip_scale"]
-        [::std::mem::offset_of!(mm_mapopt_t, chain_skip_scale) - 60usize];
-    ["Offset of field: mm_mapopt_t::rmq_size_cap"]
-        [::std::mem::offset_of!(mm_mapopt_t, rmq_size_cap) - 64usize];
-    ["Offset of field: mm_mapopt_t::rmq_inner_dist"]
-        [::std::mem::offset_of!(mm_mapopt_t, rmq_inner_dist) - 68usize];
-    ["Offset of field: mm_mapopt_t::rmq_rescue_size"]
-        [::std::mem::offset_of!(mm_mapopt_t, rmq_rescue_size) - 72usize];
-    ["Offset of field: mm_mapopt_t::rmq_rescue_ratio"]
-        [::std::mem::offset_of!(mm_mapopt_t, rmq_rescue_ratio) - 76usize];
-    ["Offset of field: mm_mapopt_t::mask_level"]
-        [::std::mem::offset_of!(mm_mapopt_t, mask_level) - 80usize];
-    ["Offset of field: mm_mapopt_t::mask_len"]
-        [::std::mem::offset_of!(mm_mapopt_t, mask_len) - 84usize];
-    ["Offset of field: mm_mapopt_t::pri_ratio"]
-        [::std::mem::offset_of!(mm_mapopt_t, pri_ratio) - 88usize];
-    ["Offset of field: mm_mapopt_t::best_n"][::std::mem::offset_of!(mm_mapopt_t, best_n) - 92usize];
-    ["Offset of field: mm_mapopt_t::alt_drop"]
-        [::std::mem::offset_of!(mm_mapopt_t, alt_drop) - 96usize];
-    ["Offset of field: mm_mapopt_t::a"][::std::mem::offset_of!(mm_mapopt_t, a) - 100usize];
-    ["Offset of field: mm_mapopt_t::b"][::std::mem::offset_of!(mm_mapopt_t, b) - 104usize];
-    ["Offset of field: mm_mapopt_t::q"][::std::mem::offset_of!(mm_mapopt_t, q) - 108usize];
-    ["Offset of field: mm_mapopt_t::e"][::std::mem::offset_of!(mm_mapopt_t, e) - 112usize];
-    ["Offset of field: mm_mapopt_t::q2"][::std::mem::offset_of!(mm_mapopt_t, q2) - 116usize];
-    ["Offset of field: mm_mapopt_t::e2"][::std::mem::offset_of!(mm_mapopt_t, e2) - 120usize];
-    ["Offset of field: mm_mapopt_t::transition"]
-        [::std::mem::offset_of!(mm_mapopt_t, transition) - 124usize];
-    ["Offset of field: mm_mapopt_t::sc_ambi"]
-        [::std::mem::offset_of!(mm_mapopt_t, sc_ambi) - 128usize];
-    ["Offset of field: mm_mapopt_t::noncan"]
-        [::std::mem::offset_of!(mm_mapopt_t, noncan) - 132usize];
-    ["Offset of field: mm_mapopt_t::junc_bonus"]
-        [::std::mem::offset_of!(mm_mapopt_t, junc_bonus) - 136usize];
-    ["Offset of field: mm_mapopt_t::junc_pen"]
-        [::std::mem::offset_of!(mm_mapopt_t, junc_pen) - 140usize];
-    ["Offset of field: mm_mapopt_t::zdrop"][::std::mem::offset_of!(mm_mapopt_t, zdrop) - 144usize];
-    ["Offset of field: mm_mapopt_t::zdrop_inv"]
-        [::std::mem::offset_of!(mm_mapopt_t, zdrop_inv) - 148usize];
-    ["Offset of field: mm_mapopt_t::end_bonus"]
-        [::std::mem::offset_of!(mm_mapopt_t, end_bonus) - 152usize];
-    ["Offset of field: mm_mapopt_t::min_dp_max"]
-        [::std::mem::offset_of!(mm_mapopt_t, min_dp_max) - 156usize];
-    ["Offset of field: mm_mapopt_t::min_ksw_len"]
-        [::std::mem::offset_of!(mm_mapopt_t, min_ksw_len) - 160usize];
-    ["Offset of field: mm_mapopt_t::anchor_ext_len"]
-        [::std::mem::offset_of!(mm_mapopt_t, anchor_ext_len) - 164usize];
-    ["Offset of field: mm_mapopt_t::anchor_ext_shift"]
-        [::std::mem::offset_of!(mm_mapopt_t, anchor_ext_shift) - 168usize];
-    ["Offset of field: mm_mapopt_t::max_clip_ratio"]
-        [::std::mem::offset_of!(mm_mapopt_t, max_clip_ratio) - 172usize];
-    ["Offset of field: mm_mapopt_t::rank_min_len"]
-        [::std::mem::offset_of!(mm_mapopt_t, rank_min_len) - 176usize];
-    ["Offset of field: mm_mapopt_t::rank_frac"]
-        [::std::mem::offset_of!(mm_mapopt_t, rank_frac) - 180usize];
-    ["Offset of field: mm_mapopt_t::pe_ori"]
-        [::std::mem::offset_of!(mm_mapopt_t, pe_ori) - 184usize];
-    ["Offset of field: mm_mapopt_t::pe_bonus"]
-        [::std::mem::offset_of!(mm_mapopt_t, pe_bonus) - 188usize];
-    ["Offset of field: mm_mapopt_t::jump_min_match"]
-        [::std::mem::offset_of!(mm_mapopt_t, jump_min_match) - 192usize];
-    ["Offset of field: mm_mapopt_t::mid_occ_frac"]
-        [::std::mem::offset_of!(mm_mapopt_t, mid_occ_frac) - 196usize];
-    ["Offset of field: mm_mapopt_t::q_occ_frac"]
-        [::std::mem::offset_of!(mm_mapopt_t, q_occ_frac) - 200usize];
-    ["Offset of field: mm_mapopt_t::min_mid_occ"]
-        [::std::mem::offset_of!(mm_mapopt_t, min_mid_occ) - 204usize];
-    ["Offset of field: mm_mapopt_t::max_mid_occ"]
-        [::std::mem::offset_of!(mm_mapopt_t, max_mid_occ) - 208usize];
-    ["Offset of field: mm_mapopt_t::mid_occ"]
-        [::std::mem::offset_of!(mm_mapopt_t, mid_occ) - 212usize];
-    ["Offset of field: mm_mapopt_t::max_occ"]
-        [::std::mem::offset_of!(mm_mapopt_t, max_occ) - 216usize];
-    ["Offset of field: mm_mapopt_t::max_max_occ"]
-        [::std::mem::offset_of!(mm_mapopt_t, max_max_occ) - 220usize];
-    ["Offset of field: mm_mapopt_t::occ_dist"]
-        [::std::mem::offset_of!(mm_mapopt_t, occ_dist) - 224usize];
-    ["Offset of field: mm_mapopt_t::mini_batch_size"]
-        [::std::mem::offset_of!(mm_mapopt_t, mini_batch_size) - 232usize];
-    ["Offset of field: mm_mapopt_t::max_sw_mat"]
-        [::std::mem::offset_of!(mm_mapopt_t, max_sw_mat) - 240usize];
-    ["Offset of field: mm_mapopt_t::cap_kalloc"]
-        [::std::mem::offset_of!(mm_mapopt_t, cap_kalloc) - 248usize];
-    ["Offset of field: mm_mapopt_t::split_prefix"]
-        [::std::mem::offset_of!(mm_mapopt_t, split_prefix) - 256usize];
-};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct mm_idx_reader_t {
@@ -4238,33 +3623,6 @@ pub union mm_idx_reader_t__bindgen_ty_1 {
     pub seq: *mut mm_bseq_file_s,
     pub idx: *mut FILE,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of mm_idx_reader_t__bindgen_ty_1"]
-        [::std::mem::size_of::<mm_idx_reader_t__bindgen_ty_1>() - 8usize];
-    ["Alignment of mm_idx_reader_t__bindgen_ty_1"]
-        [::std::mem::align_of::<mm_idx_reader_t__bindgen_ty_1>() - 8usize];
-    ["Offset of field: mm_idx_reader_t__bindgen_ty_1::seq"]
-        [::std::mem::offset_of!(mm_idx_reader_t__bindgen_ty_1, seq) - 0usize];
-    ["Offset of field: mm_idx_reader_t__bindgen_ty_1::idx"]
-        [::std::mem::offset_of!(mm_idx_reader_t__bindgen_ty_1, idx) - 0usize];
-};
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of mm_idx_reader_t"][::std::mem::size_of::<mm_idx_reader_t>() - 56usize];
-    ["Alignment of mm_idx_reader_t"][::std::mem::align_of::<mm_idx_reader_t>() - 8usize];
-    ["Offset of field: mm_idx_reader_t::is_idx"]
-        [::std::mem::offset_of!(mm_idx_reader_t, is_idx) - 0usize];
-    ["Offset of field: mm_idx_reader_t::n_parts"]
-        [::std::mem::offset_of!(mm_idx_reader_t, n_parts) - 4usize];
-    ["Offset of field: mm_idx_reader_t::idx_size"]
-        [::std::mem::offset_of!(mm_idx_reader_t, idx_size) - 8usize];
-    ["Offset of field: mm_idx_reader_t::opt"]
-        [::std::mem::offset_of!(mm_idx_reader_t, opt) - 16usize];
-    ["Offset of field: mm_idx_reader_t::fp_out"]
-        [::std::mem::offset_of!(mm_idx_reader_t, fp_out) - 40usize];
-    ["Offset of field: mm_idx_reader_t::fp"][::std::mem::offset_of!(mm_idx_reader_t, fp) - 48usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct mm_tbuf_s {
@@ -4272,14 +3630,6 @@ pub struct mm_tbuf_s {
     pub rep_len: ::std::os::raw::c_int,
     pub frag_gap: ::std::os::raw::c_int,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of mm_tbuf_s"][::std::mem::size_of::<mm_tbuf_s>() - 16usize];
-    ["Alignment of mm_tbuf_s"][::std::mem::align_of::<mm_tbuf_s>() - 8usize];
-    ["Offset of field: mm_tbuf_s::km"][::std::mem::offset_of!(mm_tbuf_s, km) - 0usize];
-    ["Offset of field: mm_tbuf_s::rep_len"][::std::mem::offset_of!(mm_tbuf_s, rep_len) - 8usize];
-    ["Offset of field: mm_tbuf_s::frag_gap"][::std::mem::offset_of!(mm_tbuf_s, frag_gap) - 12usize];
-};
 pub type mm_tbuf_t = mm_tbuf_s;
 unsafe extern "C" {
     pub static mut mm_verbose: ::std::os::raw::c_int;
@@ -4621,21 +3971,6 @@ pub struct __locale_struct {
     pub __ctype_toupper: *const ::std::os::raw::c_int,
     pub __names: [*const ::std::os::raw::c_char; 13usize],
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of __locale_struct"][::std::mem::size_of::<__locale_struct>() - 232usize];
-    ["Alignment of __locale_struct"][::std::mem::align_of::<__locale_struct>() - 8usize];
-    ["Offset of field: __locale_struct::__locales"]
-        [::std::mem::offset_of!(__locale_struct, __locales) - 0usize];
-    ["Offset of field: __locale_struct::__ctype_b"]
-        [::std::mem::offset_of!(__locale_struct, __ctype_b) - 104usize];
-    ["Offset of field: __locale_struct::__ctype_tolower"]
-        [::std::mem::offset_of!(__locale_struct, __ctype_tolower) - 112usize];
-    ["Offset of field: __locale_struct::__ctype_toupper"]
-        [::std::mem::offset_of!(__locale_struct, __ctype_toupper) - 120usize];
-    ["Offset of field: __locale_struct::__names"]
-        [::std::mem::offset_of!(__locale_struct, __names) - 128usize];
-};
 pub type __locale_t = *mut __locale_struct;
 pub type locale_t = __locale_t;
 unsafe extern "C" {
@@ -4909,17 +4244,6 @@ pub struct mm_bseq1_t {
     pub qual: *mut ::std::os::raw::c_char,
     pub comment: *mut ::std::os::raw::c_char,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of mm_bseq1_t"][::std::mem::size_of::<mm_bseq1_t>() - 40usize];
-    ["Alignment of mm_bseq1_t"][::std::mem::align_of::<mm_bseq1_t>() - 8usize];
-    ["Offset of field: mm_bseq1_t::l_seq"][::std::mem::offset_of!(mm_bseq1_t, l_seq) - 0usize];
-    ["Offset of field: mm_bseq1_t::rid"][::std::mem::offset_of!(mm_bseq1_t, rid) - 4usize];
-    ["Offset of field: mm_bseq1_t::name"][::std::mem::offset_of!(mm_bseq1_t, name) - 8usize];
-    ["Offset of field: mm_bseq1_t::seq"][::std::mem::offset_of!(mm_bseq1_t, seq) - 16usize];
-    ["Offset of field: mm_bseq1_t::qual"][::std::mem::offset_of!(mm_bseq1_t, qual) - 24usize];
-    ["Offset of field: mm_bseq1_t::comment"][::std::mem::offset_of!(mm_bseq1_t, comment) - 32usize];
-};
 unsafe extern "C" {
     pub fn mm_bseq_open(fn_: *const ::std::os::raw::c_char) -> *mut mm_bseq_file_t;
 }
@@ -4987,39 +4311,18 @@ pub struct div_t {
     pub quot: ::std::os::raw::c_int,
     pub rem: ::std::os::raw::c_int,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of div_t"][::std::mem::size_of::<div_t>() - 8usize];
-    ["Alignment of div_t"][::std::mem::align_of::<div_t>() - 4usize];
-    ["Offset of field: div_t::quot"][::std::mem::offset_of!(div_t, quot) - 0usize];
-    ["Offset of field: div_t::rem"][::std::mem::offset_of!(div_t, rem) - 4usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct ldiv_t {
     pub quot: ::std::os::raw::c_long,
     pub rem: ::std::os::raw::c_long,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of ldiv_t"][::std::mem::size_of::<ldiv_t>() - 16usize];
-    ["Alignment of ldiv_t"][::std::mem::align_of::<ldiv_t>() - 8usize];
-    ["Offset of field: ldiv_t::quot"][::std::mem::offset_of!(ldiv_t, quot) - 0usize];
-    ["Offset of field: ldiv_t::rem"][::std::mem::offset_of!(ldiv_t, rem) - 8usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct lldiv_t {
     pub quot: ::std::os::raw::c_longlong,
     pub rem: ::std::os::raw::c_longlong,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of lldiv_t"][::std::mem::size_of::<lldiv_t>() - 16usize];
-    ["Alignment of lldiv_t"][::std::mem::align_of::<lldiv_t>() - 8usize];
-    ["Offset of field: lldiv_t::quot"][::std::mem::offset_of!(lldiv_t, quot) - 0usize];
-    ["Offset of field: lldiv_t::rem"][::std::mem::offset_of!(lldiv_t, rem) - 8usize];
-};
 unsafe extern "C" {
     pub fn __ctype_get_mb_cur_max() -> usize;
 }
@@ -5128,22 +4431,6 @@ pub struct random_data {
     pub rand_sep: ::std::os::raw::c_int,
     pub end_ptr: *mut i32,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of random_data"][::std::mem::size_of::<random_data>() - 48usize];
-    ["Alignment of random_data"][::std::mem::align_of::<random_data>() - 8usize];
-    ["Offset of field: random_data::fptr"][::std::mem::offset_of!(random_data, fptr) - 0usize];
-    ["Offset of field: random_data::rptr"][::std::mem::offset_of!(random_data, rptr) - 8usize];
-    ["Offset of field: random_data::state"][::std::mem::offset_of!(random_data, state) - 16usize];
-    ["Offset of field: random_data::rand_type"]
-        [::std::mem::offset_of!(random_data, rand_type) - 24usize];
-    ["Offset of field: random_data::rand_deg"]
-        [::std::mem::offset_of!(random_data, rand_deg) - 28usize];
-    ["Offset of field: random_data::rand_sep"]
-        [::std::mem::offset_of!(random_data, rand_sep) - 32usize];
-    ["Offset of field: random_data::end_ptr"]
-        [::std::mem::offset_of!(random_data, end_ptr) - 40usize];
-};
 unsafe extern "C" {
     pub fn random_r(__buf: *mut random_data, __result: *mut i32) -> ::std::os::raw::c_int;
 }
@@ -5212,18 +4499,6 @@ pub struct drand48_data {
     pub __init: ::std::os::raw::c_ushort,
     pub __a: ::std::os::raw::c_ulonglong,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of drand48_data"][::std::mem::size_of::<drand48_data>() - 24usize];
-    ["Alignment of drand48_data"][::std::mem::align_of::<drand48_data>() - 8usize];
-    ["Offset of field: drand48_data::__x"][::std::mem::offset_of!(drand48_data, __x) - 0usize];
-    ["Offset of field: drand48_data::__old_x"]
-        [::std::mem::offset_of!(drand48_data, __old_x) - 6usize];
-    ["Offset of field: drand48_data::__c"][::std::mem::offset_of!(drand48_data, __c) - 12usize];
-    ["Offset of field: drand48_data::__init"]
-        [::std::mem::offset_of!(drand48_data, __init) - 14usize];
-    ["Offset of field: drand48_data::__a"][::std::mem::offset_of!(drand48_data, __a) - 16usize];
-};
 unsafe extern "C" {
     pub fn drand48_r(__buffer: *mut drand48_data, __result: *mut f64) -> ::std::os::raw::c_int;
 }
@@ -5577,17 +4852,6 @@ pub struct km_stat_t {
     pub n_cores: usize,
     pub largest: usize,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of km_stat_t"][::std::mem::size_of::<km_stat_t>() - 40usize];
-    ["Alignment of km_stat_t"][::std::mem::align_of::<km_stat_t>() - 8usize];
-    ["Offset of field: km_stat_t::capacity"][::std::mem::offset_of!(km_stat_t, capacity) - 0usize];
-    ["Offset of field: km_stat_t::available"]
-        [::std::mem::offset_of!(km_stat_t, available) - 8usize];
-    ["Offset of field: km_stat_t::n_blocks"][::std::mem::offset_of!(km_stat_t, n_blocks) - 16usize];
-    ["Offset of field: km_stat_t::n_cores"][::std::mem::offset_of!(km_stat_t, n_cores) - 24usize];
-    ["Offset of field: km_stat_t::largest"][::std::mem::offset_of!(km_stat_t, largest) - 32usize];
-};
 unsafe extern "C" {
     pub fn kmalloc(km: *mut ::std::os::raw::c_void, size: usize) -> *mut ::std::os::raw::c_void;
 }
@@ -5770,14 +5034,6 @@ pub struct __kstring_t {
     pub m: usize,
     pub s: *mut ::std::os::raw::c_char,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of __kstring_t"][::std::mem::size_of::<__kstring_t>() - 24usize];
-    ["Alignment of __kstring_t"][::std::mem::align_of::<__kstring_t>() - 8usize];
-    ["Offset of field: __kstring_t::l"][::std::mem::offset_of!(__kstring_t, l) - 0usize];
-    ["Offset of field: __kstring_t::m"][::std::mem::offset_of!(__kstring_t, m) - 8usize];
-    ["Offset of field: __kstring_t::s"][::std::mem::offset_of!(__kstring_t, s) - 16usize];
-};
 pub type kstring_t = __kstring_t;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -5796,23 +5052,6 @@ pub struct ksw_extz_t {
     pub reach_end: ::std::os::raw::c_int,
     pub cigar: *mut u32,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of ksw_extz_t"][::std::mem::size_of::<ksw_extz_t>() - 56usize];
-    ["Alignment of ksw_extz_t"][::std::mem::align_of::<ksw_extz_t>() - 8usize];
-    ["Offset of field: ksw_extz_t::max_q"][::std::mem::offset_of!(ksw_extz_t, max_q) - 4usize];
-    ["Offset of field: ksw_extz_t::max_t"][::std::mem::offset_of!(ksw_extz_t, max_t) - 8usize];
-    ["Offset of field: ksw_extz_t::mqe"][::std::mem::offset_of!(ksw_extz_t, mqe) - 12usize];
-    ["Offset of field: ksw_extz_t::mqe_t"][::std::mem::offset_of!(ksw_extz_t, mqe_t) - 16usize];
-    ["Offset of field: ksw_extz_t::mte"][::std::mem::offset_of!(ksw_extz_t, mte) - 20usize];
-    ["Offset of field: ksw_extz_t::mte_q"][::std::mem::offset_of!(ksw_extz_t, mte_q) - 24usize];
-    ["Offset of field: ksw_extz_t::score"][::std::mem::offset_of!(ksw_extz_t, score) - 28usize];
-    ["Offset of field: ksw_extz_t::m_cigar"][::std::mem::offset_of!(ksw_extz_t, m_cigar) - 32usize];
-    ["Offset of field: ksw_extz_t::n_cigar"][::std::mem::offset_of!(ksw_extz_t, n_cigar) - 36usize];
-    ["Offset of field: ksw_extz_t::reach_end"]
-        [::std::mem::offset_of!(ksw_extz_t, reach_end) - 40usize];
-    ["Offset of field: ksw_extz_t::cigar"][::std::mem::offset_of!(ksw_extz_t, cigar) - 48usize];
-};
 impl ksw_extz_t {
     #[inline]
     pub fn max(&self) -> u32 {
@@ -6111,14 +5350,6 @@ pub struct mm_seed_t {
     pub _bitfield_1: __BindgenBitfieldUnit<[u8; 8usize]>,
     pub cr: *const u64,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of mm_seed_t"][::std::mem::size_of::<mm_seed_t>() - 24usize];
-    ["Alignment of mm_seed_t"][::std::mem::align_of::<mm_seed_t>() - 8usize];
-    ["Offset of field: mm_seed_t::n"][::std::mem::offset_of!(mm_seed_t, n) - 0usize];
-    ["Offset of field: mm_seed_t::q_pos"][::std::mem::offset_of!(mm_seed_t, q_pos) - 4usize];
-    ["Offset of field: mm_seed_t::cr"][::std::mem::offset_of!(mm_seed_t, cr) - 16usize];
-};
 impl mm_seed_t {
     #[inline]
     pub fn q_span(&self) -> u32 {
@@ -6287,15 +5518,6 @@ pub struct mm_seg_t {
     pub u: *mut u64,
     pub a: *mut mm128_t,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of mm_seg_t"][::std::mem::size_of::<mm_seg_t>() - 24usize];
-    ["Alignment of mm_seg_t"][::std::mem::align_of::<mm_seg_t>() - 8usize];
-    ["Offset of field: mm_seg_t::n_u"][::std::mem::offset_of!(mm_seg_t, n_u) - 0usize];
-    ["Offset of field: mm_seg_t::n_a"][::std::mem::offset_of!(mm_seg_t, n_a) - 4usize];
-    ["Offset of field: mm_seg_t::u"][::std::mem::offset_of!(mm_seg_t, u) - 8usize];
-    ["Offset of field: mm_seg_t::a"][::std::mem::offset_of!(mm_seg_t, a) - 16usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct mm_idx_jjump1_t {
@@ -6305,21 +5527,6 @@ pub struct mm_idx_jjump1_t {
     pub strand: i16,
     pub flag: u16,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of mm_idx_jjump1_t"][::std::mem::size_of::<mm_idx_jjump1_t>() - 16usize];
-    ["Alignment of mm_idx_jjump1_t"][::std::mem::align_of::<mm_idx_jjump1_t>() - 4usize];
-    ["Offset of field: mm_idx_jjump1_t::off"]
-        [::std::mem::offset_of!(mm_idx_jjump1_t, off) - 0usize];
-    ["Offset of field: mm_idx_jjump1_t::off2"]
-        [::std::mem::offset_of!(mm_idx_jjump1_t, off2) - 4usize];
-    ["Offset of field: mm_idx_jjump1_t::cnt"]
-        [::std::mem::offset_of!(mm_idx_jjump1_t, cnt) - 8usize];
-    ["Offset of field: mm_idx_jjump1_t::strand"]
-        [::std::mem::offset_of!(mm_idx_jjump1_t, strand) - 12usize];
-    ["Offset of field: mm_idx_jjump1_t::flag"]
-        [::std::mem::offset_of!(mm_idx_jjump1_t, flag) - 14usize];
-};
 unsafe extern "C" {
     pub fn cputime() -> f64;
 }
@@ -6786,18 +5993,6 @@ pub struct ketopt_t {
     pub pos: ::std::os::raw::c_int,
     pub n_args: ::std::os::raw::c_int,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of ketopt_t"][::std::mem::size_of::<ketopt_t>() - 32usize];
-    ["Alignment of ketopt_t"][::std::mem::align_of::<ketopt_t>() - 8usize];
-    ["Offset of field: ketopt_t::ind"][::std::mem::offset_of!(ketopt_t, ind) - 0usize];
-    ["Offset of field: ketopt_t::opt"][::std::mem::offset_of!(ketopt_t, opt) - 4usize];
-    ["Offset of field: ketopt_t::arg"][::std::mem::offset_of!(ketopt_t, arg) - 8usize];
-    ["Offset of field: ketopt_t::longidx"][::std::mem::offset_of!(ketopt_t, longidx) - 16usize];
-    ["Offset of field: ketopt_t::i"][::std::mem::offset_of!(ketopt_t, i) - 20usize];
-    ["Offset of field: ketopt_t::pos"][::std::mem::offset_of!(ketopt_t, pos) - 24usize];
-    ["Offset of field: ketopt_t::n_args"][::std::mem::offset_of!(ketopt_t, n_args) - 28usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct ko_longopt_t {
@@ -6805,15 +6000,6 @@ pub struct ko_longopt_t {
     pub has_arg: ::std::os::raw::c_int,
     pub val: ::std::os::raw::c_int,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of ko_longopt_t"][::std::mem::size_of::<ko_longopt_t>() - 16usize];
-    ["Alignment of ko_longopt_t"][::std::mem::align_of::<ko_longopt_t>() - 8usize];
-    ["Offset of field: ko_longopt_t::name"][::std::mem::offset_of!(ko_longopt_t, name) - 0usize];
-    ["Offset of field: ko_longopt_t::has_arg"]
-        [::std::mem::offset_of!(ko_longopt_t, has_arg) - 8usize];
-    ["Offset of field: ko_longopt_t::val"][::std::mem::offset_of!(ko_longopt_t, val) - 12usize];
-};
 unsafe extern "C" {
     pub static mut KETOPT_INIT: ketopt_t;
 }
@@ -6824,17 +6010,6 @@ pub struct ks_isort_stack_t {
     pub right: *mut ::std::os::raw::c_void,
     pub depth: ::std::os::raw::c_int,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of ks_isort_stack_t"][::std::mem::size_of::<ks_isort_stack_t>() - 24usize];
-    ["Alignment of ks_isort_stack_t"][::std::mem::align_of::<ks_isort_stack_t>() - 8usize];
-    ["Offset of field: ks_isort_stack_t::left"]
-        [::std::mem::offset_of!(ks_isort_stack_t, left) - 0usize];
-    ["Offset of field: ks_isort_stack_t::right"]
-        [::std::mem::offset_of!(ks_isort_stack_t, right) - 8usize];
-    ["Offset of field: ks_isort_stack_t::depth"]
-        [::std::mem::offset_of!(ks_isort_stack_t, depth) - 16usize];
-};
 pub type ksstr_t = *const ::std::os::raw::c_char;
 unsafe extern "C" {
     pub fn kt_for(
@@ -6905,19 +6080,6 @@ pub struct __va_list_tag {
     pub overflow_arg_area: *mut ::std::os::raw::c_void,
     pub reg_save_area: *mut ::std::os::raw::c_void,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of __va_list_tag"][::std::mem::size_of::<__va_list_tag>() - 24usize];
-    ["Alignment of __va_list_tag"][::std::mem::align_of::<__va_list_tag>() - 8usize];
-    ["Offset of field: __va_list_tag::gp_offset"]
-        [::std::mem::offset_of!(__va_list_tag, gp_offset) - 0usize];
-    ["Offset of field: __va_list_tag::fp_offset"]
-        [::std::mem::offset_of!(__va_list_tag, fp_offset) - 4usize];
-    ["Offset of field: __va_list_tag::overflow_arg_area"]
-        [::std::mem::offset_of!(__va_list_tag, overflow_arg_area) - 8usize];
-    ["Offset of field: __va_list_tag::reg_save_area"]
-        [::std::mem::offset_of!(__va_list_tag, reg_save_area) - 16usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct mm_idx_bucket_s {

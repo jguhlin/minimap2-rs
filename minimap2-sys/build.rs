@@ -209,11 +209,12 @@ fn sse2only(cc: &mut cc::Build) {
 fn gen_bindings() {
     let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
-    let mut bindgen = bindgen::Builder::default()
+    let bindgen = bindgen::Builder::default()
         .derive_debug(true)
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()));
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+        .layout_tests(false); // Disable layout tests to avoid cross-compilation issues
 
-    let mut bindgen = bindgen.header("minimap2.h");
+    let bindgen = bindgen.header("minimap2.h");
 
     bindgen
         .generate_cstr(true)
