@@ -387,7 +387,8 @@ impl Aligner<()> {
         };
 
         unsafe {
-            minimap2_sys::mm_set_opt(&0, &mut aligner.idxopt, &mut aligner.mapopt);
+            let ret = minimap2_sys::mm_set_opt(std::ptr::null(), &mut aligner.idxopt, &mut aligner.mapopt);
+            assert_eq!(ret, 0);
         }
 
         aligner
@@ -600,8 +601,10 @@ impl Aligner<Unset> {
     /// options at once.
     pub fn preset(mut self, preset: Preset) -> Aligner<PresetSet> {
         unsafe {
-            mm_set_opt(&0, &mut self.idxopt, &mut self.mapopt);
-            mm_set_opt(preset.into(), &mut self.idxopt, &mut self.mapopt)
+            let ret1 = mm_set_opt(std::ptr::null(), &mut self.idxopt, &mut self.mapopt);
+            assert_eq!(ret1, 0);
+            let ret2 = mm_set_opt(preset.into(), &mut self.idxopt, &mut self.mapopt);
+            assert_eq!(ret2, 0);
         };
 
         Aligner {
@@ -995,7 +998,10 @@ where
     /// Presets should be called before any other options are set, as they change multiple
     /// options at once.
     pub fn additional_preset(mut self, preset: Preset) -> Self {
-        unsafe { mm_set_opt(preset.into(), &mut self.idxopt, &mut self.mapopt) };
+        unsafe {
+            let ret = mm_set_opt(preset.into(), &mut self.idxopt, &mut self.mapopt);
+            assert_eq!(ret, 0);
+        };
 
         self
     }
@@ -1856,7 +1862,10 @@ mod tests {
         let mut mm_idxopt = MaybeUninit::uninit();
         let mut mm_mapopt = MaybeUninit::uninit();
 
-        unsafe { mm_set_opt(&0, mm_idxopt.as_mut_ptr(), mm_mapopt.as_mut_ptr()) };
+        unsafe {
+            let ret = mm_set_opt(std::ptr::null(), mm_idxopt.as_mut_ptr(), mm_mapopt.as_mut_ptr());
+            assert_eq!(ret, 0);
+        };
     }
 
     #[test]
