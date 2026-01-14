@@ -179,12 +179,12 @@ mod tests {
 
     #[test]
     fn mapopt() {
-        let x: mm_mapopt_t = Default::default();
+        let _x: mm_mapopt_t = Default::default();
     }
 
     #[test]
     fn idxopt() {
-        let x: mm_idxopt_t = Default::default();
+        let _x: mm_idxopt_t = Default::default();
     }
 
     #[test]

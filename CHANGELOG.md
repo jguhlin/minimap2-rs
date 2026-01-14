@@ -1,4 +1,8 @@
-### 0.1.29 minimap2 2.30 (UNRELEASED)
+### 0.1.30 minimap2 2.30 (UNRELEASED)
++ Fix: Check the return value of `mm_set_opt` @sjackman
++ Fix: Use `std::ptr::null()` instead of `&0` for null pointer arguments @sjackman
++ Fix: Update `Preset::Asm` to map to "asm5" instead of "asm" for minimap2 2.30 compatibility
++ Update rust-htslib requirement from 0.50 to 0.51
 + Experimental rust threads (and possible windows support)
 
 ### 0.1.28 minimap2 2.30

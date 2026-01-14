@@ -160,11 +160,11 @@ fn compile() {
     configure(&mut cc);
 
     cc.flag("-DHAVE_KALLOC");
-    #[cfg(feature = "static")]
-    cc.static_flag(true);
-
-    // println!("cargo:rustc-cfg=link_libz");
-
+    
+    // Rename to avoid conflicts with other libs
+    cc.define("cputime", "mm_cputime");
+    cc.define("realtime", "mm_realtime");
+    
     if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
         cc.include(include.clone());
         // Use env DEP_Z_ROOT to find the library
@@ -211,8 +211,7 @@ fn gen_bindings() {
 
     let mut bindgen = bindgen::Builder::default()
         .derive_debug(true)
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-        .rustfmt_bindings(true);
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()));
 
     let mut bindgen = bindgen.header("minimap2.h");
 
