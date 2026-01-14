@@ -169,6 +169,24 @@ jobs:
           name: wheels-macos-${{ matrix.platform.target }}
           path: dist
 
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+          working-directory: "minimappers2"
+      - name: Upload sdist
+        uses: actions/upload-artifact@v6
+        with:
+          name: wheels-sdist
+          path: dist
+
   release:
     name: Release
     runs-on: ubuntu-latest
