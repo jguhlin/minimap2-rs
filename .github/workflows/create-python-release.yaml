@@ -36,7 +36,7 @@ jobs:
             target: aarch64
     steps:
       - run: sudo apt-get update && sudo apt-get install -y build-essential
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: 'recursive'
       - run: cd minimappers2
@@ -101,7 +101,7 @@ jobs:
             target: aarch64
     steps:
       - run: sudo apt-get update && sudo apt-get install -y build-essential musl-tools
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: 'recursive'
       - run: cd minimappers2
@@ -142,7 +142,7 @@ jobs:
           - runner: macos-14
             target: aarch64
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: 'recursive'
       - run: cd minimappers2
