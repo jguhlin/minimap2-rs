@@ -244,6 +244,8 @@ pub struct Mapping {
     pub is_spliced: bool,
     pub trans_strand: Option<Strand>,
     pub alignment: Option<Alignment>,
+    // Segment ID for paired-end reads (0 = read1, 1 = read2). Always 0 for single-end.
+    pub segment_id: u8,
 }
 
 // Thread local buffer (memory management) for minimap2
@@ -1121,8 +1123,9 @@ impl Aligner<Built> {
 
     // https://github.com/lh3/minimap2/blob/master/python/mappy.pyx#L164
     // TODO: I doubt extra_flags is working properly...
-    // TODO: Python allows for paired-end mapping with seq2: Option<&[u8]>, but more work to implement
     /// Aligns a given sequence (as bytes) to the index associated with this aligner
+    ///
+    /// For paired-end mapping, use [`map_pair`](Self::map_pair) instead.
     ///
     /// Parameters:
     /// seq: Sequence to align
@@ -1471,6 +1474,7 @@ impl Aligner<Built> {
                         is_spliced,
                         trans_strand,
                         alignment,
+                        segment_id: 0, // Single-end mapping
                     });
                     libc::free(reg.p as *mut c_void);
                 }
@@ -1489,8 +1493,414 @@ impl Aligner<Built> {
         
         all_mappings
     });
-        
+
         Ok(mappings)
+    }
+
+    /// Aligns a pair of sequences (paired-end reads) to the index.
+    ///
+    /// This method uses minimap2's `mm_map_frag` function internally to perform
+    /// paired-end alignment, which considers the expected fragment length and
+    /// orientation of read pairs.
+    ///
+    /// # Parameters
+    /// * `seq1` - First read sequence (read 1)
+    /// * `seq2` - Second read sequence (read 2)
+    /// * `cs` - Whether to output CS tag
+    /// * `md` - Whether to output MD tag
+    /// * `max_frag_len` - Maximum fragment length (insert size). If None, uses default.
+    /// * `extra_flags` - Extra flags to pass to minimap2
+    /// * `query_name` - Name of the read pair
+    ///
+    /// # Returns
+    /// A tuple of `(Vec<Mapping>, Vec<Mapping>)` where the first vector contains
+    /// mappings for read 1 and the second contains mappings for read 2.
+    ///
+    /// # Example
+    /// ```no_run
+    /// use minimap2::Aligner;
+    ///
+    /// let aligner = Aligner::builder()
+    ///     .sr()  // short-read preset for paired-end
+    ///     .with_cigar()
+    ///     .with_index("reference.fa", None)
+    ///     .expect("Unable to build index");
+    ///
+    /// let read1 = b"ACGTACGTACGTACGT";
+    /// let read2 = b"TGCATGCATGCATGCA";
+    ///
+    /// let (mappings1, mappings2) = aligner.map_pair(
+    ///     read1, read2,
+    ///     false, false,
+    ///     Some(500),
+    ///     None,
+    ///     Some(b"read_pair_001"),
+    /// ).expect("Unable to align");
+    /// ```
+    pub fn map_pair(
+        &self,
+        seq1: &[u8],
+        seq2: &[u8],
+        cs: bool,
+        md: bool,
+        max_frag_len: Option<usize>,
+        extra_flags: Option<&[u64]>,
+        query_name: Option<&[u8]>,
+    ) -> Result<(Vec<Mapping>, Vec<Mapping>), &'static str> {
+        use std::os::raw::c_int;
+
+        // Make sure index is set
+        if !self.has_index() {
+            return Err("No index");
+        }
+
+        // Make sure sequences are not empty
+        if seq1.is_empty() {
+            return Err("Sequence 1 is empty");
+        }
+        if seq2.is_empty() {
+            return Err("Sequence 2 is empty");
+        }
+
+        let qname_cstring;
+        let query_name_cstr: Option<&CStr> = match query_name {
+            None => None,
+            Some(qname_slice) => {
+                if qname_slice.last() != Some(&b'\0') {
+                    qname_cstring = Some(CString::new(qname_slice).expect("Invalid query name"));
+                    Some(qname_cstring.as_ref().unwrap().as_c_str())
+                } else {
+                    Some(
+                        CStr::from_bytes_with_nul(query_name.as_ref().unwrap().as_ref())
+                            .expect("Invalid query name"),
+                    )
+                }
+            }
+        };
+
+        let mut map_opt = self.mapopt.clone();
+
+        // Set max_frag_len if provided
+        if let Some(max_frag_len) = max_frag_len {
+            map_opt.max_frag_len = max_frag_len as i32;
+        }
+
+        // Apply extra flags
+        if let Some(extra_flags) = extra_flags {
+            for flag in extra_flags {
+                map_opt.flag |= *flag as i64;
+            }
+        }
+
+        let query_name_arc = query_name_cstr.map(|x| Arc::new(x.to_owned().into_string().unwrap()));
+
+        let qname = match query_name_cstr {
+            None => std::ptr::null(),
+            Some(qname) => qname.as_ref().as_ptr() as *const ::std::os::raw::c_char,
+        };
+
+        // Determine which reads need to be reverse-complemented based on pe_ori
+        // pe_ori encoding: bit-0 for reverse read2, bit-1 for reverse read1
+        let revcomp_read1 = map_opt.pe_ori >= 0 && ((map_opt.pe_ori >> 1) & 1) != 0;
+        let revcomp_read2 = map_opt.pe_ori >= 0 && (map_opt.pe_ori & 1) != 0;
+
+        // Reverse complement sequences if needed
+        let seq1_rc: Vec<u8>;
+        let seq2_rc: Vec<u8>;
+        let seq1_mapped: &[u8] = if revcomp_read1 {
+            seq1_rc = reverse_complement(seq1);
+            &seq1_rc
+        } else {
+            seq1
+        };
+        let seq2_mapped: &[u8] = if revcomp_read2 {
+            seq2_rc = reverse_complement(seq2);
+            &seq2_rc
+        } else {
+            seq2
+        };
+
+        // Prepare arrays for mm_map_frag
+        let seqs: [&[u8]; 2] = [seq1_mapped, seq2_mapped];
+        let qlens: [c_int; 2] = [seq1.len() as c_int, seq2.len() as c_int];
+        let seq_ptrs: [*const ::std::os::raw::c_char; 2] = [
+            seq1_mapped.as_ptr() as *const ::std::os::raw::c_char,
+            seq2_mapped.as_ptr() as *const ::std::os::raw::c_char,
+        ];
+
+        let (mappings1, mappings2) = BUF.with_borrow_mut(|buf| {
+            let mut all_mappings1 = Vec::new();
+            let mut all_mappings2 = Vec::new();
+
+            // Map against all index parts
+            for idx_part in &self.idx_parts {
+                let mut n_regs: [c_int; 2] = [0, 0];
+                let mut regs: [*mut mm_reg1_t; 2] = [std::ptr::null_mut(), std::ptr::null_mut()];
+
+                let km: *mut libc::c_void = unsafe { mm_tbuf_get_km(buf.get_buf()) };
+
+                unsafe {
+                    mm_map_frag(
+                        &**idx_part.as_ref() as *const mm_idx_t,
+                        2, // n_segs = 2 for paired-end
+                        qlens.as_ptr(),
+                        seq_ptrs.as_ptr() as *mut *const ::std::os::raw::c_char,
+                        n_regs.as_mut_ptr(),
+                        regs.as_mut_ptr(),
+                        buf.get_buf(),
+                        &map_opt,
+                        qname,
+                    );
+                }
+
+                // Determine which segments need coordinate flipping
+                let revcomp_flags: [bool; 2] = [revcomp_read1, revcomp_read2];
+
+                // Process results for both segments
+                for seg_id in 0..2usize {
+                    let seg_n_regs = n_regs[seg_id];
+                    let seg_regs = regs[seg_id];
+                    let seq = seqs[seg_id];
+
+                    let mut mappings = Vec::with_capacity(seg_n_regs as usize);
+
+                    for i in 0..seg_n_regs {
+                        unsafe {
+                            let mm_reg1_mut_ptr = seg_regs.offset(i as isize);
+                            let mm_reg1_const_ptr = mm_reg1_mut_ptr as *const mm_reg1_t;
+                            let reg: mm_reg1_t = *mm_reg1_mut_ptr;
+
+                            let idx = &**idx_part.as_ref();
+
+                            let contig = {
+                                let seqs_arr = (*idx).seq;
+                                let entry = seqs_arr.offset(reg.rid as isize);
+                                let name_ptr: *const libc::c_char = (*entry).name;
+                                std::ffi::CStr::from_ptr(name_ptr)
+                            };
+
+                            let is_primary = reg.parent == reg.id && (reg.sam_pri() > 0);
+                            let is_supplementary = (reg.parent == reg.id) && (reg.sam_pri() == 0);
+                            let is_spliced = reg.is_spliced() != 0;
+                            let trans_strand = if let Some(extra) = reg.p.as_ref() {
+                                match extra.trans_strand() {
+                                    1 => Some(Strand::Forward),
+                                    2 => Some(Strand::Reverse),
+                                    _ => None,
+                                }
+                            } else {
+                                None
+                            };
+
+                            let alignment = if !reg.p.is_null() {
+                                let p = &*reg.p;
+                                let nm = reg.blen - reg.mlen + p.n_ambi() as i32;
+                                let n_cigar = p.n_cigar;
+
+                                let (cigar, cigar_str) = if n_cigar > 0 {
+                                    let mut cigar = p
+                                        .cigar
+                                        .as_slice(n_cigar as usize)
+                                        .to_vec()
+                                        .iter()
+                                        .map(|c| ((c >> 4), (c & 0xf) as u8))
+                                        .collect::<Vec<(u32, u8)>>();
+
+                                    let clip_len0 = if reg.rev() != 0 {
+                                        seq.len() as i32 - reg.qe
+                                    } else {
+                                        reg.qs
+                                    };
+
+                                    let clip_len1 = if reg.rev() != 0 {
+                                        reg.qs
+                                    } else {
+                                        seq.len() as i32 - reg.qe
+                                    };
+
+                                    let mut cigar_str = cigar
+                                        .iter()
+                                        .map(|(len, code)| {
+                                            let cigar_char = match code {
+                                                0 => "M",
+                                                1 => "I",
+                                                2 => "D",
+                                                3 => "N",
+                                                4 => "S",
+                                                5 => "H",
+                                                6 => "P",
+                                                7 => "=",
+                                                8 => "X",
+                                                _ => panic!("Invalid CIGAR code {code}"),
+                                            };
+                                            format!("{len}{cigar_char}")
+                                        })
+                                        .collect::<Vec<String>>()
+                                        .join("");
+
+                                    let clip_char = 'S';
+
+                                    if clip_len0 > 0 {
+                                        cigar_str = format!("{}{}{}", clip_len0, clip_char, cigar_str);
+                                        if self.cigar_clipping {
+                                            cigar.insert(0, (clip_len0 as u32, 4_u8));
+                                        }
+                                    }
+
+                                    if clip_len1 > 0 {
+                                        cigar_str = format!("{}{}{}", cigar_str, clip_len1, clip_char);
+                                        if self.cigar_clipping {
+                                            cigar.push((clip_len1 as u32, 4_u8));
+                                        }
+                                    }
+
+                                    (Some(cigar), Some(cigar_str))
+                                } else {
+                                    (None, None)
+                                };
+
+                                let (cs_str, md_str) = if cs || md {
+                                    let cs_str = if cs {
+                                        let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
+                                        let mut m_cs_string: libc::c_int = 0i32;
+
+                                        let _cs_len = {
+                                            mm_gen_cs(
+                                                km,
+                                                &mut cs_string,
+                                                &mut m_cs_string,
+                                                idx,
+                                                mm_reg1_const_ptr,
+                                                seq.as_ptr() as *const _,
+                                                1,
+                                            )
+                                        };
+                                        let _cs = {
+                                            let s = CStr::from_ptr(cs_string)
+                                                .to_string_lossy()
+                                                .into_owned();
+                                            libc::free(cs_string as *mut _);
+                                            s
+                                        };
+                                        Some(_cs)
+                                    } else {
+                                        None
+                                    };
+
+                                    let md_str = if md {
+                                        let mut md_buf: *mut libc::c_char = std::ptr::null_mut();
+                                        let mut md_len: libc::c_int = 0;
+
+                                        let _written = {
+                                            mm_gen_MD(
+                                                km,
+                                                &mut md_buf,
+                                                &mut md_len,
+                                                idx,
+                                                mm_reg1_const_ptr,
+                                                seq.as_ptr() as *const _,
+                                            )
+                                        };
+
+                                        let md_string = {
+                                            let s = std::ffi::CStr::from_ptr(md_buf)
+                                                .to_string_lossy()
+                                                .into_owned();
+                                            libc::free(md_buf as *mut libc::c_void);
+                                            s
+                                        };
+                                        Some(md_string)
+                                    } else {
+                                        None
+                                    };
+
+                                    (cs_str, md_str)
+                                } else {
+                                    (None, None)
+                                };
+
+                                Some(Alignment {
+                                    nm,
+                                    cigar,
+                                    cigar_str,
+                                    md: md_str,
+                                    cs: cs_str,
+                                    alignment_score: Some(p.dp_score as i32),
+                                })
+                            } else {
+                                None
+                            };
+
+                            let target_name_arc = Arc::new(
+                                std::ffi::CStr::from_ptr(contig.as_ptr())
+                                    .to_str()
+                                    .unwrap()
+                                    .to_string(),
+                            );
+
+                            let target_len = {
+                                let seqs_arr = (*idx).seq;
+                                let entry = seqs_arr.offset(reg.rid as isize);
+                                (*entry).len as i32
+                            };
+
+                            // Flip query coordinates and strand for reverse-complemented reads
+                            let (final_qs, final_qe, final_rev) = if revcomp_flags[seg_id] {
+                                let qlen = qlens[seg_id];
+                                (qlen - reg.qe, qlen - reg.qs, reg.rev() ^ 1)
+                            } else {
+                                (reg.qs, reg.qe, reg.rev())
+                            };
+
+                            mappings.push(Mapping {
+                                target_name: Some(Arc::clone(&target_name_arc)),
+                                target_len,
+                                target_start: reg.rs,
+                                target_end: reg.re,
+                                target_id: reg.rid,
+                                query_name: query_name_arc.clone(),
+                                query_len: NonZeroI32::new(seq.len() as i32),
+                                query_start: final_qs,
+                                query_end: final_qe,
+                                strand: if final_rev == 0 {
+                                    Strand::Forward
+                                } else {
+                                    Strand::Reverse
+                                },
+                                match_len: reg.mlen,
+                                block_len: reg.blen,
+                                mapq: reg.mapq(),
+                                is_primary,
+                                is_supplementary,
+                                is_spliced,
+                                trans_strand,
+                                alignment,
+                                segment_id: seg_id as u8,
+                            });
+                            libc::free(reg.p as *mut c_void);
+                        }
+                    }
+
+                    // Add mappings to the appropriate result vector
+                    if seg_id == 0 {
+                        all_mappings1.extend(mappings);
+                    } else {
+                        all_mappings2.extend(mappings);
+                    }
+
+                    // Free the regs array for this segment
+                    if !seg_regs.is_null() {
+                        unsafe {
+                            libc::free(seg_regs as *mut c_void);
+                        }
+                    }
+                }
+            }
+
+            (all_mappings1, all_mappings2)
+        });
+
+        Ok((mappings1, mappings2))
     }
 
     /// Map entire file
@@ -1694,6 +2104,27 @@ fn revcomp_splice(s: &mut [u8; 2]) {
     let c = if s[1] < 4 { 3 - s[1] } else { 4 };
     s[1] = if s[0] < 4 { 3 - s[0] } else { 4 };
     s[0] = c;
+}
+
+/// Reverse complement a DNA sequence
+#[inline]
+fn reverse_complement(seq: &[u8]) -> Vec<u8> {
+    seq.iter()
+        .rev()
+        .map(|&b| match b {
+            b'A' | b'a' => b'T',
+            b'T' | b't' => b'A',
+            b'C' | b'c' => b'G',
+            b'G' | b'g' => b'C',
+            b'N' | b'n' => b'N',
+            // For encoded sequences (0=A, 1=C, 2=G, 3=T)
+            0 => 3,
+            1 => 2,
+            2 => 1,
+            3 => 0,
+            _ => b, // Keep other characters as-is
+        })
+        .collect()
 }
 
 mod send {
@@ -2773,5 +3204,214 @@ mod tests {
         if let Err(e) = aligner {
             panic!("{e:#?}");
         }
+    }
+
+    /// Test paired-end mapping with map_pair()
+    #[test]
+    fn test_map_pair_output() {
+        let aligner = Aligner::builder()
+            .sr() // short-read preset for paired-end
+            .with_index_threads(1)
+            .with_cigar()
+            .with_index("test_data/genome.fa", None)
+            .unwrap();
+
+        // Pair 1: chr1_chr1_pair - both reads map to chr1 (proper pair)
+        // Read1 from pair_1.fq
+        let read1_pair1 = b"ATTGCTGCCAAGTATTCGATGCATCTGTTACCCAGAGGTGCTCCTCACTA";
+        // Read2 from pair_2.fq
+        let read2_pair1 = b"GATCCTCTCGGCCGATAGTCCAGCTCGTAGTTGCGACGAGAAGGCGAGAG";
+
+        let (mappings1, mappings2) = aligner
+            .map_pair(
+                read1_pair1,
+                read2_pair1,
+                false,
+                false,
+                Some(500), // max_frag_len
+                None,
+                Some(b"chr1_chr1_pair"),
+            )
+            .expect("map_pair should succeed for chr1_chr1_pair");
+
+        // Verify both reads produced mappings
+        assert!(!mappings1.is_empty());
+        assert!(!mappings2.is_empty());
+
+        // Verify segment_id is set correctly
+        assert_eq!(mappings1[0].segment_id, 0);
+        assert_eq!(mappings2[0].segment_id, 1);
+
+        assert_eq!(
+            mappings1[0].query_name,
+            Some(Arc::new(String::from("chr1_chr1_pair")))
+        );
+        assert_eq!(mappings1[0].query_name, mappings2[0].query_name);
+
+        // Verify target name - both should map to chr1
+        assert_eq!(
+            mappings1[0].target_name,
+            Some(Arc::new(String::from("chr1")))
+        );
+        assert_eq!(
+            mappings2[0].target_name,
+            Some(Arc::new(String::from("chr1")))
+        );
+
+        // Read1: chr1:23 in SAM -> 22 in 0-based
+        assert_eq!(mappings1[0].target_start, 22);
+        // Read2: chr1:199 in SAM -> 198 in 0-based
+        assert_eq!(mappings2[0].target_start, 198);
+
+        // Verify mapping quality
+        assert_eq!(mappings1[0].mapq, 24);
+        assert_eq!(mappings2[0].mapq, 26);
+
+        // Read1 should be Forward (SAM flag 99)
+        assert_eq!(mappings1[0].strand, Strand::Forward);
+        // Read2 should be Reverse (SAM flag 147)
+        assert_eq!(mappings2[0].strand, Strand::Reverse);
+
+        // Verify query lengths
+        assert_eq!(mappings1[0].query_len, NonZeroI32::new(50));
+        assert_eq!(mappings2[0].query_len, NonZeroI32::new(50));
+
+        // Verify CIGAR - both should be 50M (perfect match)
+        let align1 = mappings1[0].alignment.as_ref().unwrap();
+        let align2 = mappings2[0].alignment.as_ref().unwrap();
+        assert_eq!(align1.cigar_str, Some(String::from("50M")));
+        assert_eq!(align2.cigar_str, Some(String::from("50M")));
+
+        // Verify is_primary
+        assert!(mappings1[0].is_primary);
+        assert!(mappings2[0].is_primary);
+
+        println!("chr1_chr1_pair mappings:");
+        println!("  Read1: {:?}", mappings1[0]);
+        println!("  Read2: {:?}", mappings2[0]);
+
+        // Pair 2: chr2_chr1_unpair - reads map to different chromosomes
+        let read1_pair2 = b"TGCCGCACAACTTCCATATTGCTGGTTATTACTACGGTACTGACCGCGCG";
+        let read2_pair2 = b"GATCCTCTCGGCCGATAGTCCAGCTCGTAGTTGCGACGAGAAGGCGAGAG";
+
+        let (mappings1, mappings2) = aligner
+            .map_pair(
+                read1_pair2,
+                read2_pair2,
+                false,
+                false,
+                Some(500),
+                None,
+                Some(b"chr2_chr1_unpair"),
+            )
+            .expect("map_pair should succeed for chr2_chr1_unpair");
+
+        assert!(!mappings1.is_empty());
+        assert!(!mappings2.is_empty());
+
+        // Verify segment_id
+        assert_eq!(mappings1[0].segment_id, 0);
+        assert_eq!(mappings2[0].segment_id, 1);
+
+        // Verify they map to different chromosomes
+        // Read1 maps to chr2, Read2 maps to chr1
+        assert_eq!(
+            mappings1[0].target_name,
+            Some(Arc::new(String::from("chr2")))
+        );
+        assert_eq!(
+            mappings2[0].target_name,
+            Some(Arc::new(String::from("chr1")))
+        );
+
+        // Verify positions (0-based)
+        // Read1: chr2:24 in SAM -> 23 in 0-based
+        assert_eq!(mappings1[0].target_start, 23);
+        // Read2: chr1:199 in SAM -> 198 in 0-based
+        assert_eq!(mappings2[0].target_start, 198);
+
+        println!("chr2_chr1_unpair mappings:");
+        println!("  Read1: {:?}", mappings1[0]);
+        println!("  Read2: {:?}", mappings2[0]);
+    }
+
+    /// Test map_pair error handling
+    #[test]
+    fn test_map_pair_errors() {
+        let aligner = Aligner::builder()
+            .sr()
+            .with_index("test_data/genome.fa", None)
+            .unwrap();
+
+        // Test empty sequence 1
+        let result = aligner.map_pair(b"", b"ACGT", false, false, None, None, None);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Sequence 1 is empty");
+
+        // Test empty sequence 2
+        let result = aligner.map_pair(b"ACGT", b"", false, false, None, None, None);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Sequence 2 is empty");
+    }
+
+    /// Test map_pair with CS and MD tags
+    #[test]
+    fn test_map_pair_with_cs_md() {
+        let aligner = Aligner::builder()
+            .sr()
+            .with_index_threads(1)
+            .with_cigar()
+            .with_index("test_data/genome.fa", None)
+            .unwrap();
+
+        let read1 = b"ATTGCTGCCAAGTATTCGATGCATCTGTTACCCAGAGGTGCTCCTCACTA";
+        let read2 = b"GATCCTCTCGGCCGATAGTCCAGCTCGTAGTTGCGACGAGAAGGCGAGAG";
+
+        // Test with CS and MD enabled
+        let (mappings1, mappings2) = aligner
+            .map_pair(read1, read2, true, true, Some(500), None, Some(b"test_cs_md"))
+            .unwrap();
+
+        assert!(!mappings1.is_empty());
+        assert!(!mappings2.is_empty());
+
+        let align1 = mappings1[0].alignment.as_ref().unwrap();
+        let align2 = mappings2[0].alignment.as_ref().unwrap();
+
+        // CS and MD should be present
+        assert!(align1.cs.is_some(), "CS tag should be present for read1");
+        assert!(align1.md.is_some(), "MD tag should be present for read1");
+        assert!(align2.cs.is_some(), "CS tag should be present for read2");
+        assert!(align2.md.is_some(), "MD tag should be present for read2");
+
+        // For perfect matches, CS should be ":50" and MD should be "50"
+        assert_eq!(align1.cs, Some(String::from(":50")));
+        assert_eq!(align1.md, Some(String::from("50")));
+        assert_eq!(align2.cs, Some(String::from(":50")));
+        assert_eq!(align2.md, Some(String::from("50")));
+
+        // Test with CS only
+        let (mappings1, _) = aligner
+            .map_pair(read1, read2, true, false, None, None, None)
+            .unwrap();
+        let align = mappings1[0].alignment.as_ref().unwrap();
+        assert!(align.cs.is_some());
+        assert!(align.md.is_none());
+
+        // Test with MD only
+        let (mappings1, _) = aligner
+            .map_pair(read1, read2, false, true, None, None, None)
+            .unwrap();
+        let align = mappings1[0].alignment.as_ref().unwrap();
+        assert!(align.cs.is_none());
+        assert!(align.md.is_some());
+
+        // Test with neither
+        let (mappings1, _) = aligner
+            .map_pair(read1, read2, false, false, None, None, None)
+            .unwrap();
+        let align = mappings1[0].alignment.as_ref().unwrap();
+        assert!(align.cs.is_none());
+        assert!(align.md.is_none());
     }
 }
