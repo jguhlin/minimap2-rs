@@ -1,4 +1,8 @@
-### 0.1.30 minimap2 2.30 (UNRELEASED)
+### 0.1.31 minimap2 2.30
++ @PPSherry: Add paired-end mapping via map_pair() function
++ Update rust-htslib to 1.0
+
+### 0.1.30 minimap2 2.30
 + Fix: Check the return value of `mm_set_opt` @sjackman
 + Fix: Use `std::ptr::null()` instead of `&0` for null pointer arguments @sjackman
 + Fix: Update `Preset::Asm` to map to "asm5" instead of "asm" for minimap2 2.30 compatibility
