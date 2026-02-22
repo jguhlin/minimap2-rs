@@ -9,7 +9,7 @@ A rust FFI wrapper library for [minimap2](https://github.com/lh3/minimap2/) with
 # How to use
 ## Requirements
 ```toml
-minimap2 = "0.1.30+minimap2.2.30"
+minimap2 = "0.1.31+minimap2.2.30"
 ```
 Also see [Features](#features)
 
@@ -18,7 +18,7 @@ Tested with rustc 1.86.0. Recommended to use the latest stable version of rust, 
 ## Minimap2 Version Table
 | minimap2-rs     | minimap2 |
 |-----------------|----------|
-| 0.1.28 - 0.1.30 | 2.30     |
+| 0.1.28 - 0.1.31 | 2.30     |
 | 0.1.25 - 0.1.27 | 2.30     |
 | 0.1.24          | 2.29     |
 | 0.1.18 - 0.1.23 | 2.28     |
