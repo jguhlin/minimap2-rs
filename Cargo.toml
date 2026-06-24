@@ -34,14 +34,14 @@ exclude = ["minimappers2", "fakeminimap2", "minimap2-sys"]
 [dependencies]
 libc = "0.2"
 needletail = { version = "0.6", optional = true, default-features = false}
-
-minimap2-sys = { path = "./minimap2-sys", version = "0.1.30+minimap2.2.30" }
 rust-htslib = { version = "1.0", default-features = false, optional = true }
+extended-htslib = { version = "0.3.0", default-features = false, optional = true }
+minimap2-sys = { path = "./minimap2-sys", version = "0.1.30+minimap2.2.30" }
 
 [dev-dependencies]
-rayon = "1.10"
+rayon = "1.12"
 crossbeam = "0.8.4"
-clap = { version = "4.5.40", features = ["derive"] }
+clap = { version = "4.6.1", features = ["derive"] }
 needletail = { version = "0.6", default-features = false}
 
 # The end-user should decide this...
@@ -54,13 +54,14 @@ needletail = { version = "0.6", default-features = false}
 # opt-level = 3
 
 [features]
-default = ["map-file"]
+default = ["map-file", "htslib"]
 map-file = ["needletail"]
 htslib = ['rust-htslib']
+extendedhtslib = ['extended-htslib']
 simde = ["minimap2-sys/simde"]
 zlib-ng = ["minimap2-sys/zlib-ng"]
-curl = ["rust-htslib/curl"]
-static = ["minimap2-sys/static", "rust-htslib/static"]
+curl = ["rust-htslib/curl", "extended-htslib/curl"]
+static = ["minimap2-sys/static", "rust-htslib/static", "extended-htslib/static"]
 sse2only = ["minimap2-sys/sse2only"]
 
 [package.metadata.docs.rs]

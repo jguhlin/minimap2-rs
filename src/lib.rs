@@ -9,6 +9,7 @@
 //! This crate has multiple create features available.
 //! * map-file - Enables the ability to map a file directly to a reference. Enabled by deafult
 //! * htslib - Provides an interface to minimap2 that returns rust_htslib::Records
+//! * extended-htslib - Provides an interface to minimap2 that returns extended_rusthtslib::Records and CS tag.
 //! * simde - Enables SIMD Everywhere library in minimap2
 //! * zlib-ng - Enables the use of zlib-ng for faster compression
 //! * curl - Enables curl for htslib
@@ -73,8 +74,9 @@ pub use minimap2_sys as ffi;
 
 #[cfg(feature = "map-file")]
 use needletail::parse_fastx_file;
-
-#[cfg(feature = "htslib")]
+#[cfg(feature = "extendedhtslib")]
+pub mod extendedhtslib;
+#[cfg(all(feature = "htslib", not(feature = "extendedhtslib")))]
 pub mod htslib;
 
 /// Alias for mm_mapop_t
@@ -389,7 +391,11 @@ impl Aligner<()> {
         };
 
         unsafe {
-            let ret = minimap2_sys::mm_set_opt(std::ptr::null(), &mut aligner.idxopt, &mut aligner.mapopt);
+            let ret = minimap2_sys::mm_set_opt(
+                std::ptr::null(),
+                &mut aligner.idxopt,
+                &mut aligner.mapopt,
+            );
             assert_eq!(ret, 0);
         }
 
@@ -794,7 +800,7 @@ where
         // Large reference genomes are automatically split into parts based on batch_size
         let mut idx_parts = Vec::new();
         let mut first_idx = None;
-        
+
         unsafe {
             // Read all index parts in a loop, just like C minimap2 does
             // This handles both single-part and multi-part indexes transparently
@@ -803,11 +809,11 @@ where
                     &mut *idx_reader as *mut mm_idx_reader_t,
                     self.threads as libc::c_int,
                 );
-                
+
                 if idx_part.is_null() {
                     break; // No more parts to read
                 }
-                
+
                 if first_idx.is_none() {
                     // Use the first part for mapping option updates and API compatibility
                     mm_mapopt_update(&mut self.mapopt, idx_part);
@@ -821,16 +827,16 @@ where
                     idx_parts.push(Arc::new(idx_part.into()));
                 }
             }
-            
+
             // Close the reader after reading all parts
             mm_idx_reader_close(idx_reader);
         }
-        
+
         // Ensure we got at least one index part
         if first_idx.is_none() {
             return Err("Failed to read index - no parts found");
         }
-        
+
         self.idx = first_idx;
         self.idx_parts = idx_parts;
 
@@ -1197,7 +1203,7 @@ impl Aligner<Built> {
 
         let mappings = BUF.with_borrow_mut(|buf| {
             let mut all_mappings = Vec::new();
-            
+
             // Map against all index parts transparently
             // For single-part indexes, this will iterate once
             // For multi-part indexes, this will iterate over all parts
@@ -1216,283 +1222,284 @@ impl Aligner<Built> {
 
                 let mut mappings = Vec::with_capacity(n_regs as usize);
 
-            let km: *mut libc::c_void = unsafe { mm_tbuf_get_km(buf.get_buf()) };
+                let km: *mut libc::c_void = unsafe { mm_tbuf_get_km(buf.get_buf()) };
 
-            for i in 0..n_regs {
-                unsafe {
-                    let mm_reg1_mut_ptr = (*mm_reg.as_ptr()).offset(i as isize);
-                    let mm_reg1_const_ptr = mm_reg1_mut_ptr as *const mm_reg1_t;
-                    let reg: mm_reg1_t = *mm_reg1_mut_ptr;
+                for i in 0..n_regs {
+                    unsafe {
+                        let mm_reg1_mut_ptr = (*mm_reg.as_ptr()).offset(i as isize);
+                        let mm_reg1_const_ptr = mm_reg1_mut_ptr as *const mm_reg1_t;
+                        let reg: mm_reg1_t = *mm_reg1_mut_ptr;
 
-                    let idx = &**idx_part.as_ref();
+                        let idx = &**idx_part.as_ref();
 
-                    let contig = {
-                        let seqs = (*idx).seq;
-                        let entry = seqs.offset(reg.rid as isize);
-                        let name_ptr: *const libc::c_char = (*entry).name;
-                        std::ffi::CStr::from_ptr(name_ptr)
-                    };
-
-                    // TODO: deprecate?
-                    let _target_len = {
-                        let seqs = (*idx).seq;
-                        let entry = seqs.offset(reg.rid as isize);
-                        (*entry).len as i32
-                    };
-
-                    let is_primary = reg.parent == reg.id && (reg.sam_pri() > 0);
-                    let is_supplementary = (reg.parent == reg.id) && (reg.sam_pri() == 0);
-                    let is_spliced = reg.is_spliced() != 0;
-                    let trans_strand = if let Some(extra) = reg.p.as_ref() {
-                        match extra.trans_strand() {
-                            1 => Some(Strand::Forward),
-                            2 => Some(Strand::Reverse),
-                            _ => None,
-                        }
-                    } else {
-                        None
-                    };
-
-                    // todo holy heck this code is ugly
-                    let alignment = if !reg.p.is_null() {
-                        let p = &*reg.p;
-
-                        // calculate the edit distance
-                        let nm = reg.blen - reg.mlen + p.n_ambi() as i32;
-                        let n_cigar = p.n_cigar;
-
-                        // Create a vector of the cigar blocks
-                        let (cigar, cigar_str) = if n_cigar > 0 {
-                            let mut cigar = p
-                                .cigar
-                                .as_slice(n_cigar as usize)
-                                .to_vec()
-                                .iter()
-                                .map(|c| ((c >> 4), (c & 0xf) as u8)) // unpack the length and op code
-                                .collect::<Vec<(u32, u8)>>();
-
-                            // Fix for adding in soft clipping cigar strings
-                            // Taken from minimap2 write_sam_cigar function
-                            // clip_len[0] = r->rev? qlen - r->qe : r->qs;
-                            // clip_len[1] = r->rev? r->qs : qlen - r->qe;
-
-                            let clip_len0 = if reg.rev() != 0 {
-                                seq.len() as i32 - reg.qe
-                            } else {
-                                reg.qs
-                            };
-
-                            let clip_len1 = if reg.rev() != 0 {
-                                reg.qs
-                            } else {
-                                seq.len() as i32 - reg.qe
-                            };
-
-                            let mut cigar_str = cigar
-                                .iter()
-                                .map(|(len, code)| {
-                                    let cigar_char = match code {
-                                        0 => "M",
-                                        1 => "I",
-                                        2 => "D",
-                                        3 => "N",
-                                        4 => "S",
-                                        5 => "H",
-                                        6 => "P",
-                                        7 => "=",
-                                        8 => "X",
-                                        _ => panic!("Invalid CIGAR code {code}"),
-                                    };
-                                    format!("{len}{cigar_char}")
-                                })
-                                .collect::<Vec<String>>()
-                                .join("");
-
-                            // int clip_char = (((sam_flag&0x800) || ((sam_flag&0x100) && (opt_flag&MM_F_SECONDARY_SEQ))) &&
-                            // !(opt_flag&MM_F_SOFTCLIP)) ? 'H' : 'S';
-
-                            // let clip_char = if (reg.flag & 0x800 != 0) || ((reg.flag & 0x100 != 0) && (map_opt.flag & 0x100 != 0)) && (map_opt.flag & 0x4 == 0) {
-                            // 'H'
-                            // } else {
-                            // 'S'
-                            // };
-
-                            // TODO: Support hard clipping
-                            let clip_char = 'S';
-
-                            // Pre and append soft clip identifiers to start and end
-                            if clip_len0 > 0 {
-                                cigar_str = format!("{}{}{}", clip_len0, clip_char, cigar_str);
-                                if self.cigar_clipping {
-                                    cigar.insert(0, (clip_len0 as u32, 4_u8));
-                                }
-                            }
-
-                            if clip_len1 > 0 {
-                                cigar_str = format!("{}{}{}", cigar_str, clip_len1, clip_char);
-                                if self.cigar_clipping {
-                                    cigar.push((clip_len1 as u32, 4_u8));
-                                }
-                            }
-
-                            (Some(cigar), Some(cigar_str))
-                        } else {
-                            (None, None)
+                        let contig = {
+                            let seqs = (*idx).seq;
+                            let entry = seqs.offset(reg.rid as isize);
+                            let name_ptr: *const libc::c_char = (*entry).name;
+                            std::ffi::CStr::from_ptr(name_ptr)
                         };
 
-                        let (cs_str, md_str) = if cs || md {
-                            let cs_str = if cs {
-                                let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
-                                let mut m_cs_string: libc::c_int = 0i32;
+                        // TODO: deprecate?
+                        let _target_len = {
+                            let seqs = (*idx).seq;
+                            let entry = seqs.offset(reg.rid as isize);
+                            (*entry).len as i32
+                        };
 
-                                // This solves a weird segfault...
-                                // let km = km_init();
+                        let is_primary = reg.parent == reg.id && (reg.sam_pri() > 0);
+                        let is_supplementary = (reg.parent == reg.id) && (reg.sam_pri() == 0);
+                        let is_spliced = reg.is_spliced() != 0;
+                        let trans_strand = if let Some(extra) = reg.p.as_ref() {
+                            match extra.trans_strand() {
+                                1 => Some(Strand::Forward),
+                                2 => Some(Strand::Reverse),
+                                _ => None,
+                            }
+                        } else {
+                            None
+                        };
 
-                                /*
-                                let _cs_len = mm_gen_cs(
-                                    km,
-                                    &mut cs_string,
-                                    &mut m_cs_string,
-                                    idx,
-                                    mm_reg1_const_ptr,
-                                    seq.as_ptr() as *const libc::c_char,
-                                    true.into(),
-                                );
+                        // todo holy heck this code is ugly
+                        let alignment = if !reg.p.is_null() {
+                            let p = &*reg.p;
 
-                                let _cs_string = std::ffi::CStr::from_ptr(cs_string)
-                                    .to_str()
-                                    .unwrap()
-                                    .to_string();
-                                */
+                            // calculate the edit distance
+                            let nm = reg.blen - reg.mlen + p.n_ambi() as i32;
+                            let n_cigar = p.n_cigar;
 
-                                let _cs_len = {
-                                    mm_gen_cs(
+                            // Create a vector of the cigar blocks
+                            let (cigar, cigar_str) = if n_cigar > 0 {
+                                let mut cigar = p
+                                    .cigar
+                                    .as_slice(n_cigar as usize)
+                                    .to_vec()
+                                    .iter()
+                                    .map(|c| ((c >> 4), (c & 0xf) as u8)) // unpack the length and op code
+                                    .collect::<Vec<(u32, u8)>>();
+
+                                // Fix for adding in soft clipping cigar strings
+                                // Taken from minimap2 write_sam_cigar function
+                                // clip_len[0] = r->rev? qlen - r->qe : r->qs;
+                                // clip_len[1] = r->rev? r->qs : qlen - r->qe;
+
+                                let clip_len0 = if reg.rev() != 0 {
+                                    seq.len() as i32 - reg.qe
+                                } else {
+                                    reg.qs
+                                };
+
+                                let clip_len1 = if reg.rev() != 0 {
+                                    reg.qs
+                                } else {
+                                    seq.len() as i32 - reg.qe
+                                };
+
+                                let mut cigar_str = cigar
+                                    .iter()
+                                    .map(|(len, code)| {
+                                        let cigar_char = match code {
+                                            0 => "M",
+                                            1 => "I",
+                                            2 => "D",
+                                            3 => "N",
+                                            4 => "S",
+                                            5 => "H",
+                                            6 => "P",
+                                            7 => "=",
+                                            8 => "X",
+                                            _ => panic!("Invalid CIGAR code {code}"),
+                                        };
+                                        format!("{len}{cigar_char}")
+                                    })
+                                    .collect::<Vec<String>>()
+                                    .join("");
+
+                                // int clip_char = (((sam_flag&0x800) || ((sam_flag&0x100) && (opt_flag&MM_F_SECONDARY_SEQ))) &&
+                                // !(opt_flag&MM_F_SOFTCLIP)) ? 'H' : 'S';
+
+                                // let clip_char = if (reg.flag & 0x800 != 0) || ((reg.flag & 0x100 != 0) && (map_opt.flag & 0x100 != 0)) && (map_opt.flag & 0x4 == 0) {
+                                // 'H'
+                                // } else {
+                                // 'S'
+                                // };
+
+                                // TODO: Support hard clipping
+                                let clip_char = 'S';
+
+                                // Pre and append soft clip identifiers to start and end
+                                if clip_len0 > 0 {
+                                    cigar_str = format!("{}{}{}", clip_len0, clip_char, cigar_str);
+                                    if self.cigar_clipping {
+                                        cigar.insert(0, (clip_len0 as u32, 4_u8));
+                                    }
+                                }
+
+                                if clip_len1 > 0 {
+                                    cigar_str = format!("{}{}{}", cigar_str, clip_len1, clip_char);
+                                    if self.cigar_clipping {
+                                        cigar.push((clip_len1 as u32, 4_u8));
+                                    }
+                                }
+
+                                (Some(cigar), Some(cigar_str))
+                            } else {
+                                (None, None)
+                            };
+
+                            let (cs_str, md_str) = if cs || md {
+                                let cs_str = if cs {
+                                    let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
+                                    let mut m_cs_string: libc::c_int = 0i32;
+
+                                    // This solves a weird segfault...
+                                    // let km = km_init();
+
+                                    /*
+                                    let _cs_len = mm_gen_cs(
                                         km,
                                         &mut cs_string,
                                         &mut m_cs_string,
                                         idx,
                                         mm_reg1_const_ptr,
-                                        seq.as_ptr() as *const _,
-                                        1,
-                                    )
-                                };
-                                let _cs = {
-                                    let s =
-                                        CStr::from_ptr(cs_string).to_string_lossy().into_owned();
-                                    libc::free(cs_string as *mut _);
-                                    s
+                                        seq.as_ptr() as *const libc::c_char,
+                                        true.into(),
+                                    );
+
+                                    let _cs_string = std::ffi::CStr::from_ptr(cs_string)
+                                        .to_str()
+                                        .unwrap()
+                                        .to_string();
+                                    */
+
+                                    let _cs_len = {
+                                        mm_gen_cs(
+                                            km,
+                                            &mut cs_string,
+                                            &mut m_cs_string,
+                                            idx,
+                                            mm_reg1_const_ptr,
+                                            seq.as_ptr() as *const _,
+                                            1,
+                                        )
+                                    };
+                                    let _cs = {
+                                        let s = CStr::from_ptr(cs_string)
+                                            .to_string_lossy()
+                                            .into_owned();
+                                        libc::free(cs_string as *mut _);
+                                        s
+                                    };
+
+                                    // libc::free(cs_string as *mut c_void);
+                                    // km_destroy(km);
+                                    Some(_cs)
+                                } else {
+                                    None
                                 };
 
-                                // libc::free(cs_string as *mut c_void);
-                                // km_destroy(km);
-                                Some(_cs)
+                                let md_str = if md {
+                                    // scratch-space pointers & lengths
+                                    let mut md_buf: *mut libc::c_char = std::ptr::null_mut();
+                                    let mut md_len: libc::c_int = 0;
+
+                                    // generate the MD tag into our ThreadBuffer’s km pool
+                                    let _written = {
+                                        mm_gen_MD(
+                                            km,
+                                            &mut md_buf,
+                                            &mut md_len,
+                                            idx,
+                                            mm_reg1_const_ptr,
+                                            seq.as_ptr() as *const _,
+                                        )
+                                    };
+
+                                    // turn it into a Rust String and free the C buffer
+                                    let md_string = {
+                                        let s = std::ffi::CStr::from_ptr(md_buf)
+                                            .to_string_lossy()
+                                            .into_owned();
+                                        libc::free(md_buf as *mut libc::c_void);
+                                        s
+                                    };
+
+                                    Some(md_string)
+                                } else {
+                                    None
+                                };
+
+                                (cs_str, md_str)
                             } else {
-                                None
+                                (None, None)
                             };
 
-                            let md_str = if md {
-                                // scratch-space pointers & lengths
-                                let mut md_buf: *mut libc::c_char = std::ptr::null_mut();
-                                let mut md_len: libc::c_int = 0;
-
-                                // generate the MD tag into our ThreadBuffer’s km pool
-                                let _written = {
-                                    mm_gen_MD(
-                                        km,
-                                        &mut md_buf,
-                                        &mut md_len,
-                                        idx,
-                                        mm_reg1_const_ptr,
-                                        seq.as_ptr() as *const _,
-                                    )
-                                };
-
-                                // turn it into a Rust String and free the C buffer
-                                let md_string = {
-                                    let s = std::ffi::CStr::from_ptr(md_buf)
-                                        .to_string_lossy()
-                                        .into_owned();
-                                    libc::free(md_buf as *mut libc::c_void);
-                                    s
-                                };
-
-                                Some(md_string)
-                            } else {
-                                None
-                            };
-
-                            (cs_str, md_str)
+                            Some(Alignment {
+                                nm,
+                                cigar,
+                                cigar_str,
+                                md: md_str,
+                                cs: cs_str,
+                                alignment_score: Some(p.dp_score as i32),
+                            })
                         } else {
-                            (None, None)
+                            None
                         };
 
-                        Some(Alignment {
-                            nm,
-                            cigar,
-                            cigar_str,
-                            md: md_str,
-                            cs: cs_str,
-                            alignment_score: Some(p.dp_score as i32),
-                        })
-                    } else {
-                        None
-                    };
+                        let target_name_arc = Arc::new(
+                            std::ffi::CStr::from_ptr(contig.as_ptr())
+                                .to_str()
+                                .unwrap()
+                                .to_string(),
+                        );
 
-                    let target_name_arc = Arc::new(
-                        std::ffi::CStr::from_ptr(contig.as_ptr())
-                            .to_str()
-                            .unwrap()
-                            .to_string(),
-                    );
+                        let target_len = {
+                            let seqs = (*idx).seq;
+                            let entry = seqs.offset(reg.rid as isize);
+                            (*entry).len as i32
+                        };
 
-                    let target_len = {
-                        let seqs = (*idx).seq;
-                        let entry = seqs.offset(reg.rid as isize);
-                        (*entry).len as i32
-                    };
+                        mappings.push(Mapping {
+                            target_name: Some(Arc::clone(&target_name_arc)),
+                            target_len,
+                            target_start: reg.rs,
+                            target_end: reg.re,
+                            target_id: reg.rid,
+                            query_name: query_name_arc.clone(),
+                            query_len: NonZeroI32::new(seq.len() as i32),
+                            query_start: reg.qs,
+                            query_end: reg.qe,
+                            strand: if reg.rev() == 0 {
+                                Strand::Forward
+                            } else {
+                                Strand::Reverse
+                            },
+                            match_len: reg.mlen,
+                            block_len: reg.blen,
+                            mapq: reg.mapq(),
+                            is_primary,
+                            is_supplementary,
+                            is_spliced,
+                            trans_strand,
+                            alignment,
+                            segment_id: 0, // Single-end mapping
+                        });
+                        libc::free(reg.p as *mut c_void);
+                    }
+                }
 
-                    mappings.push(Mapping {
-                        target_name: Some(Arc::clone(&target_name_arc)),
-                        target_len,
-                        target_start: reg.rs,
-                        target_end: reg.re,
-                        target_id: reg.rid,
-                        query_name: query_name_arc.clone(),
-                        query_len: NonZeroI32::new(seq.len() as i32),
-                        query_start: reg.qs,
-                        query_end: reg.qe,
-                        strand: if reg.rev() == 0 {
-                            Strand::Forward
-                        } else {
-                            Strand::Reverse
-                        },
-                        match_len: reg.mlen,
-                        block_len: reg.blen,
-                        mapq: reg.mapq(),
-                        is_primary,
-                        is_supplementary,
-                        is_spliced,
-                        trans_strand,
-                        alignment,
-                        segment_id: 0, // Single-end mapping
-                    });
-                    libc::free(reg.p as *mut c_void);
+                // Add mappings from this part to the overall result
+                all_mappings.extend(mappings);
+
+                // Free the mm_regs for this part
+                unsafe {
+                    let ptr: *mut mm_reg1_t = mm_reg.assume_init();
+                    let c_void_ptr: *mut c_void = ptr as *mut c_void;
+                    libc::free(c_void_ptr);
                 }
             }
-            
-            // Add mappings from this part to the overall result
-            all_mappings.extend(mappings);
-            
-            // Free the mm_regs for this part
-            unsafe {
-                let ptr: *mut mm_reg1_t = mm_reg.assume_init();
-                let c_void_ptr: *mut c_void = ptr as *mut c_void;
-                libc::free(c_void_ptr);
-            }
-        }
-        
-        all_mappings
-    });
+
+            all_mappings
+        });
 
         Ok(mappings)
     }
@@ -1741,14 +1748,16 @@ impl Aligner<Built> {
                                     let clip_char = 'S';
 
                                     if clip_len0 > 0 {
-                                        cigar_str = format!("{}{}{}", clip_len0, clip_char, cigar_str);
+                                        cigar_str =
+                                            format!("{}{}{}", clip_len0, clip_char, cigar_str);
                                         if self.cigar_clipping {
                                             cigar.insert(0, (clip_len0 as u32, 4_u8));
                                         }
                                     }
 
                                     if clip_len1 > 0 {
-                                        cigar_str = format!("{}{}{}", cigar_str, clip_len1, clip_char);
+                                        cigar_str =
+                                            format!("{}{}{}", cigar_str, clip_len1, clip_char);
                                         if self.cigar_clipping {
                                             cigar.push((clip_len1 as u32, 4_u8));
                                         }
@@ -2294,7 +2303,11 @@ mod tests {
         let mut mm_mapopt = MaybeUninit::uninit();
 
         unsafe {
-            let ret = mm_set_opt(std::ptr::null(), mm_idxopt.as_mut_ptr(), mm_mapopt.as_mut_ptr());
+            let ret = mm_set_opt(
+                std::ptr::null(),
+                mm_idxopt.as_mut_ptr(),
+                mm_mapopt.as_mut_ptr(),
+            );
             assert_eq!(ret, 0);
         };
     }
@@ -3369,7 +3382,15 @@ mod tests {
 
         // Test with CS and MD enabled
         let (mappings1, mappings2) = aligner
-            .map_pair(read1, read2, true, true, Some(500), None, Some(b"test_cs_md"))
+            .map_pair(
+                read1,
+                read2,
+                true,
+                true,
+                Some(500),
+                None,
+                Some(b"test_cs_md"),
+            )
             .unwrap();
 
         assert!(!mappings1.is_empty());
