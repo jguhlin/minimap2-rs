@@ -1365,7 +1365,7 @@ impl Aligner<Built> {
                                     .to_string();
                                 */
 
-                                let _cs_len = {
+                                let cs_len = {
                                     mm_gen_cs(
                                         km,
                                         &mut cs_string,
@@ -1376,10 +1376,22 @@ impl Aligner<Built> {
                                         1,
                                     )
                                 };
+                                // Use the length returned by mm_gen_cs instead of strlen via
+                                // CStr::from_ptr. A non-NUL-terminated buffer near a page edge
+                                // causes __strlen_avx2 to read past the allocation and SIGSEGV.
                                 let _cs = {
-                                    let s =
-                                        CStr::from_ptr(cs_string).to_string_lossy().into_owned();
-                                    libc::free(cs_string as *mut _);
+                                    let s = if cs_len > 0 && !cs_string.is_null() {
+                                        let bytes = std::slice::from_raw_parts(
+                                            cs_string as *const u8,
+                                            cs_len as usize,
+                                        );
+                                        String::from_utf8_lossy(bytes).into_owned()
+                                    } else {
+                                        String::new()
+                                    };
+                                    if !cs_string.is_null() {
+                                        libc::free(cs_string as *mut _);
+                                    }
                                     s
                                 };
 
@@ -1391,28 +1403,38 @@ impl Aligner<Built> {
                             };
 
                             let md_str = if md {
-                                // scratch-space pointers & lengths
+                                // scratch-space pointers & capacity
                                 let mut md_buf: *mut libc::c_char = std::ptr::null_mut();
-                                let mut md_len: libc::c_int = 0;
+                                let mut m_md_buf: libc::c_int = 0;
 
-                                // generate the MD tag into our ThreadBuffer’s km pool
-                                let _written = {
+                                // generate the MD tag into our ThreadBuffer’s km pool;
+                                // return value is the length written.
+                                let md_len = {
                                     mm_gen_MD(
                                         km,
                                         &mut md_buf,
-                                        &mut md_len,
+                                        &mut m_md_buf,
                                         idx,
                                         mm_reg1_const_ptr,
                                         seq.as_ptr() as *const _,
                                     )
                                 };
 
-                                // turn it into a Rust String and free the C buffer
+                                // Use the returned length instead of strlen via CStr::from_ptr,
+                                // for the same page-overrun reason as cs above.
                                 let md_string = {
-                                    let s = std::ffi::CStr::from_ptr(md_buf)
-                                        .to_string_lossy()
-                                        .into_owned();
-                                    libc::free(md_buf as *mut libc::c_void);
+                                    let s = if md_len > 0 && !md_buf.is_null() {
+                                        let bytes = std::slice::from_raw_parts(
+                                            md_buf as *const u8,
+                                            md_len as usize,
+                                        );
+                                        String::from_utf8_lossy(bytes).into_owned()
+                                    } else {
+                                        String::new()
+                                    };
+                                    if !md_buf.is_null() {
+                                        libc::free(md_buf as *mut libc::c_void);
+                                    }
                                     s
                                 };
 
@@ -1764,7 +1786,7 @@ impl Aligner<Built> {
                                         let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
                                         let mut m_cs_string: libc::c_int = 0i32;
 
-                                        let _cs_len = {
+                                        let cs_len = {
                                             mm_gen_cs(
                                                 km,
                                                 &mut cs_string,
@@ -1775,11 +1797,21 @@ impl Aligner<Built> {
                                                 1,
                                             )
                                         };
+                                        // Use returned length instead of strlen via
+                                        // CStr::from_ptr (page-overrun risk; see map()).
                                         let _cs = {
-                                            let s = CStr::from_ptr(cs_string)
-                                                .to_string_lossy()
-                                                .into_owned();
-                                            libc::free(cs_string as *mut _);
+                                            let s = if cs_len > 0 && !cs_string.is_null() {
+                                                let bytes = std::slice::from_raw_parts(
+                                                    cs_string as *const u8,
+                                                    cs_len as usize,
+                                                );
+                                                String::from_utf8_lossy(bytes).into_owned()
+                                            } else {
+                                                String::new()
+                                            };
+                                            if !cs_string.is_null() {
+                                                libc::free(cs_string as *mut _);
+                                            }
                                             s
                                         };
                                         Some(_cs)
@@ -1789,24 +1821,34 @@ impl Aligner<Built> {
 
                                     let md_str = if md {
                                         let mut md_buf: *mut libc::c_char = std::ptr::null_mut();
-                                        let mut md_len: libc::c_int = 0;
+                                        let mut m_md_buf: libc::c_int = 0;
 
-                                        let _written = {
+                                        let md_len = {
                                             mm_gen_MD(
                                                 km,
                                                 &mut md_buf,
-                                                &mut md_len,
+                                                &mut m_md_buf,
                                                 idx,
                                                 mm_reg1_const_ptr,
                                                 seq.as_ptr() as *const _,
                                             )
                                         };
 
+                                        // Use returned length instead of strlen via
+                                        // CStr::from_ptr (page-overrun risk; see map()).
                                         let md_string = {
-                                            let s = std::ffi::CStr::from_ptr(md_buf)
-                                                .to_string_lossy()
-                                                .into_owned();
-                                            libc::free(md_buf as *mut libc::c_void);
+                                            let s = if md_len > 0 && !md_buf.is_null() {
+                                                let bytes = std::slice::from_raw_parts(
+                                                    md_buf as *const u8,
+                                                    md_len as usize,
+                                                );
+                                                String::from_utf8_lossy(bytes).into_owned()
+                                            } else {
+                                                String::new()
+                                            };
+                                            if !md_buf.is_null() {
+                                                libc::free(md_buf as *mut libc::c_void);
+                                            }
                                             s
                                         };
                                         Some(md_string)
