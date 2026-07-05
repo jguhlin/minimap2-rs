@@ -1341,6 +1341,16 @@ impl Aligner<Built> {
                         };
 
                         let (cs_str, md_str) = if cs || md {
+                            // mm_gen_cs_or_MD calls strlen() on the seq pointer.
+                            // Rust &[u8] is NOT NUL-terminated, so passing seq.as_ptr() can
+                            // cause __strlen_avx2 to read past the buffer and SEGV when the
+                            // next page is unmapped. Build a NUL-terminated copy once and
+                            // reuse it for both cs and md.
+                            let mut seq_nul: Vec<u8> = Vec::with_capacity(seq.len() + 1);
+                            seq_nul.extend_from_slice(seq);
+                            seq_nul.push(0);
+                            let seq_nul_ptr = seq_nul.as_ptr();
+
                             let cs_str = if cs {
                                 let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
                                 let mut m_cs_string: libc::c_int = 0i32;
@@ -1372,7 +1382,7 @@ impl Aligner<Built> {
                                         &mut m_cs_string,
                                         idx,
                                         mm_reg1_const_ptr,
-                                        seq.as_ptr() as *const _,
+                                        seq_nul_ptr as *const _,
                                         1,
                                     )
                                 };
@@ -1416,7 +1426,7 @@ impl Aligner<Built> {
                                         &mut m_md_buf,
                                         idx,
                                         mm_reg1_const_ptr,
-                                        seq.as_ptr() as *const _,
+                                        seq_nul_ptr as *const _,
                                     )
                                 };
 
@@ -1461,7 +1471,7 @@ impl Aligner<Built> {
                     };
 
                     let target_name_arc = Arc::new(
-                        std::ffi::CStr::from_ptr(contig.as_ptr())
+                        contig
                             .to_str()
                             .unwrap()
                             .to_string(),
@@ -1782,6 +1792,16 @@ impl Aligner<Built> {
                                 };
 
                                 let (cs_str, md_str) = if cs || md {
+                                    // mm_gen_cs_or_MD calls strlen() on the seq pointer.
+                                    // Rust &[u8] is NOT NUL-terminated, so passing seq.as_ptr()
+                                    // can cause __strlen_avx2 to read past the buffer and SEGV
+                                    // when the next page is unmapped. Build a NUL-terminated
+                                    // copy once and reuse it for both cs and md.
+                                    let mut seq_nul: Vec<u8> = Vec::with_capacity(seq.len() + 1);
+                                    seq_nul.extend_from_slice(seq);
+                                    seq_nul.push(0);
+                                    let seq_nul_ptr = seq_nul.as_ptr();
+
                                     let cs_str = if cs {
                                         let mut cs_string: *mut libc::c_char = std::ptr::null_mut();
                                         let mut m_cs_string: libc::c_int = 0i32;
@@ -1793,7 +1813,7 @@ impl Aligner<Built> {
                                                 &mut m_cs_string,
                                                 idx,
                                                 mm_reg1_const_ptr,
-                                                seq.as_ptr() as *const _,
+                                                seq_nul_ptr as *const _,
                                                 1,
                                             )
                                         };
@@ -1830,7 +1850,7 @@ impl Aligner<Built> {
                                                 &mut m_md_buf,
                                                 idx,
                                                 mm_reg1_const_ptr,
-                                                seq.as_ptr() as *const _,
+                                                seq_nul_ptr as *const _,
                                             )
                                         };
 
@@ -1874,7 +1894,7 @@ impl Aligner<Built> {
                             };
 
                             let target_name_arc = Arc::new(
-                                std::ffi::CStr::from_ptr(contig.as_ptr())
+                                contig
                                     .to_str()
                                     .unwrap()
                                     .to_string(),
