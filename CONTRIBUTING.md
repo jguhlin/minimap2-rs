@@ -8,7 +8,7 @@ The goal is to have two separate libraries, a -sys library, that serves as a smo
 1. **Fork** the repository on GitHub.  
 2. **Clone** your fork locally and create a new branch for your changes:
 ```bash
-   git clone https://github.com/your-username/minimap2-rs.git
+   git clone --recurse-submodules https://github.com/your-username/minimap2-rs.git
    cd minimap2-rs
    git checkout -b feature/my-new-feature
 ```
