@@ -25,7 +25,7 @@ mm2-fast and minimap2 have diverged. At this point mm2-fast is no longer support
 ## Changelog
 ### 0.1.30 minimap2.2.30
 * Update to minimap2 2.30
-* Rename some functions for better multi-crate -sys compatabilities
+* Rename some functions for better multi-crate -sys compatibilities
 
 ### 0.1.29 minimap2.2.29
 * Update to minimap2 2.29
