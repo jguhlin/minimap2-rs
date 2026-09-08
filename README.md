@@ -39,7 +39,7 @@ let mut aligner = Aligner::builder()
 
 Align a sequence:
 ```rust
-let seq: Vec<u8> = b"ACTGACTCACATCGACTACGACTACTAGACACTAGACTATCGACTACTGACATCGA";
+let seq: &[u8] = b"ACTGACTCACATCGACTACGACTACTAGACACTAGACTATCGACTACTGACATCGA";
 let alignment = aligner
     .map(&seq, false, false, None, None, Some(b"My Sequence Name"))
     .expect("Unable to align");
