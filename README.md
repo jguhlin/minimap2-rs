@@ -7,6 +7,8 @@
 A rust FFI wrapper library for [minimap2](https://github.com/lh3/minimap2/) with support for SIMDe, htslib, zlib-ng, and curl.
 
 # How to use
+See the [rustdocs](https://docs.rs/minimap2/latest/minimap2/)
+
 ## Requirements
 ```toml
 minimap2 = "0.1.31+minimap2.2.30"
