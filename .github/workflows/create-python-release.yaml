@@ -83,7 +83,7 @@ jobs:
 #          manylinux: auto
 #          working-directory: "minimappers2"
       - name: Upload wheels
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-linux-${{ matrix.platform.target }}
           path: dist
@@ -125,7 +125,7 @@ jobs:
 #          manylinux: musllinux_1_2
 #          working-directory: "minimappers2"
       - name: Upload wheels
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-musllinux-${{ matrix.platform.target }}
           path: dist
@@ -162,7 +162,7 @@ jobs:
 #          sccache: 'true'
 #          working-directory: "minimappers2"
       - name: Upload wheels
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-macos-${{ matrix.platform.target }}
           path: dist
@@ -180,7 +180,7 @@ jobs:
           args: --out dist
           working-directory: "minimappers2"
       - name: Upload sdist
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-sdist
           path: dist
@@ -199,9 +199,9 @@ jobs:
       attestations: write
     steps:
       - run: sudo apt-get update && sudo apt-get install -y build-essential
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: 'wheels-*/*'
       - name: Publish to PyPI

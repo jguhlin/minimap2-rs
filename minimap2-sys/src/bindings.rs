@@ -570,7 +570,7 @@ pub const __HAVE_DISTINCT_FLOAT32X: u32 = 0;
 pub const __HAVE_DISTINCT_FLOAT64X: u32 = 0;
 pub const __HAVE_DISTINCT_FLOAT128X: u32 = 0;
 pub const __HAVE_FLOATN_NOT_TYPEDEF: u32 = 0;
-pub const MM_VERSION: &::std::ffi::CStr = c"2.29-r1283";
+pub const MM_VERSION: &::std::ffi::CStr = c"2.31-r1302";
 pub const MM_F_NO_DIAG: u32 = 1;
 pub const MM_F_NO_DUAL: u32 = 2;
 pub const MM_F_CIGAR: u32 = 4;
@@ -3779,6 +3779,17 @@ unsafe extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 unsafe extern "C" {
+    pub fn mm_gen_ds(
+        km: *mut ::std::os::raw::c_void,
+        buf: *mut *mut ::std::os::raw::c_char,
+        max_len: *mut ::std::os::raw::c_int,
+        mi: *const mm_idx_t,
+        r: *const mm_reg1_t,
+        seq: *const ::std::os::raw::c_char,
+        no_iden: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
     pub fn mm_gen_MD(
         km: *mut ::std::os::raw::c_void,
         buf: *mut *mut ::std::os::raw::c_char,
@@ -3836,6 +3847,14 @@ unsafe extern "C" {
         idx: *mut mm_idx_t,
         fn_: *const ::std::os::raw::c_char,
         max_sc: i32,
+    ) -> i32;
+}
+unsafe extern "C" {
+    pub fn mm_idx_spsc_read2(
+        idx: *mut mm_idx_t,
+        fn_: *const ::std::os::raw::c_char,
+        max_sc: i32,
+        scale: f32,
     ) -> i32;
 }
 unsafe extern "C" {

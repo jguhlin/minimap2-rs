@@ -41,7 +41,7 @@ let mut aligner = Aligner::builder()
 
 Align a sequence:
 ```rust
-let seq: Vec<u8> = b"ACTGACTCACATCGACTACGACTACTAGACACTAGACTATCGACTACTGACATCGA";
+let seq: &[u8] = b"ACTGACTCACATCGACTACGACTACTAGACACTAGACTATCGACTACTGACATCGA";
 let alignment = aligner
     .map(&seq, false, false, None, None, Some(b"My Sequence Name"))
     .expect("Unable to align");
@@ -142,7 +142,7 @@ Also works. Otherwise directly cloning the aligner will Arc clone the internal i
 
 ## Features
 The following crate features are available:
-* map-file - Enables the ability to map a file directly to a reference. Enabled by deafult
+* map-file - Enables the ability to map a file directly to a reference. Enabled by default
 * htslib - Provides an interface to minimap2 that returns rust_htslib::Records
 * simde - Enables SIMD Everywhere library in minimap2
 * zlib-ng - Enables the use of zlib-ng for faster compression

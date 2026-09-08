@@ -1,6 +1,6 @@
 [package]
 name = "minimap2-sys"
-version = "0.1.30+minimap2.2.30"
+version = "0.1.30+minimap2.2.31"
 edition = "2024"
 links = "libminimap2"
 authors = ["Joseph Guhlin <joseph.guhlin@gmail.com>"]
@@ -16,6 +16,7 @@ exclude = [
 	"target",
 	"Cargo.lock",
 	"/minimap2/lib/simde/test",
+	"/simde/test",
 	".circlci",
 	".notest",
 	".github",
