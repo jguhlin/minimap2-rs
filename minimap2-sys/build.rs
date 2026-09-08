@@ -117,7 +117,11 @@ fn target_specific(cc: &mut cc::Build) {
 
 #[cfg(feature = "simde")]
 fn simde(cc: &mut cc::Build) {
-    cc.include("minimap2/lib/simde");
+    // minimap2 >= 2.31 no longer bundles simde (the lib/simde submodule was
+    // dropped), so we vendor it here as the minimap2-sys/simde submodule and
+    // add it to the include path. The C sources include <simde/x86/sse2.h>,
+    // which resolves under this directory (it contains a `simde/` subdir).
+    cc.include("simde");
     cc.flag("-DSIMDE_ENABLE_NATIVE_ALIASES");
     cc.flag("-DUSE_SIMDE");
     cc.flag("-std=c99");

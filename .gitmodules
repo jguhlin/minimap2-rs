@@ -7,3 +7,6 @@
 [submodule "minimap2-sys/mm2-fast"]
 	path = minimap2-sys/mm2-fast
 	url = https://github.com/bwa-mem2/mm2-fast
+[submodule "minimap2-sys/simde"]
+	path = minimap2-sys/simde
+	url = https://github.com/simd-everywhere/simde.git
