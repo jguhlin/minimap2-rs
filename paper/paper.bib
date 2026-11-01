@@ -256,7 +256,6 @@
   doi={10.1101/gr.279265.124}
 }
 
-
 @article {oarfish,
 	author = {Jousheghani, Zahra Zare and Patro, Rob},
 	title = {Oarfish: Enhanced probabilistic modeling leads to improved accuracy in long read transcriptome quantification},
@@ -267,5 +266,18 @@
 	abstract = {Motivation Long read sequencing technology is becoming an increasingly indispensable tool in genomic and transcriptomic analysis. In transcriptomics in particular, long reads offer the possibility of sequencing full-length isoforms, which can vastly simplify the identification of novel transcripts and transcript quantification. However, despite this promise, the focus of much long read method development to date has been on transcript identification, with comparatively little attention paid to quantification. Yet, due to differences in the underlying protocols and technologies, lower throughput (i.e. fewer reads sequenced per sample compared to short read technologies), as well as technical artifacts, long read quantification remains a challenge, motivating the continued development and assessment of quantification methods tailored to this increasingly prevalent type of data.Results We introduce a new method and software tool for long read transcript quantification called oarfish. Our model incorporates a novel and innovative coverage score, which affects the conditional probability of fragment assignment in the underlying probabilistic model. We demonstrate that by accounting for this coverage information, oarfish is able to produce more accurate quantification estimates than existing long read quantification methods, particularly when one considers the primary isoforms present in a particular cell line or tissue type.Availability and Implementation Oarfish is implemented in the Rust programming language, and is made available as free and open-source software under the BSD 3-clause license. The source code is available at https://www.github.com/COMBINE-lab/oarfish.Competing Interest StatementR.P. is a co-founder of Ocean Genomics inc.},
 	URL = {https://www.biorxiv.org/content/early/2024/03/01/2024.02.28.582591},
 	eprint = {https://www.biorxiv.org/content/early/2024/03/01/2024.02.28.582591.full.pdf},
+	journal = {bioRxiv}
+}
+
+@article {rammap,
+	author = {Wang, Jeremy R. and Li, Heng},
+	title = {Memory-safe high-performance sequence mapping with rammap},
+	elocation-id = {2026.05.26.726289},
+	year = {2026},
+	doi = {10.64898/2026.05.26.726289},
+	publisher = {Cold Spring Harbor Laboratory},
+	abstract = {We introduce a reimplementation of the widely used mapping tool minimap2 in Rust called rammap. We demonstrate perfect concordance with minimap2, enabling its backwards compatibility as a drop-in replacement for minimap2-based workflows. Additionally, rammap implements performance optimizations for modern architectures and applications, including AVX512 and WASM v128 SIMD support for dynamic programming alignment and SIMD-accelerated chaining. These achieve comparable or better performance than minimap2 across diverse mapping workloads while maintaining Rust{\textquoteright}s stronger memory safety constraints. The rammap API exposes both SIMD-accelerated sequence-sequence alignment modules and full mapping pipelines for use as an integrated library. Lastly, we describe the modular architecture and provide examples illustrating the extensibility of major mapping components, including seeding, chaining, and gap-filling/extension to support development of improved or domain-specific mapping components within a high-performance framework.Competing Interest StatementThe authors have declared no competing interest.},
+	URL = {https://www.biorxiv.org/content/early/2026/05/29/2026.05.26.726289},
+	eprint = {https://www.biorxiv.org/content/early/2026/05/29/2026.05.26.726289.full.pdf},
 	journal = {bioRxiv}
 }

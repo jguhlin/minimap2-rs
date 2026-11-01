@@ -67,8 +67,7 @@ If you have a new feature suggestion, open an issue labeled `enhancement` and ex
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the same
-license as the project (see [LICENSE](LICENSE)).
+By contributing, you agree that your contributions will be licensed under the same licenses as the project (see [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE)).
 
 ## Code of Conduct
 
