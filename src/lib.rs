@@ -323,6 +323,26 @@ pub trait AcceptsParams {}
 impl AcceptsParams for PresetSet {}
 impl AcceptsParams for Unset {}
 
+/// RAII guard for `*mut mm_idx_reader_t` ensuring the reader is closed exactly once.
+struct IdxReaderGuard(*mut mm_idx_reader_t);
+
+impl IdxReaderGuard {
+    fn close(&mut self) {
+        if !self.0.is_null() {
+            unsafe {
+                mm_idx_reader_close(self.0);
+            }
+            self.0 = std::ptr::null_mut();
+        }
+    }
+}
+
+impl Drop for IdxReaderGuard {
+    fn drop(&mut self) {
+        self.close();
+    }
+}
+
 /// Aligner struct, mimicking minimap2's python interface
 ///
 /// ```
@@ -350,7 +370,7 @@ pub struct Aligner<S: BuilderState> {
     /// Each part is processed independently during mapping.
     pub idx_parts: Vec<Arc<MmIdx>>,
 
-    /// Index reader created by minimap2
+    /// Index reader created by minimap2 (None once the index has been built or loaded)
     pub idx_reader: Option<Arc<mm_idx_reader_t>>,
 
     /// Whether to add soft clipping to CIGAR result
@@ -767,47 +787,58 @@ where
         }
 
         // Confirm file is not empty if it is a regular file
-        if path.as_ref().is_file() && path.as_ref().metadata().unwrap().len() == 0 {
-            return Err("Index File is empty");
+        if path.as_ref().is_file() {
+            if let Ok(metadata) = path.as_ref().metadata() {
+                if metadata.len() == 0 {
+                    return Err("Index File is empty");
+                }
+            }
         }
 
         let will_serialize = output.is_some();
-        let output = match output {
+        let output_c = match output {
             Some(output) => match std::ffi::CString::new(output) {
-                Ok(output) => output,
+                Ok(output) => Some(output),
                 Err(_) => return Err("Invalid Output for Index"),
             },
-            None => std::ffi::CString::new(Vec::new()).unwrap(),
+            None => None,
+        };
+        let output_ptr = match &output_c {
+            Some(output) => output.as_ptr(),
+            None => std::ptr::null(),
         };
 
-        let idx_reader = MaybeUninit::new(unsafe {
-            mm_idx_reader_open(path_str.as_ptr(), &self.idxopt, output.as_ptr())
-        });
+        let raw_reader = unsafe {
+            mm_idx_reader_open(path_str.as_ptr(), &self.idxopt, output_ptr)
+        };
+        if raw_reader.is_null() {
+            return Err("Failed to open index reader");
+        }
 
-        let idx_reader = unsafe { idx_reader.assume_init() };
+        let mut idx_reader = IdxReaderGuard(raw_reader);
         // the call that populates this returns 0 if the opened file is not a pre-existing index
         // and the file size (so a strictly positive number of bytes) otherwise
-        let is_pre_existing_index = unsafe { (*idx_reader).is_idx > 0 };
+        let is_pre_existing_index = unsafe { (*idx_reader.0).is_idx > 0 };
 
         // Multi-part index reading following C minimap2 pattern
         // Transparently handle both single-part and multi-part indexes
         // Large reference genomes are automatically split into parts based on batch_size
         let mut idx_parts = Vec::new();
         let mut first_idx = None;
-        
+
         unsafe {
             // Read all index parts in a loop, just like C minimap2 does
             // This handles both single-part and multi-part indexes transparently
             loop {
                 let idx_part = mm_idx_reader_read(
-                    &mut *idx_reader as *mut mm_idx_reader_t,
+                    idx_reader.0,
                     self.threads as libc::c_int,
                 );
-                
+
                 if idx_part.is_null() {
                     break; // No more parts to read
                 }
-                
+
                 if first_idx.is_none() {
                     // Use the first part for mapping option updates and API compatibility
                     mm_mapopt_update(&mut self.mapopt, idx_part);
@@ -821,16 +852,16 @@ where
                     idx_parts.push(Arc::new(idx_part.into()));
                 }
             }
-            
+
             // Close the reader after reading all parts
-            mm_idx_reader_close(idx_reader);
+            idx_reader.close();
         }
-        
+
         // Ensure we got at least one index part
         if first_idx.is_none() {
             return Err("Failed to read index - no parts found");
         }
-        
+
         self.idx = first_idx;
         self.idx_parts = idx_parts;
 
@@ -840,7 +871,7 @@ where
             threads: self.threads,
             idx: self.idx,
             idx_parts: self.idx_parts,
-            idx_reader: Some(Arc::new(unsafe { *idx_reader })),
+            idx_reader: None,
             cigar_clipping: self.cigar_clipping,
             _state: Built,
         };
@@ -3209,12 +3240,14 @@ mod tests {
             .with_cigar()
             .with_index("yeast_ref.mmi", None)
             .unwrap();
+        assert!(aligner.idx_reader.is_none());
         // Confirm with_cigar is set
         // self.mapopt.flag |= MM_F_CIGAR as i64;
         assert_eq!(aligner.mapopt.flag & MM_F_CIGAR as i64, MM_F_CIGAR as i64);
 
         // Clone aligner
         let aligner_clone = aligner.clone();
+        assert!(aligner_clone.idx_reader.is_none());
         assert_eq!(
             aligner_clone.mapopt.flag & MM_F_CIGAR as i64,
             MM_F_CIGAR as i64
@@ -3476,4 +3509,111 @@ mod tests {
         assert!(align.cs.is_none());
         assert!(align.md.is_none());
     }
+
+    #[test]
+    fn test_regression_index_creation_reader_ownership() {
+        // 1. Without serialization
+        let aligner = Aligner::builder()
+            .map_ont()
+            .with_index_threads(1)
+            .with_index("test_data/test_data.fasta", None)
+            .expect("Failed to build index from test_data.fasta");
+
+        // The closed reader must not be retained; idx_reader must be None
+        assert!(aligner.idx_reader.is_none(), "aligner.idx_reader must be None");
+        assert!(aligner.idx.is_some(), "aligner.idx must be Some");
+        assert!(!aligner.idx_parts.is_empty(), "aligner.idx_parts must not be empty");
+
+        // 2. With serialization
+        let temp_mmi = std::env::temp_dir().join(format!("test_regression_ownership_{}.mmi", std::process::id()));
+        let temp_mmi_str = temp_mmi.to_str().unwrap();
+
+        let aligner_dump = Aligner::builder()
+            .map_ont()
+            .with_index_threads(1)
+            .with_index("test_data/test_data.fasta", Some(temp_mmi_str))
+            .expect("Failed to build and dump index");
+
+        assert!(aligner_dump.idx_reader.is_none(), "dumped aligner.idx_reader must be None");
+        assert!(temp_mmi.exists(), "Dumped index file must exist");
+
+        // 3. Loading pre-built index
+        let aligner_loaded = Aligner::builder()
+            .map_ont()
+            .with_index_threads(1)
+            .with_index(temp_mmi_str, None)
+            .expect("Failed to load dumped index");
+
+        assert!(aligner_loaded.idx_reader.is_none(), "loaded aligner.idx_reader must be None");
+
+        let _ = std::fs::remove_file(temp_mmi);
+    }
+
+    #[test]
+    fn test_regression_failed_index_opening() {
+        use std::io::Write;
+        use std::os::unix::fs::PermissionsExt;
+
+        // Empty file
+        let res_empty = Aligner::builder()
+            .map_ont()
+            .with_index("test_data/empty.fa", None);
+        match res_empty {
+            Err(e) => assert_eq!(e, "Index File is empty"),
+            Ok(_) => panic!("Expected empty file to return Err"),
+        }
+
+        // Unreadable file (mm_idx_reader_open returns null)
+        let unreadable_path = std::env::temp_dir().join(format!("test_unreadable_{}.fa", std::process::id()));
+        {
+            let mut file = std::fs::File::create(&unreadable_path).unwrap();
+            file.write_all(b">seq1\nACGTACGTACGT\n").unwrap();
+            file.flush().unwrap();
+        }
+        // Remove read permissions so open(fn, O_RDONLY) fails inside minimap2
+        let perms = std::fs::Permissions::from_mode(0o000);
+        std::fs::set_permissions(&unreadable_path, perms).unwrap();
+
+        let res_unreadable = if std::fs::File::open(&unreadable_path).is_err() {
+            Some(
+                Aligner::builder()
+                    .map_ont()
+                    .with_index(&unreadable_path, None),
+            )
+        } else {
+            None
+        };
+
+        // Restore permissions for cleanup
+        let _ = std::fs::set_permissions(&unreadable_path, std::fs::Permissions::from_mode(0o644));
+        let _ = std::fs::remove_file(&unreadable_path);
+
+        if let Some(result) = res_unreadable {
+            match result {
+                Err(error) => assert_eq!(error, "Failed to open index reader"),
+                Ok(_) => panic!("Expected unreadable file to return Err"),
+            }
+        }
+
+        // Truncated index file (mm_idx_reader_open succeeds, mm_idx_reader_read returns no parts due to truncated header)
+        let corrupt_idx_path = std::env::temp_dir().join(format!("test_corrupt_{}.mmi", std::process::id()));
+        {
+            let mut file = std::fs::File::create(&corrupt_idx_path).unwrap();
+            // "MMI\x02" is the minimap2 index magic, but with truncated header (0 additional bytes)
+            file.write_all(b"MMI\x02").unwrap();
+            file.flush().unwrap();
+        }
+
+        let res_corrupt = Aligner::builder()
+            .map_ont()
+            .with_index(&corrupt_idx_path, None);
+
+        let _ = std::fs::remove_file(&corrupt_idx_path);
+
+        match res_corrupt {
+            Err(e) => assert_eq!(e, "Failed to read index - no parts found"),
+            Ok(_) => panic!("Expected corrupt index file to return Err"),
+        }
+    }
+
 }
